@@ -15,7 +15,7 @@
 - 孩子激励：小测通过和今日全清会产生积分和徽章。
 - 复习闭环：错题、卡住、未完成任务会进入复习队列，次日优先生成补漏任务。
 - 报告落盘：日报和周报会同时入库并生成 Markdown 文件。
-- 提醒：已接入 PushPlus，未配置 token 时自动记录为 skipped，不影响系统使用。
+- 提醒：默认使用本机系统通知，支持 macOS / Windows / Linux；PushPlus、控制台日志和关闭外部提醒均可配置。
 - 定时任务：09:00 生成任务、09:30/10:00 检查 P0 未开始、13:00 检查 P0 未完成、19:30 提醒未完成、20:30 生成日报、21:00 未完成转明日补漏。
 
 ## 本地运行
@@ -61,15 +61,31 @@ docker compose up -d --build
 6. 完成任务后提交小测。
 7. 打开 `/parent` 查看看板，或点击“生成今天日报 / 生成本周周报”。
 
-## PushPlus 配置
+## 提醒配置
 
-复制 `.env.example` 为 `.env` 后填写：
+默认配置：
 
 ```text
+NOTIFY_CHANNEL=local
+```
+
+`local` 会按运行机器自动选择本机通知：
+- macOS：调用系统通知中心，适合苹果电脑本地使用。
+- Windows：调用系统托盘气泡通知，适合家里 Windows 电脑使用。
+- Linux：调用 `notify-send`，需要桌面环境支持。
+
+可选通道：
+
+```text
+NOTIFY_CHANNEL=auto        # 优先本机通知；如果配置了 PUSHPLUS_TOKEN，也会同时发 PushPlus
+NOTIFY_CHANNEL=pushplus    # 只发 PushPlus
+NOTIFY_CHANNEL=console     # 只输出到服务控制台
+NOTIFY_CHANNEL=none        # 不发外部通知，只写提醒日志
+NOTIFY_CHANNEL=local,pushplus
 PUSHPLUS_TOKEN=你的PushPlusToken
 ```
 
-未填写时提醒不会发送到手机，但会写入 `notification_logs`，家长端仍能看到记录。
+PushPlus 只是可选项；不填写 `PUSHPLUS_TOKEN` 也不影响本机通知和家长端提醒记录。所有提醒都会写入 `notification_logs`，家长端仍能看到记录。
 
 ## AI 出题配置
 
