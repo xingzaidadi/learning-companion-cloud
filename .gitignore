@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+data/*.db
+data/*.db-*
+reports/daily/*.md
+reports/weekly/*.md
+backups/
+.venv/
+server.log
+server.err.log
+learning-companion-cloud/
+*.db
+*.db-*

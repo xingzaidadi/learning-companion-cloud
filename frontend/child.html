@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>孩子端 - 暑假自主学习陪跑</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <h1>今天只做下一步</h1>
+          <p>不用想太多，点开始，然后完成一张任务卡。</p>
+        </div>
+        <nav class="nav">
+          <a href="/child">孩子端</a>
+        </nav>
+      </header>
+
+      <section class="card hero">
+        <div>
+          <div class="muted">今天进度</div>
+          <div class="progress-number"><span id="doneCount">0</span><small> / <span id="totalCount">0</span></small></div>
+        </div>
+        <button id="startNext" class="primary big-action">开始下一个任务</button>
+      </section>
+
+      <section class="grid" style="margin-top:16px">
+        <div class="card span-8">
+          <h2>今日任务</h2>
+          <div id="tasks" class="task-list"></div>
+        </div>
+        <div class="card span-4">
+          <h2>小测 / 检查</h2>
+          <div id="quizBox" class="muted">完成任务后，这里会出现 3 道检查题。</div>
+        </div>
+      </section>
+    </main>
+    <div class="toast"></div>
+    <script src="/static/app.js"></script>
+    <script>
+      const { api, postEvent, toast, taskStatusTag, priorityTag } = window.LearningApp;
+      let tasks = [];
+      let activeTaskId = null;
+
+      async function loadTasks() {
+        tasks = await api("/api/daily-tasks");
+        renderTasks();
+      }
+
+      function renderTasks() {
+        const done = tasks.filter((task) => task.status === "completed").length;
+        document.querySelector("#doneCount").textContent = done;
+        document.querySelector("#totalCount").textContent = tasks.length;
+        const container = document.querySelector("#tasks");
+        container.innerHTML = "";
+        if (!tasks.length) {
+          container.innerHTML = '<p class="muted">今天还没有任务，请让家长在管理端生成。</p>';
+          document.querySelector("#startNext").disabled = true;
+          return;
+        }
+        document.querySelector("#startNext").disabled = false;
+        tasks.forEach((task) => {
+          const card = document.createElement("article");
+          card.className = `task-card ${task.id === activeTaskId || task.status === "in_progress" ? "active" : ""}`;
+          card.innerHTML = `
+            <div class="task-head">
+              <div>
+                <h3 class="task-title">${task.title}</h3>
+                <p class="muted">${task.description}</p>
+              </div>
+              <div class="task-meta">${priorityTag(task)}${taskStatusTag(task)}</div>
+            </div>
+            <div class="task-meta">
+              <span class="tag">${task.estimated_minutes} 分钟</span>
+              <span class="tag">${task.check_method}</span>
+            </div>
+            <p><strong>完成标准：</strong>${task.completion_standard}</p>
+            <div class="actions">
+              <button class="primary" data-action="start" data-id="${task.id}">开始</button>
+              <button data-action="pause" data-id="${task.id}">暂停</button>
+              <button class="warn" data-action="complete" data-id="${task.id}">我做完了，开始检查</button>
+              <button class="danger" data-action="stuck" data-id="${task.id}">我卡住了</button>
+            </div>
+          `;
+          container.append(card);
+        });
+      }
+
+      async function startNext() {
+        const next = tasks.find((task) => !["completed", "in_progress"].includes(task.status));
+        if (!next) {
+          await endDay();
+          return;
+        }
+        await postEvent(next.id, "start");
+        activeTaskId = next.id;
+        toast(`开始：${next.title}`);
+        await loadTasks();
+      }
+
+      async function showQuiz(taskId) {
+        const data = await api(`/api/daily-tasks/${taskId}/quiz`);
+        const box = document.querySelector("#quizBox");
+        box.classList.remove("muted");
+        box.innerHTML = `<h3>${data.task.title}</h3>`;
+        const form = document.createElement("form");
+        data.items.forEach((item) => {
+          const wrapper = document.createElement("div");
+          wrapper.className = "quiz-item";
+          if (item.options && item.options.length) {
+            wrapper.innerHTML = `<strong>${item.question}</strong>${item.options
+              .map((option) => `<label><input type="radio" name="${item.id}" value="${option}" /> ${option}</label>`)
+              .join("")}`;
+          } else {
+            wrapper.innerHTML = `<label>${item.question}<textarea name="${item.id}" placeholder="写一句就可以"></textarea></label>`;
+          }
+          form.append(wrapper);
+        });
+        const submit = document.createElement("button");
+        submit.className = "primary";
+        submit.textContent = "提交小测";
+        form.append(submit);
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const answers = {};
+          new FormData(form).forEach((value, key) => {
+            answers[key] = value;
+          });
+          const result = await api(`/api/daily-tasks/${taskId}/quiz`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ answers }),
+          });
+          toast(`小测结果：${result.correct}/${result.total}`);
+          await loadTasks();
+          box.innerHTML = result.status === "completed"
+            ? `<p>真棒，检查通过：${result.correct}/${result.total}</p>`
+            : `<p>需要订正：${result.correct}/${result.total}</p>`;
+        });
+        box.append(form);
+      }
+
+      async function endDay() {
+        const report = await api("/api/day/end", { method: "POST" });
+        toast(`今天结束：${report.summary}`);
+      }
+
+      document.querySelector("#startNext").addEventListener("click", startNext);
+      document.querySelector("#tasks").addEventListener("click", async (event) => {
+        const button = event.target.closest("button[data-action]");
+        if (!button) return;
+        const taskId = Number(button.dataset.id);
+        const action = button.dataset.action;
+        if (action === "stuck") {
+          const note = prompt("卡在哪里？写一句话就行：") || "";
+          await postEvent(taskId, "stuck", note);
+          toast("已告诉家长：你卡住了");
+        } else if (action === "complete") {
+          await postEvent(taskId, "complete");
+          await showQuiz(taskId);
+        } else {
+          await postEvent(taskId, action);
+          toast(action === "start" ? "已开始，加油！" : "已暂停，休息一下。");
+        }
+        await loadTasks();
+      });
+
+      loadTasks().catch((error) => toast(error.message));
+    </script>
+  </body>
+</html>

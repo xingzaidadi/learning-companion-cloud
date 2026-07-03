@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>家长端 - 暑假自主学习陪跑</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <h1>家长看板</h1>
+          <p>只看关键问题：开始了吗、P0 完成了吗、卡在哪里。</p>
+        </div>
+        <nav class="nav">
+          <a href="/child">孩子端</a>
+          <a href="/parent">家长端</a>
+          <a href="/admin">管理端</a>
+        </nav>
+      </header>
+
+      <section class="grid">
+        <div class="card span-4 stat">
+          <span class="muted">今日完成</span>
+          <strong><span id="completed">0</span> / <span id="total">0</span></strong>
+        </div>
+        <div class="card span-4 stat">
+          <span class="muted">卡住任务</span>
+          <strong id="stuckCount">0</strong>
+        </div>
+        <div class="card span-4 stat">
+          <span class="muted">小测次数</span>
+          <strong id="quizCount">0</strong>
+        </div>
+      </section>
+
+      <section class="card" style="margin-top:16px">
+        <h2>孩子今日鼓励</h2>
+        <div id="rewards" class="task-list"></div>
+      </section>
+
+      <section class="card" style="margin-top:16px">
+        <h2>Agent 学习结论</h2>
+        <div id="mastery" class="task-list"></div>
+      </section>
+
+      <section class="grid" style="margin-top:16px">
+        <div class="card span-8">
+          <h2>今日任务状态</h2>
+          <div id="tasks" class="task-list"></div>
+        </div>
+        <aside class="card span-4">
+          <h2>日报</h2>
+          <div id="report" class="muted">今晚 20:30 自动生成，也可手动结束今天。</div>
+          <button id="endDay" class="primary" style="margin-top:12px">生成今天日报</button>
+        </aside>
+      </section>
+
+      <section class="grid" style="margin-top:16px">
+        <div class="card span-6">
+          <h2>小测结果</h2>
+          <div id="quizResults" class="task-list"></div>
+        </div>
+        <div class="card span-6">
+          <h2>明日复习队列</h2>
+          <div id="reviews" class="task-list"></div>
+        </div>
+      </section>
+
+      <section class="grid" style="margin-top:16px">
+        <div class="card span-6">
+          <h2>周报</h2>
+          <div id="weeklyReport" class="muted">可手动生成本周周报。</div>
+          <button id="weekReport" class="primary" style="margin-top:12px">生成本周周报</button>
+        </div>
+        <div class="card span-6">
+          <h2>提醒记录</h2>
+          <div id="notifications" class="task-list"></div>
+        </div>
+      </section>
+    </main>
+    <div class="toast"></div>
+    <script src="/static/app.js"></script>
+    <script>
+      const { api, toast, taskStatusTag, priorityTag } = window.LearningApp;
+
+      async function loadDashboard() {
+        const data = await api("/api/parent/dashboard");
+        document.querySelector("#completed").textContent = data.completed;
+        document.querySelector("#total").textContent = data.total;
+        document.querySelector("#stuckCount").textContent = data.stuck_tasks.length;
+        document.querySelector("#quizCount").textContent = data.quiz_results.length;
+
+        const rewards = document.querySelector("#rewards");
+        rewards.innerHTML = data.rewards && data.rewards.items.length ? "" : '<p class="muted">今天还没有奖励，完成小测后会出现。</p>';
+        if (data.rewards) {
+          const summary = document.createElement("article");
+          summary.className = "task-card";
+          summary.innerHTML = `<strong>今日积分：${data.rewards.points}</strong><p class="muted">${data.rewards.badges.join("、") || "继续加油"}</p>`;
+          rewards.append(summary);
+          data.rewards.items.forEach((item) => {
+            const card = document.createElement("article");
+            card.className = "task-card";
+            card.innerHTML = `<strong>+${item.points} ${item.badge}</strong><p class="muted">${item.reason}</p>`;
+            rewards.append(card);
+          });
+        }
+
+        const mastery = document.querySelector("#mastery");
+        mastery.innerHTML = data.mastery && data.mastery.length ? "" : '<p class="muted">暂无 Agent 掌握度结论，完成小测后会出现。</p>';
+        (data.mastery || []).slice(0, 6).forEach((item) => {
+          const card = document.createElement("article");
+          card.className = "task-card";
+          card.innerHTML = `
+            <div class="task-head">
+              <div>
+                <strong>${item.title}</strong>
+                <p class="muted">${item.diagnosis}</p>
+              </div>
+              <span class="tag ${["A","B"].includes(item.mastery_level) ? "ok" : "warn"}">掌握 ${item.mastery_level}</span>
+            </div>
+            <p><strong>明日动作：</strong>${item.next_action}</p>
+          `;
+          mastery.append(card);
+        });
+
+        const tasks = document.querySelector("#tasks");
+        tasks.innerHTML = data.tasks.length ? "" : '<p class="muted">今天还没有任务。</p>';
+        data.tasks.forEach((task) => {
+          const card = document.createElement("article");
+          card.className = "task-card";
+          card.innerHTML = `
+            <div class="task-head">
+              <div>
+                <h3 class="task-title">${task.title}</h3>
+                <p class="muted">${task.description}</p>
+              </div>
+              <div class="task-meta">${priorityTag(task)}${taskStatusTag(task)}</div>
+            </div>
+            <p><strong>完成标准：</strong>${task.completion_standard}</p>
+          `;
+          tasks.append(card);
+        });
+
+        const report = document.querySelector("#report");
+        if (data.report) {
+          report.classList.remove("muted");
+          report.innerHTML = `
+            <p>${data.report.summary}</p>
+            <p><strong>问题：</strong>${data.report.problems}</p>
+            <p><strong>明天第一步：</strong>${data.report.tomorrow_first_step}</p>
+          `;
+        }
+
+        const weekly = document.querySelector("#weeklyReport");
+        if (data.weekly_report) {
+          weekly.classList.remove("muted");
+          weekly.innerHTML = `
+            <p>${data.weekly_report.summary}</p>
+            <p><strong>问题：</strong>${data.weekly_report.problems}</p>
+            <p><strong>下周重点：</strong>${data.weekly_report.next_week_focus}</p>
+          `;
+        }
+
+        const quizBox = document.querySelector("#quizResults");
+        quizBox.innerHTML = data.quiz_results.length ? "" : '<p class="muted">暂无小测。</p>';
+        data.quiz_results.forEach((result) => {
+          const card = document.createElement("article");
+          card.className = "task-card";
+          card.innerHTML = `
+            <strong>${result.title}</strong>
+            <span class="tag ${result.status === "completed" ? "ok" : "warn"}">${result.correct}/${result.total}</span>
+            <p class="muted">${result.wrong_items.length ? "有错题，需要订正。" : "检查通过。"}</p>
+          `;
+          quizBox.append(card);
+        });
+
+        const reviews = document.querySelector("#reviews");
+        reviews.innerHTML = data.review_items.length ? "" : '<p class="muted">暂无待复习错题/卡点。</p>';
+        data.review_items.forEach((item) => {
+          const card = document.createElement("article");
+          card.className = "task-card";
+          card.innerHTML = `
+            <strong>${item.question}</strong>
+            <div class="task-meta"><span class="tag">${item.status}</span><span class="tag">到期 ${item.due_date}</span><span class="tag">${item.reason}</span></div>
+            <p class="muted">${item.explanation || item.answer || "明天会优先生成复习任务。"}</p>
+          `;
+          reviews.append(card);
+        });
+
+        const logs = document.querySelector("#notifications");
+        logs.innerHTML = data.notifications.length ? "" : '<p class="muted">暂无提醒记录。</p>';
+        data.notifications.forEach((log) => {
+          const card = document.createElement("article");
+          card.className = "task-card";
+          card.innerHTML = `
+            <strong>${log.event_type} · ${log.status}</strong>
+            <p class="muted">${log.message.replaceAll("\n", "<br>")}</p>
+          `;
+          logs.append(card);
+        });
+      }
+
+      document.querySelector("#endDay").addEventListener("click", async () => {
+        const report = await api("/api/day/end", { method: "POST" });
+        toast(report.summary);
+        await loadDashboard();
+      });
+
+      document.querySelector("#weekReport").addEventListener("click", async () => {
+        const report = await api("/api/week/report", { method: "POST" });
+        toast(report.summary);
+        await loadDashboard();
+      });
+
+      loadDashboard().catch((error) => toast(error.message));
+      setInterval(loadDashboard, 30000);
+    </script>
+  </body>
+</html>

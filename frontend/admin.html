@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>管理端 - 学习陪跑 Agent</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <h1>一句话安排学习</h1>
+          <p>默认不用填复杂表单：说清目标，Agent 自动拆计划、生成今日任务。</p>
+        </div>
+        <nav class="nav">
+          <a href="/child">孩子端</a>
+          <a href="/parent">家长端</a>
+          <a href="/admin">管理端</a>
+        </nav>
+      </header>
+
+      <section class="card">
+        <h2>今天要怎么学？</h2>
+        <p class="muted">直接输入自然语言即可。例：寒假作业本，每日一小节；语文书，每日一篇课文；数学书，每日一节。</p>
+        <form id="quickPlanForm" class="form-grid">
+          <label class="full">学习目标
+            <textarea name="raw_text" required placeholder="寒假作业本，每日一小节；语文书，每日一篇课文"></textarea>
+          </label>
+          <div class="actions full">
+            <button class="primary">生成计划并生成今日任务</button>
+            <button type="button" id="generateToday">只生成今日任务</button>
+            <button type="button" id="refresh">刷新</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="grid" style="margin-top:16px">
+        <div class="card span-6">
+          <h2>今日任务</h2>
+          <div id="todayTasks" class="task-list"></div>
+        </div>
+        <div class="card span-6">
+          <h2>已生成计划</h2>
+          <div id="sources" class="task-list"></div>
+        </div>
+      </section>
+
+      <section class="card" style="margin-top:16px">
+        <details>
+          <summary><strong>高级设置：教材版本、AI、手动录入、批量导入</strong></summary>
+
+          <section class="grid" style="margin-top:16px">
+            <form id="settingsForm" class="card span-6">
+              <h2>家长配置中心</h2>
+              <div class="form-grid">
+                <label>城市
+                  <input name="city" value="武汉" />
+                </label>
+                <label>年级学期
+                  <input name="grade_semester" value="五年级上册" />
+                </label>
+                <label>语文版本
+                  <input name="chinese_version" value="统编版/人民教育出版社" />
+                </label>
+                <label>数学版本
+                  <select name="math_version">
+                    <option value="北师大版/北京师范大学出版社">北师大版/北京师范大学出版社</option>
+                    <option value="人教版/人民教育出版社">人教版/人民教育出版社</option>
+                  </select>
+                </label>
+                <label>英语版本
+                  <select name="english_version">
+                    <option value="外研社三年级起点/刘兆义">外研社三年级起点/刘兆义</option>
+                    <option value="人教PEP/吴欣">人教PEP/吴欣</option>
+                  </select>
+                </label>
+                <label>每日最大分钟
+                  <input name="max_total_minutes" type="number" min="30" value="120" />
+                </label>
+                <label>小测通过线
+                  <input name="quiz_pass_score" type="number" min="0.5" max="1" step="0.05" value="0.8" />
+                </label>
+                <label>AI API URL
+                  <input name="api_url" placeholder="http://model.mify.ai.srv/v1" />
+                </label>
+                <label>AI 模型
+                  <input name="model" placeholder="ppio/pa/gpt-5.5" />
+                </label>
+                <label>启用 AI 出题
+                  <select name="ai_enabled">
+                    <option value="true">是，失败自动回退</option>
+                    <option value="false">否，只用本地规则</option>
+                  </select>
+                </label>
+              </div>
+              <div class="actions" style="margin-top:16px">
+                <button class="primary">保存配置</button>
+                <button type="button" id="checkAi">检查 AI</button>
+              </div>
+              <p id="aiStatus" class="muted"></p>
+            </form>
+
+            <form id="sourceForm" class="card span-6">
+              <h2>手动录入任务源</h2>
+              <div class="form-grid">
+                <label>类型
+                  <select name="category">
+                    <option value="summer_homework">作业</option>
+                    <option value="preview">五年级预习</option>
+                    <option value="ket">KET 学习</option>
+                  </select>
+                </label>
+                <label>科目
+                  <input name="subject" placeholder="数学 / 英语 / 语文" />
+                </label>
+                <label class="full">标题
+                  <input name="title" required placeholder="例如：语文《白鹭》 / 小数除法 / KET 词汇" />
+                </label>
+                <label>总单位
+                  <input name="total_units" type="number" min="1" value="10" />
+                </label>
+                <label>已完成
+                  <input name="completed_units" type="number" min="0" value="0" />
+                </label>
+                <label>截止日期
+                  <input name="deadline" type="date" />
+                </label>
+                <label>预计分钟
+                  <input name="estimated_minutes" type="number" min="5" value="25" />
+                </label>
+                <label>知识点
+                  <input name="topic" placeholder="小数除法 / 白鹭 / My week" />
+                </label>
+                <label class="full">本节学习内容
+                  <textarea name="lesson_content" placeholder="可选：今天具体学什么"></textarea>
+                </label>
+                <label class="full">知识点 / 易错点
+                  <textarea name="knowledge_points" placeholder="可选：小数点位置；概括主要内容；there be"></textarea>
+                </label>
+                <label class="full">英语词表
+                  <textarea name="vocabulary" placeholder="可选：library=图书馆&#10;borrow=借入"></textarea>
+                </label>
+              </div>
+              <div class="actions" style="margin-top:16px">
+                <button class="primary">保存任务源</button>
+                <button type="button" id="seedDemo">生成示例</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="card" style="margin-top:16px">
+            <h2>批量导入</h2>
+            <form id="importForm" class="form-grid">
+              <label class="full">任务清单
+                <textarea name="raw_text" required placeholder="每行一个任务，也可以粘贴自然语言清单"></textarea>
+              </label>
+              <label>默认截止日期
+                <input name="default_deadline" type="date" />
+              </label>
+              <div class="actions" style="align-self:end">
+                <button class="primary">批量导入</button>
+              </div>
+            </form>
+          </section>
+        </details>
+      </section>
+
+      <section class="card" style="margin-top:16px">
+        <h2>Agent 决策日志</h2>
+        <div id="agentRuns" class="task-list"></div>
+      </section>
+    </main>
+    <div class="toast"></div>
+    <script src="/static/app.js"></script>
+    <script>
+      const { api, toast, taskStatusTag, priorityTag } = window.LearningApp;
+      const categoryText = { summer_homework: "作业", preview: "五年级预习", ket: "KET" };
+
+      async function loadSources() {
+        const data = await api("/api/task-sources");
+        const box = document.querySelector("#sources");
+        box.innerHTML = data.length ? "" : '<p class="muted">还没有计划。先在上面说一句学习目标。</p>';
+        data.forEach((source) => {
+          const card = document.createElement("article");
+          card.className = "task-card";
+          card.innerHTML = `
+            <div class="task-head">
+              <div>
+                <h3 class="task-title">${source.title}</h3>
+                <p class="muted">${source.subject || "综合"} · ${source.completed_units}/${source.total_units} · 截止 ${source.deadline || "未设置"}</p>
+              </div>
+              <span class="tag">${categoryText[source.category] || source.category}</span>
+            </div>
+          `;
+          box.append(card);
+        });
+      }
+
+      async function loadTodayTasks() {
+        const data = await api("/api/daily-tasks");
+        const box = document.querySelector("#todayTasks");
+        box.innerHTML = data.length ? "" : '<p class="muted">今天还没生成任务。</p>';
+        data.forEach((task) => {
+          const card = document.createElement("article");
+          card.className = "task-card";
+          card.innerHTML = `
+            <div class="task-head">
+              <div>
+                <h3 class="task-title">${task.title}</h3>
+                <p class="muted">${task.description}</p>
+              </div>
+              <div class="task-meta">${priorityTag(task)}${taskStatusTag(task)}</div>
+            </div>
+            <div class="actions">
+              <button data-action="regenerateQuiz" data-id="${task.id}">重生成小测</button>
+            </div>
+          `;
+          box.append(card);
+        });
+      }
+
+      async function loadAgentRuns() {
+        const data = await api("/api/agent/overview");
+        const box = document.querySelector("#agentRuns");
+        box.innerHTML = data.runs && data.runs.length ? "" : '<p class="muted">暂无 Agent 决策日志。</p>';
+        (data.runs || []).slice(0, 10).forEach((run) => {
+          const card = document.createElement("article");
+          card.className = "task-card";
+          card.innerHTML = `<div class="task-head"><strong>${run.run_type} · ${run.status}</strong><span class="tag">${run.model || "rule"}</span></div><p class="muted">${run.created_at}</p>`;
+          box.append(card);
+        });
+      }
+
+      async function loadSettings() {
+        const data = await api("/api/settings");
+        const form = document.querySelector("#settingsForm");
+        form.city.value = data.region.city || "武汉";
+        form.grade_semester.value = `${data.region.grade || "五年级"}${data.region.semester || "上册"}`;
+        form.chinese_version.value = data.region.chinese_version || "统编版/人民教育出版社";
+        form.math_version.value = data.region.math_version || "北师大版/北京师范大学出版社";
+        form.english_version.value = data.region.english_version || "外研社三年级起点/刘兆义";
+        form.max_total_minutes.value = data.daily_limits.max_total_minutes || 120;
+        form.quiz_pass_score.value = data.path_rules.quiz_pass_score || 0.8;
+        form.api_url.value = data.ai.api_url || "";
+        form.model.value = data.ai.model || "";
+        form.ai_enabled.value = String(Boolean(data.ai.enabled));
+      }
+
+      async function refreshAll() {
+        await Promise.all([loadSources(), loadTodayTasks(), loadAgentRuns()]);
+      }
+
+      document.querySelector("#quickPlanForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const plan = await api("/api/study-plan/generate", { method: "POST", body: formData });
+        const today = await api("/api/daily-tasks/generate", { method: "POST" });
+        toast(`已生成 ${plan.created} 条计划，今日 ${today.count} 个任务`);
+        event.target.reset();
+        await refreshAll();
+      });
+
+      document.querySelector("#settingsForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const payload = {
+          region: {
+            city: form.city.value,
+            grade: "五年级",
+            semester: "上册",
+            chinese_version: form.chinese_version.value,
+            math_version: form.math_version.value,
+            english_version: form.english_version.value,
+          },
+          daily_limits: { max_total_minutes: Number(form.max_total_minutes.value || 120) },
+          path_rules: {
+            quiz_pass_score: Number(form.quiz_pass_score.value || 0.8),
+            low_score_blocks_new_preview: true,
+            max_daily_tasks: 5,
+          },
+          ai: {
+            enabled: form.ai_enabled.value === "true",
+            provider: "openai_compatible",
+            api_url: form.api_url.value,
+            model: form.model.value,
+          },
+        };
+        await api("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        toast("配置已保存");
+      });
+
+      document.querySelector("#checkAi").addEventListener("click", async () => {
+        const result = await api("/api/ai/check");
+        document.querySelector("#aiStatus").textContent = result.ok ? `AI 可用：${result.model}` : `AI 未通：${result.status} ${result.error || ""}`;
+        toast(result.ok ? "AI 检查通过" : "AI 检查未通过");
+      });
+
+      document.querySelector("#sourceForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await api("/api/task-sources", { method: "POST", body: new FormData(event.target) });
+        toast("任务源已保存");
+        event.target.reset();
+        await loadSources();
+      });
+
+      document.querySelector("#importForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const result = await api("/api/task-sources/import", { method: "POST", body: new FormData(event.target) });
+        toast(`导入完成：新增 ${result.created} 个`);
+        event.target.reset();
+        await loadSources();
+      });
+
+      document.querySelector("#seedDemo").addEventListener("click", async () => {
+        const result = await api("/api/task-sources/seed", { method: "POST" });
+        toast(result.created ? `已生成 ${result.created} 个示例` : "已有任务源，无需重复生成");
+        await loadSources();
+      });
+
+      document.querySelector("#generateToday").addEventListener("click", async () => {
+        const result = await api("/api/daily-tasks/generate", { method: "POST" });
+        toast(`今日任务 ${result.count} 个`);
+        await Promise.all([loadTodayTasks(), loadAgentRuns()]);
+      });
+
+      document.querySelector("#refresh").addEventListener("click", async () => {
+        await refreshAll();
+        toast("已刷新");
+      });
+
+      document.querySelector("#todayTasks").addEventListener("click", async (event) => {
+        const button = event.target.closest("button[data-action='regenerateQuiz']");
+        if (!button) return;
+        const result = await api(`/api/daily-tasks/${button.dataset.id}/quiz/regenerate`, { method: "POST" });
+        toast(`已重生成 ${result.items.length} 道小测题`);
+      });
+
+      Promise.all([loadSettings(), refreshAll()]).catch((error) => toast(error.message));
+    </script>
+  </body>
+</html>
