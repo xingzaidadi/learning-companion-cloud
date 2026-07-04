@@ -90,9 +90,12 @@ def run_browser_clicks(base_url: str) -> None:
         page = browser.new_page()
         page.set_default_timeout(15_000)
         browser_errors: list[str] = []
+        api_responses: list[tuple[int, str]] = []
         page.on("pageerror", lambda error: browser_errors.append(str(error)))
         page.on("console", lambda message: browser_errors.append(message.text) if message.type == "error" else None)
-        page.on("dialog", lambda dialog: dialog.accept("不理解 school 这个词怎么读"))
+        page.on("response", lambda response: api_responses.append((response.status, response.url)) if "/api/" in response.url else None)
+        stuck_notes = ["不认识鹭这个字", "不理解 school 这个词怎么读"]
+        page.on("dialog", lambda dialog: dialog.accept(stuck_notes.pop(0) if stuck_notes else "卡在第一步"))
 
         page.goto(f"{base_url}/admin")
         page.wait_for_selector("#quickPlanForm")
@@ -111,6 +114,15 @@ def run_browser_clicks(base_url: str) -> None:
         page.wait_for_selector("#tasks .task-card")
         child_body = page.locator("body").inner_text()
         assert "寒假作业本" in child_body and ("白鹭" in child_body or "语文" in child_body)
+        page.locator("#tasks .task-card").filter(has_text="白鹭").locator("button[data-action='stuck']").click()
+        page.wait_for_function(
+            "() => document.querySelector('#assistBox')?.innerText.includes('当前卡住')"
+            " && document.querySelector('#assistBox')?.innerText.includes('鹭')"
+            " && document.querySelector('#assistBox')?.innerText.includes('lù')",
+            timeout=20_000,
+        )
+        stuck_status_count = page.locator(".task-head .task-meta .tag", has_text="卡住了").count()
+        assert stuck_status_count == 1
         page.goto(f"{base_url}/parent")
         page.wait_for_selector("#tasks .task-card")
         parent_body = page.locator("body").inner_text()
@@ -167,14 +179,28 @@ def run_browser_clicks(base_url: str) -> None:
         page.wait_for_selector("#tasks .task-card")
         page.click("#startNext")
         page.wait_for_timeout(500)
-        click_first(page, "#tasks button[data-action='start']")
+        workflow_card = page.locator("#tasks .task-card").filter(has_text="数学").first
+        workflow_card.locator("button[data-action='start']").click()
         page.wait_for_timeout(300)
-        click_first(page, "#tasks button[data-action='pause']")
+        workflow_card.locator("button[data-action='pause']").click()
         page.wait_for_timeout(300)
-        click_first(page, "#tasks button[data-action='stuck']")
-        page.wait_for_selector("#assistBox h3")
-        click_first(page, "#tasks button[data-action='complete']")
-        page.wait_for_selector("#quizBox form")
+        workflow_card = page.locator("#tasks .task-card").filter(has_text="数学").first
+        workflow_card.locator("button[data-action='complete']").click(force=True)
+        try:
+            page.wait_for_selector("#quizBox form", timeout=5_000)
+        except Exception:
+            workflow_card = page.locator("#tasks .task-card").filter(has_text="数学").first
+            workflow_card.locator("button[data-action='complete']").click(force=True)
+            try:
+                page.wait_for_selector("#quizBox form")
+            except Exception as exc:
+                raise AssertionError(
+                    "点击“我做完了，开始检查”后没有出现小测表单。\n"
+                    f"quizBox={page.locator('#quizBox').inner_text()}\n"
+                    f"tasks={page.locator('#tasks').inner_text()}\n"
+                    f"errors={browser_errors}\n"
+                    f"api_responses={api_responses[-20:]}"
+                ) from exc
         for index in range(page.locator("#quizBox textarea").count()):
             page.locator("#quizBox textarea").nth(index).fill("测试答案")
         radio_names = page.locator("#quizBox input[type='radio']").evaluate_all(

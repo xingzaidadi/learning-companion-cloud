@@ -160,9 +160,11 @@
       function showStuckAssistance(result) {
         const box = document.querySelector("#assistBox");
         const assistance = result.assistance || {};
+        const sourceText = result.assistant_source === "ai" ? "AI 辅导" : "本地辅导";
         box.classList.remove("muted");
         box.innerHTML = `
-          <h3>先别急，我们拆小一点</h3>
+          <h3>当前卡住：${escapeHtml(result.task_title || "这项任务")}</h3>
+          <p class="muted">${escapeHtml(sourceText)} · 你的问题：${escapeHtml(result.child_note || "还没有填写具体问题")}</p>
           <p>${escapeHtml(assistance.encouragement || "卡住很正常，我们一步一步来。")}</p>
           <div class="quiz-item">
             <strong>可能卡在</strong>
@@ -201,9 +203,10 @@
         const action = button.dataset.action;
         if (action === "stuck") {
           const note = prompt("卡在哪里？写一句话就行：") || "";
+          activeTaskId = taskId;
           const result = await postEvent(taskId, "stuck", note);
           showStuckAssistance(result);
-          toast("AI 已给你一个提示，先试 3 分钟");
+          toast(result.assistant_source === "ai" ? "AI 已给你一个提示，先试 3 分钟" : "已给你一个本地提示，先试 3 分钟");
         } else if (action === "complete") {
           await postEvent(taskId, "complete");
           await showQuiz(taskId);

@@ -291,9 +291,29 @@ def run_e2e() -> None:
 
         stuck = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "stuck", "note": "不会读 school"}))
         assert_true(stuck["status"] == "stuck", "stuck 后状态应为 stuck")
+        assert_true(stuck["task_id"] == task_id, "卡住响应应返回当前任务 id")
+        assert_true(stuck["task_title"] == task["title"], "卡住响应应返回当前任务标题")
+        assert_true(stuck["child_note"] == "不会读 school", "卡住响应应返回孩子填写的问题")
+        assert_true(stuck["assistant_source"] in ("ai", "rule"), "卡住响应应标明辅导来源")
         assistance = stuck.get("assistance", {})
         for key in ("encouragement", "hint_1", "guiding_question", "try_again", "review_focus"):
             assert_true(bool(assistance.get(key)), f"卡住辅导缺少 {key}")
+
+        current_task_rows = assert_status(client.get("/api/daily-tasks"))
+        stuck_rows = [item for item in current_task_rows if item["status"] == "stuck"]
+        assert_true([item["id"] for item in stuck_rows] == [task_id], f"只应当前任务卡住，实际 {stuck_rows}")
+
+        chinese_task = next(item for item in current_task_rows if "白鹭" in item["title"] or "语文" in item["title"])
+        chinese_stuck = assert_status(
+            client.post(
+                f"/api/daily-tasks/{chinese_task['id']}/event",
+                json={"event_type": "stuck", "note": "不认识鹭这个字"},
+            )
+        )
+        chinese_assistance = chinese_stuck.get("assistance", {})
+        assert_true(chinese_stuck["task_id"] == chinese_task["id"], "语文卡住响应应绑定语文任务")
+        assert_true("鹭" in chinese_assistance.get("likely_blocker", ""), "应针对不认识的鹭字解释")
+        assert_true("lù" in chinese_assistance.get("likely_blocker", ""), "应给出鹭字读音")
 
         complete = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "complete"}))
         assert_true(complete["status"] == "checking", "complete 后状态应为 checking")

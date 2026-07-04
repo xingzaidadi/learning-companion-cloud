@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from sqlite3 import Connection
 from typing import Any
 
@@ -126,7 +127,10 @@ def assist_stuck(conn: Connection, task_id: int, note: str = "") -> dict[str, An
     assistance = _normalize_stuck_assistance(ai_result if isinstance(ai_result, dict) else fallback, fallback)
     output = {
         "task_id": task_id,
+        "task_title": task.get("title", ""),
+        "child_note": note,
         "status": "assisted",
+        "assistant_source": "ai" if ai_meta.get("used_ai") else "rule",
         "assistance": assistance,
         "review_action": f"已把“{assistance['review_focus']}”加入后续补漏和复测重点。",
     }
@@ -272,6 +276,9 @@ def _fallback_stuck_assistance(task: dict[str, Any], source: dict[str, Any] | No
     title = task.get("title") or "当前任务"
     standard = task.get("completion_standard") or task.get("description") or "完成本任务的核心要求"
     blocker = note.strip() or "还没有说清楚卡在哪一步"
+    targeted = _targeted_stuck_help(subject, blocker, title)
+    if targeted:
+        return targeted
     return {
         "encouragement": "卡住很正常，先别急。我们把问题拆小，一步一步来。",
         "likely_blocker": f"你可能卡在：{blocker}。如果不确定，就先看任务要求里最关键的一句话。",
@@ -282,6 +289,89 @@ def _fallback_stuck_assistance(task: dict[str, Any], source: dict[str, Any] | No
         "if_still_stuck": "如果 3 分钟后还不会，再点一次卡住或请家长看这一条提示，不要硬耗太久。",
         "review_focus": _review_focus_for_subject(subject, blocker),
         "parent_note": "孩子已触发卡住辅导；建议先让孩子说题目要求和第一步，不要直接讲完整答案。",
+    }
+
+
+def _targeted_stuck_help(subject: str, blocker: str, title: str) -> dict[str, str] | None:
+    char = _extract_unknown_char(blocker)
+    if char:
+        return _unknown_char_help(char, title)
+    word = _extract_unknown_word(blocker)
+    if word:
+        return {
+            "encouragement": "这个问题问得很好，不认识词先解决读音和意思，再继续做任务。",
+            "likely_blocker": f"你卡在“{word}”这个词，不是整项任务都不会。",
+            "hint_1": f"先把“{word}”在课文或任务里圈出来，看它前后分别在说什么。",
+            "guiding_question": f"“{word}”前后一句是在写景、写人，还是写要完成的动作？",
+            "mini_example": "遇到不会的词，可以按“读音—意思—放回句子”三步处理。",
+            "try_again": f"现在先查清“{word}”的读音和意思，再用自己的话说一遍这一句。",
+            "if_still_stuck": "如果还是不懂，把包含这个词的完整句子再发出来，系统会按这句话继续拆。",
+            "review_focus": f"词语理解：{word}",
+            "parent_note": "孩子卡在词语理解，建议先让孩子读出词、说大概意思，再回到原句理解。",
+        }
+    if "题目" in blocker or "要求" in blocker or "不知道做什么" in blocker:
+        return {
+            "encouragement": "不是不会做，是题目要求还没拆开。先把要求翻译成自己的话。",
+            "likely_blocker": "你卡在任务要求：不知道先做哪一步。",
+            "hint_1": f"这张卡片先只看任务名《{title}》和“完成标准”，把动词圈出来，比如读、圈、概括、说明。",
+            "guiding_question": "这项任务最后要你交出什么：一句话、几道题、一个解释，还是一段复述？",
+            "mini_example": "比如“概括主要内容”不是背全文，而是说清：谁/什么，怎么样，表达了什么。",
+            "try_again": "现在只写第一步：我今天要先完成____。",
+            "if_still_stuck": "如果还不清楚，把任务卡上的一句要求原样发出来，再继续拆。",
+            "review_focus": "任务要求拆解",
+            "parent_note": "孩子卡在理解任务要求，先让孩子圈动词，不要直接代做。",
+        }
+    return None
+
+
+def _extract_unknown_char(blocker: str) -> str:
+    patterns = (
+        r"不认识\s*([\u4e00-\u9fff])\s*(?:这个)?(?:字|生字)?",
+        r"([\u4e00-\u9fff])\s*(?:这个)?字\s*(?:不认识|不会读|怎么读)",
+        r"([\u4e00-\u9fff])\s*怎么读",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, blocker)
+        if match:
+            return match.group(1)
+    return ""
+
+
+def _extract_unknown_word(blocker: str) -> str:
+    match = re.search(r"不懂\s*“?([\u4e00-\u9fff]{2,6})”?|不认识\s*“?([\u4e00-\u9fff]{2,6})”?", blocker)
+    if not match:
+        return ""
+    return next((group for group in match.groups() if group), "")
+
+
+def _unknown_char_help(char: str, title: str) -> dict[str, str]:
+    known_chars = {
+        "鹭": {
+            "pinyin": "lù",
+            "meaning": "一种水鸟，常见词是“白鹭”。",
+            "memory": "左边“路”提示读音，右边“鸟”提示它和鸟有关。",
+            "words": "白鹭、鹭鸶",
+        }
+    }
+    info = known_chars.get(
+        char,
+        {
+            "pinyin": "先查字典或课本注音",
+            "meaning": "先看它在课文句子里表示人、物、动作还是样子。",
+            "memory": "可以拆偏旁，先看形旁，再看声旁。",
+            "words": f"{char}所在的课文词语",
+        },
+    )
+    return {
+        "encouragement": f"你问的是一个很具体的问题：不认识“{char}”字。先解决这个字就能继续。",
+        "likely_blocker": f"你卡在生字“{char}”：读音是 {info['pinyin']}；意思：{info['meaning']}",
+        "hint_1": f"记法：{info['memory']} 把“{char}”在《{title}》里圈出来，旁边写上读音。",
+        "guiding_question": f"“{char}”在课文里和哪个词连在一起？它是在写一种事物，还是写动作/样子？",
+        "mini_example": f"同类例子：{info['words']}。先会读，再放回原句理解。",
+        "try_again": f"现在读三遍：{char}，再用“{info['words'].split('、')[0]}”说一句话。",
+        "if_still_stuck": "如果还是不会，把这个字所在的完整句子发出来，再按句子继续拆。",
+        "review_focus": f"生字认读：{char}",
+        "parent_note": f"孩子卡在生字“{char}”，先帮他确认读音和词义，再回到课文原句。",
     }
 
 
