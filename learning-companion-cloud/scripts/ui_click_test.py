@@ -188,8 +188,21 @@ def run_browser_clicks(base_url: str) -> None:
 
         page.goto(f"{base_url}/child")
         page.wait_for_selector("#tasks .task-card")
+        page.evaluate(
+            """
+            () => {
+              window.__taskListChildMutations = 0;
+              const target = document.querySelector("#tasks");
+              window.__taskListObserver = new MutationObserver((mutations) => {
+                window.__taskListChildMutations += mutations.filter((mutation) => mutation.type === "childList").length;
+              });
+              window.__taskListObserver.observe(target, { childList: true });
+            }
+            """
+        )
         page.click("#startNext")
         page.wait_for_timeout(500)
+        assert page.evaluate("() => window.__taskListChildMutations") == 0, "点击开始不应重绘整个任务列表"
         workflow_card = page.locator("#tasks .task-card.active").first
         page.wait_for_function(
             "() => Array.from(document.querySelectorAll('#tasks .task-card.active .timer-tag')).some((node) => !node.innerText.includes('0:00'))",
