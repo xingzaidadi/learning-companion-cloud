@@ -69,6 +69,7 @@ def run_static_encoding_check() -> None:
         ROOT / "backend" / "scheduler.py",
         ROOT / "backend" / "plan_generator.py",
         ROOT / "backend" / "curriculum.py",
+        ROOT / "backend" / "question_engine.py",
         ROOT / "backend" / "report.py",
         ROOT / "backend" / "review.py",
         ROOT / "frontend" / "child.html",
@@ -338,6 +339,25 @@ def run_e2e() -> None:
         quiz = assert_status(client.get(f"/api/daily-tasks/{task_id}/quiz"))
         assert_true(len(quiz["items"]) >= 3, "小测题应至少 3 道")
         assert_true(all("answer" not in item for item in quiz["items"]), "孩子端小测不应暴露标准答案")
+        english_types = {item["question_type"] for item in quiz["items"]}
+        assert_true(
+            {"english_spelling", "english_word_cn_to_en", "english_sentence_fill"} & english_types == {"english_spelling", "english_word_cn_to_en", "english_sentence_fill"},
+            f"英语小测应包含默写/中译英/句型填空，实际 {english_types}",
+        )
+
+        chinese_quiz = assert_status(client.get(f"/api/daily-tasks/{chinese_task['id']}/quiz"))
+        chinese_types = {item["question_type"] for item in chinese_quiz["items"]}
+        assert_true(
+            {"chinese_word_dictation", "chinese_pinyin", "chinese_char_group"}.issubset(chinese_types),
+            f"语文小测应包含听写/拼音/组词，实际 {chinese_types}",
+        )
+        math_task = next(item for item in current_task_rows if "数学" in item["title"] or "小数" in item["title"])
+        math_quiz = assert_status(client.get(f"/api/daily-tasks/{math_task['id']}/quiz"))
+        math_types = {item["question_type"] for item in math_quiz["items"]}
+        assert_true(
+            {"math_exact", "math_concept_choice", "math_step_explain"}.issubset(math_types),
+            f"数学小测应包含计算/概念/步骤，实际 {math_types}",
+        )
 
         regenerated = assert_status(client.post(f"/api/daily-tasks/{task_id}/quiz/regenerate"))
         assert_true(len(regenerated["items"]) >= 3, "重生成小测按钮应返回至少 3 道题")
@@ -349,6 +369,9 @@ def run_e2e() -> None:
         grade = assert_status(client.post(f"/api/daily-tasks/{task_id}/quiz", json={"answers": answers}))
         assert_true(grade["total"] == len(quiz["items"]), "批改总题数应等于小测题数")
         assert_true("diagnosis" in grade, "批改应返回诊断")
+        assert_true("error_types" in grade and grade["error_types"], "批改应返回错因统计")
+        assert_true(all("error_type" in item for item in grade["wrong_items"]), "每道错题应有错因")
+        assert_true("mastery" in grade and "mastery_level" in grade["mastery"], "批改应返回掌握度")
         agent_grade_result = assert_status(client.post(f"/api/agent/grade/{task_id}", json={"answers": answers}))
         assert_true(agent_grade_result["total"] == len(quiz["items"]), "Agent 批改接口应可用")
 
@@ -359,7 +382,7 @@ def run_e2e() -> None:
         assert_true(len(dashboard["quiz_results"]) >= 1, "dashboard 应包含小测结果")
 
         report = assert_status(client.post("/api/day/end"))
-        for key in ("summary", "problems", "tomorrow_first_step"):
+        for key in ("summary", "problems", "tomorrow_first_step", "weakest_point", "parent_attention", "ten_minute_action"):
             assert_true(key in report, f"日报缺少 {key}")
         agent_report_result = assert_status(client.post("/api/agent/daily-report", json={"student_id": 1}))
         for key in ("summary", "problems", "tomorrow_first_step"):
@@ -384,11 +407,13 @@ def run_e2e() -> None:
 
         with get_conn() as conn:
             review_count = conn.execute("SELECT COUNT(*) FROM review_items").fetchone()[0]
+            review_stages = {row[0] for row in conn.execute("SELECT DISTINCT review_stage FROM review_items").fetchall()}
             run_count = conn.execute("SELECT COUNT(*) FROM agent_runs WHERE run_type = 'stuck_assist'").fetchone()[0]
             log_count = conn.execute("SELECT COUNT(*) FROM notification_logs").fetchone()[0]
         seeded_existing = assert_status(client.post("/api/task-sources/seed"))
         assert_true(seeded_existing["created"] == 0, "已有计划时生成示例按钮应安全跳过重复创建")
         assert_true(review_count >= 1, "卡住/错题应进入补漏队列")
+        assert_true({"D1", "D3", "D7"}.issubset(review_stages), f"错题应生成 D1/D3/D7 复习节奏，实际 {review_stages}")
         assert_true(run_count >= 1, "卡住应记录 Agent stuck_assist 日志")
         assert_true(log_count >= 1, "提醒日志应写入 notification_logs")
 

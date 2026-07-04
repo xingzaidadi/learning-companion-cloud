@@ -125,6 +125,9 @@ def init_db() -> None:
                 total INTEGER NOT NULL,
                 correct INTEGER NOT NULL,
                 wrong_items_json TEXT NOT NULL DEFAULT '[]',
+                score_json TEXT NOT NULL DEFAULT '{}',
+                error_types_json TEXT NOT NULL DEFAULT '{}',
+                mastery_json TEXT NOT NULL DEFAULT '{}',
                 status TEXT NOT NULL,
                 created_at TEXT NOT NULL
             );
@@ -138,6 +141,11 @@ def init_db() -> None:
                 summary TEXT NOT NULL,
                 problems TEXT NOT NULL DEFAULT '',
                 tomorrow_first_step TEXT NOT NULL DEFAULT '',
+                weakest_point TEXT NOT NULL DEFAULT '',
+                parent_attention TEXT NOT NULL DEFAULT '',
+                ten_minute_action TEXT NOT NULL DEFAULT '',
+                passed_points_json TEXT NOT NULL DEFAULT '[]',
+                failed_points_json TEXT NOT NULL DEFAULT '[]',
                 created_at TEXT NOT NULL,
                 UNIQUE(student_id, date)
             );
@@ -171,6 +179,9 @@ def init_db() -> None:
                 reason TEXT NOT NULL DEFAULT 'wrong_quiz',
                 due_date TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'pending',
+                review_stage TEXT NOT NULL DEFAULT 'D1',
+                attempt_count INTEGER NOT NULL DEFAULT 0,
+                last_result TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
@@ -257,6 +268,35 @@ def init_db() -> None:
             );
             """
         )
+        _ensure_columns(
+            conn,
+            "quiz_results",
+            {
+                "score_json": "TEXT NOT NULL DEFAULT '{}'",
+                "error_types_json": "TEXT NOT NULL DEFAULT '{}'",
+                "mastery_json": "TEXT NOT NULL DEFAULT '{}'",
+            },
+        )
+        _ensure_columns(
+            conn,
+            "review_items",
+            {
+                "review_stage": "TEXT NOT NULL DEFAULT 'D1'",
+                "attempt_count": "INTEGER NOT NULL DEFAULT 0",
+                "last_result": "TEXT NOT NULL DEFAULT ''",
+            },
+        )
+        _ensure_columns(
+            conn,
+            "daily_reports",
+            {
+                "weakest_point": "TEXT NOT NULL DEFAULT ''",
+                "parent_attention": "TEXT NOT NULL DEFAULT ''",
+                "ten_minute_action": "TEXT NOT NULL DEFAULT ''",
+                "passed_points_json": "TEXT NOT NULL DEFAULT '[]'",
+                "failed_points_json": "TEXT NOT NULL DEFAULT '[]'",
+            },
+        )
 
         row = conn.execute("SELECT id FROM students LIMIT 1").fetchone()
         if row is None:
@@ -268,6 +308,13 @@ def init_db() -> None:
                 """,
                 ("孩子", 11, "四年级", "五年级", now),
             )
+
+
+def _ensure_columns(conn: sqlite3.Connection, table: str, columns: dict[str, str]) -> None:
+    existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    for name, definition in columns.items():
+        if name not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
 
 
 def dict_row(row: sqlite3.Row | None) -> dict[str, Any] | None:

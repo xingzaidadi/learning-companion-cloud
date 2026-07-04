@@ -695,6 +695,9 @@ def parent_dashboard(
         )
         for result in quiz_results:
             result["wrong_items"] = loads(result.pop("wrong_items_json"), [])
+            result["score"] = loads(result.pop("score_json", None), {})
+            result["error_types"] = loads(result.pop("error_types_json", None), {})
+            result["mastery"] = loads(result.pop("mastery_json", None), {})
         report = conn.execute(
             "SELECT * FROM daily_reports WHERE student_id = ? AND date = ?",
             (student_id, today),

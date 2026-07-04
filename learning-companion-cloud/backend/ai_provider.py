@@ -9,10 +9,13 @@ from urllib import error as urlerror
 
 PROMPT_TEMPLATE = """
 你是武汉小学五年级上册语数英学习陪跑系统的出题老师。
-请严格根据【教材范围】和【当天学习内容】出 3-5 道小测题。
+请严格根据【教材范围】和【当天学习内容】出 5-7 道小测题。
 不要超出五年级上册课本范围，不要引入竞赛题或初中知识。
 输出 JSON 数组，每项字段：
-question_type: choice | exact | short
+question_type: 可以使用 choice/exact/short，也优先使用以下细分题型：
+- 语文：chinese_pinyin、chinese_word_dictation、chinese_char_group、chinese_word_explain、chinese_sentence_understand、chinese_summary、chinese_expression
+- 英语：english_word_cn_to_en、english_word_en_to_cn、english_spelling、english_sentence_fill、english_translation、english_reading_check、english_sentence_make
+- 数学：math_exact、math_concept_choice、math_step_explain、math_word_problem、math_error_reason、math_variant
 question: 题干
 options_json: 选择题选项数组字符串，非选择题用 []
 answer: 标准答案
@@ -156,7 +159,7 @@ def check_ai_connection(settings: dict[str, Any]) -> dict[str, Any]:
     model = _effective_model(ai)
     api_key = os.getenv("AI_API_KEY") or os.getenv("OPENAI_API_KEY", "")
     result: dict[str, Any] = {
-        "enabled": bool(ai.get("enabled")),
+        "enabled": bool(ai.get("enabled") or _env_ai_enabled()),
         "api_url_set": bool(api_url),
         "model": model,
         "key_present": bool(api_key),

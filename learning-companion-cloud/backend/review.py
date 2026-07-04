@@ -17,18 +17,20 @@ def create_review_item(
     explanation: str = "",
     reason: str = "wrong_quiz",
     days_later: int = 1,
+    review_stage: str | None = None,
 ) -> int:
     now = utc_now()
     due_date = (date.today() + timedelta(days=days_later)).isoformat()
+    stage = review_stage or f"D{days_later}"
     cursor = conn.execute(
         """
         INSERT INTO review_items (
             student_id, source_task_id, question, answer, explanation,
-            reason, due_date, status, created_at, updated_at
+            reason, due_date, status, review_stage, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
         """,
-        (student_id, source_task_id, question, answer, explanation, reason, due_date, now, now),
+        (student_id, source_task_id, question, answer, explanation, reason, due_date, stage, now, now),
     )
     return int(cursor.lastrowid)
 
@@ -63,15 +65,15 @@ def create_review_tasks(conn: Connection, student_id: int, target_date: str) -> 
             (
                 student_id,
                 target_date,
-                f"错题/卡点复习：{item['question'][:24]}",
-                f"复习昨天留下的问题：{item['question']}",
-                "能说出正确答案，并重新完成检查。",
+                f"{item.get('review_stage', 'D1')} 补漏：{item['question'][:24]}",
+                f"复习前面留下的问题：{item['question']}\n错因/来源：{item.get('reason', 'wrong_quiz')}\n标准答案：{item.get('answer', '')}",
+                "能说出正确答案、错因，并完成一道同类变式。",
                 now,
                 now,
             ),
         )
         conn.execute(
-            "UPDATE review_items SET status = 'scheduled', updated_at = ? WHERE id = ?",
+            "UPDATE review_items SET status = 'scheduled', attempt_count = attempt_count + 1, updated_at = ? WHERE id = ?",
             (now, item["id"]),
         )
         conn.execute(
@@ -88,10 +90,10 @@ def create_review_tasks(conn: Connection, student_id: int, target_date: str) -> 
                 "date": target_date,
                 "source_id": None,
                 "priority": "P0",
-                "title": f"错题/卡点复习：{item['question'][:24]}",
-                "description": f"复习昨天留下的问题：{item['question']}",
+                "title": f"{item.get('review_stage', 'D1')} 补漏：{item['question'][:24]}",
+                "description": f"复习前面留下的问题：{item['question']}\n错因/来源：{item.get('reason', 'wrong_quiz')}\n标准答案：{item.get('answer', '')}",
                 "estimated_minutes": 15,
-                "completion_standard": "能说出正确答案，并重新完成检查。",
+                "completion_standard": "能说出正确答案、错因，并完成一道同类变式。",
                 "check_method": "review_quiz",
                 "status": "not_started",
                 "created_at": now,

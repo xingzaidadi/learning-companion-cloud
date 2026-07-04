@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import re
+import unicodedata
 from sqlite3 import Connection
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from .db import dumps, loads, utc_now
-from .ai_provider import generate_ai_questions
+from .ai_provider import call_ai_json_with_meta, generate_ai_questions
 from .curriculum import find_curriculum_context
 from .question_engine import build_content_quiz
 from .review import create_review_item
@@ -84,9 +86,6 @@ def _templates(conn: Connection, task: dict[str, Any]) -> list[dict[str, Any]]:
     if curriculum_context:
         scope = f"{curriculum_context.get('unit')}；知识点：{'、'.join(curriculum_context.get('points', []))}；范围限制：{curriculum_context.get('scope_note')}"
     ai_items = generate_ai_questions(settings, scope, content_text)
-    if ai_items:
-        return ai_items
-
     content_items = build_content_quiz(
         category=category,
         subject=subject,
@@ -96,6 +95,17 @@ def _templates(conn: Connection, task: dict[str, Any]) -> list[dict[str, Any]]:
         config=config,
         version=version,
     )
+    if ai_items and content_items:
+        seen: set[str] = set()
+        merged: list[dict[str, Any]] = []
+        for item in [*content_items[:5], *ai_items[:3], *content_items[5:]]:
+            key = f"{item.get('question_type')}::{item.get('question')}"
+            if key not in seen:
+                merged.append(item)
+                seen.add(key)
+        return merged[:7]
+    if ai_items:
+        return ai_items
     if content_items:
         return content_items
 
@@ -200,10 +210,39 @@ def regenerate_quiz_for_task(conn: Connection, task_id: int) -> list[dict[str, A
     return ensure_quiz_for_task(conn, dict(task))
 
 
-def _exact_match(user_answer: str, expected: str) -> bool:
-    normalized_user = user_answer.lower().replace(" ", "")
+def _compact(value: str) -> str:
+    return re.sub(r"[\s，。、“”‘’！!？?：:；;,.（）()\[\]{}]+", "", value or "").lower()
+
+
+def _normalize_pinyin(value: str) -> str:
+    text = unicodedata.normalize("NFD", value or "")
+    text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
+    text = text.replace("ü", "u").replace("v", "u")
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
+def _numbers(value: str) -> list[Decimal]:
+    found: list[Decimal] = []
+    for raw in re.findall(r"-?\d+(?:\.\d+)?", value or ""):
+        try:
+            found.append(Decimal(raw))
+        except InvalidOperation:
+            continue
+    return found
+
+
+def _numeric_match(user_answer: str, expected: str) -> bool:
+    expected_values = _numbers(expected)
+    user_values = _numbers(user_answer)
+    if not expected_values or not user_values:
+        return False
+    return any(user_value == expected_value for user_value in user_values for expected_value in expected_values)
+
+
+def _exact_match(user_answer: str, expected: str, *, numeric_inside_text: bool = False) -> bool:
+    normalized_user = _compact(user_answer)
     for value in expected.split("|"):
-        normalized_expected = value.strip().lower().replace(" ", "")
+        normalized_expected = _compact(value)
         if normalized_user == normalized_expected:
             return True
         try:
@@ -211,7 +250,154 @@ def _exact_match(user_answer: str, expected: str) -> bool:
                 return True
         except InvalidOperation:
             pass
+    if numeric_inside_text and _numeric_match(user_answer, expected):
+        return True
     return False
+
+
+def _extract_quoted_char(question: str) -> str:
+    match = re.search(r"「(.)」", question or "")
+    return match.group(1) if match else ""
+
+
+def _is_open_type(question_type: str) -> bool:
+    return question_type in {
+        "short",
+        "chinese_word_explain",
+        "chinese_sentence_understand",
+        "chinese_summary",
+        "chinese_expression",
+        "english_translation",
+        "english_reading_check",
+        "english_sentence_make",
+        "math_step_explain",
+    }
+
+
+def _fallback_open_grade(question_type: str, user_answer: str, expected: str) -> tuple[bool, str]:
+    text = (user_answer or "").strip()
+    if not text:
+        return False, "未作答"
+    if question_type == "english_translation":
+        expected_words = [word.lower() for word in re.findall(r"[A-Za-z]+", expected)]
+        user_words = [word.lower() for word in re.findall(r"[A-Za-z]+", user_answer)]
+        hits = sum(1 for word in expected_words if word in user_words)
+        return hits >= max(1, min(2, len(expected_words))), "本地检查核心英文词"
+    if question_type == "english_sentence_make":
+        return bool(re.search(r"[A-Za-z]+", text)) and len(re.findall(r"[A-Za-z]+", text)) >= 3, "本地检查完整英文短句"
+    if question_type == "math_step_explain":
+        return len(text) >= 6 and any(key in text for key in ("先", "再", "因为", "公式", "小数", "步骤", "×", "÷")), "本地检查是否说出步骤"
+    if question_type.startswith("chinese_"):
+        return len(_compact(text)) >= 6, "本地检查是否完整表达"
+    return bool(text), "本地检查非空答案"
+
+
+def _ai_grade_open(
+    conn: Connection,
+    question_type: str,
+    question: str,
+    user_answer: str,
+    expected: str,
+    explanation: str,
+) -> tuple[bool, str, str]:
+    fallback_correct, fallback_reason = _fallback_open_grade(question_type, user_answer, expected)
+    fallback = {
+        "correct": fallback_correct,
+        "reason": fallback_reason,
+        "error_type": "",
+    }
+    settings = get_settings(conn)
+    result, meta = call_ai_json_with_meta(
+        settings,
+        f"""
+你是武汉小学五年级上册语数英陪跑老师。请批改一道开放题，只输出 JSON。
+不要超纲，不替孩子扩写答案，只判断是否基本达成本题要求。
+字段：
+correct: true/false
+reason: 20字以内说明
+error_type: 从 错字/拼音/词义/理解/表达/拼写/句型/语序/计算/小数点/概念/审题/单位/步骤不清 中选择一个，不确定用 表达
+
+题型：{question_type}
+题目：{question}
+标准答案/要点：{expected}
+讲解：{explanation}
+孩子答案：{user_answer}
+""".strip(),
+        fallback,
+    )
+    if isinstance(result, dict):
+        return bool(result.get("correct")), str(result.get("reason") or fallback_reason), "ai" if meta.get("used_ai") else "rule"
+    return fallback_correct, fallback_reason, "rule"
+
+
+def _error_type(question_type: str, question: str, user_answer: str, expected: str) -> str:
+    if question_type == "chinese_word_dictation":
+        return "错字"
+    if question_type == "chinese_pinyin":
+        return "拼音"
+    if question_type in ("chinese_word_explain",):
+        return "词义"
+    if question_type in ("chinese_sentence_understand", "chinese_summary"):
+        return "理解"
+    if question_type == "chinese_expression":
+        return "表达"
+    if question_type in ("english_word_cn_to_en", "english_spelling"):
+        return "拼写"
+    if question_type == "english_word_en_to_cn":
+        return "词义"
+    if question_type in ("english_sentence_fill", "english_translation", "english_sentence_make"):
+        return "句型"
+    if question_type in ("math_concept_choice",):
+        return "概念"
+    if question_type in ("math_word_problem",):
+        if expected and not _numeric_match(user_answer, expected):
+            return "审题"
+        return "单位"
+    if question_type in ("math_step_explain",):
+        return "步骤不清"
+    if question_type in ("math_error_reason",):
+        return "概念"
+    if question_type.startswith("math_"):
+        expected_nums = _numbers(expected)
+        user_nums = _numbers(user_answer)
+        if expected_nums and user_nums:
+            expected_value = expected_nums[0]
+            if any(abs(user_value) == abs(expected_value * Decimal(10)) or abs(user_value * Decimal(10)) == abs(expected_value) for user_value in user_nums):
+                return "小数点"
+        return "计算"
+    return "表达"
+
+
+def _review_reason(question_type: str, error_type: str) -> str:
+    if question_type.startswith("chinese_"):
+        if error_type == "错字":
+            return "wrong_chinese_dictation"
+        if error_type == "拼音":
+            return "wrong_chinese_pinyin"
+        return "wrong_chinese_understanding"
+    if question_type.startswith("english_"):
+        if error_type == "拼写":
+            return "wrong_english_spelling"
+        if error_type == "词义":
+            return "wrong_english_meaning"
+        return "wrong_english_sentence"
+    if question_type.startswith("math_"):
+        if error_type in ("计算", "小数点"):
+            return "wrong_math_calculation"
+        if error_type == "审题":
+            return "wrong_math_word_problem"
+        return "wrong_math_concept"
+    return "wrong_quiz"
+
+
+def _mastery_level(ratio: float) -> str:
+    if ratio >= 0.9:
+        return "A"
+    if ratio >= 0.8:
+        return "B"
+    if ratio >= 0.6:
+        return "C"
+    return "D"
 
 
 def grade_quiz(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[str, Any]:
@@ -224,47 +410,87 @@ def grade_quiz(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[
     ).fetchall()
     wrong_items: list[dict[str, str]] = []
     correct = 0
+    error_counts: dict[str, int] = {}
     for item in items:
         user_answer = answers.get(str(item["id"]), "").strip()
         expected = item["answer"].strip()
-        if item["question_type"] == "short":
-            is_correct = bool(user_answer)
-        elif item["question_type"] == "exact":
+        question_type = item["question_type"]
+        grading_source = "rule"
+        if question_type == "choice" or question_type.endswith("_choice") or question_type == "math_error_reason":
+            is_correct = _compact(user_answer) == _compact(expected)
+        elif question_type == "chinese_word_dictation":
+            is_correct = _compact(user_answer) == _compact(expected)
+        elif question_type == "chinese_pinyin":
+            is_correct = any(_normalize_pinyin(user_answer) == _normalize_pinyin(value) for value in expected.split("|"))
+        elif question_type == "chinese_char_group":
+            required_char = _extract_quoted_char(item["question"])
+            is_correct = bool(required_char and required_char in user_answer)
+        elif question_type in ("english_word_cn_to_en", "english_spelling"):
             is_correct = _exact_match(user_answer, expected)
+        elif question_type == "english_word_en_to_cn":
+            is_correct = _compact(expected) in _compact(user_answer) or _compact(user_answer) in _compact(expected)
+        elif question_type in ("exact", "math_exact", "math_word_problem", "math_variant"):
+            is_correct = _exact_match(user_answer, expected, numeric_inside_text=True)
+        elif question_type == "english_sentence_fill":
+            is_correct = _exact_match(user_answer, expected)
+        elif _is_open_type(question_type):
+            is_correct, _reason, grading_source = _ai_grade_open(conn, question_type, item["question"], user_answer, expected, item["explanation"])
         else:
-            is_correct = user_answer == expected
+            is_correct = bool(user_answer)
         if is_correct:
             correct += 1
         else:
+            error_type = _error_type(question_type, item["question"], user_answer, expected)
+            error_counts[error_type] = error_counts.get(error_type, 0) + 1
             wrong_items.append(
                 {
+                    "question_type": question_type,
                     "question": item["question"],
                     "your_answer": user_answer,
                     "answer": expected,
                     "explanation": item["explanation"],
+                    "error_type": error_type,
+                    "mastery_level": "D" if not user_answer else "C",
+                    "next_action": f"先订正这题，再做 {error_type} 同类变式。",
+                    "grading_source": grading_source,
                 }
             )
-            create_review_item(
-                conn,
-                int(task["student_id"]),
-                task_id,
-                item["question"],
-                expected,
-                item["explanation"],
-                "wrong_quiz",
-                1,
-            )
+            for days_later in (1, 3, 7):
+                create_review_item(
+                    conn,
+                    int(task["student_id"]),
+                    task_id,
+                    item["question"],
+                    expected,
+                    item["explanation"],
+                    _review_reason(question_type, error_type),
+                    days_later,
+                    f"D{days_later}",
+                )
 
     total = len(items)
     ratio = correct / total if total else 0
     status = "completed" if ratio >= 0.8 else "needs_revision"
+    mastery = {
+        "mastery_level": _mastery_level(ratio),
+        "next_action": "继续新课" if status == "completed" else "先完成错因补漏，再推进新课",
+        "parent_note": "小测已通过。" if status == "completed" else "建议家长用 10 分钟陪孩子订正最高频错因。",
+    }
+    score_json = {
+        "score": round(ratio * 100, 1),
+        "pass_score": 80,
+        "correct_rate": ratio,
+    }
     now = utc_now()
     conn.execute(
         """
-        INSERT INTO quiz_results (daily_task_id, total, correct, wrong_items_json, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO quiz_results (
+            daily_task_id, total, correct, wrong_items_json,
+            score_json, error_types_json, mastery_json, status, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (task_id, total, correct, dumps(wrong_items), status, now),
+        (task_id, total, correct, dumps(wrong_items), dumps(score_json), dumps(error_counts), dumps(mastery), status, now),
     )
     conn.execute(
         "UPDATE daily_tasks SET status = ?, updated_at = ? WHERE id = ?",
@@ -290,7 +516,7 @@ def grade_quiz(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[
         ).fetchone()
         if link and link["note"].isdigit():
             conn.execute(
-                "UPDATE review_items SET status = 'done', updated_at = ? WHERE id = ?",
+                "UPDATE review_items SET status = 'done', last_result = 'passed', updated_at = ? WHERE id = ?",
                 (now, int(link["note"])),
             )
     if status == "completed":
@@ -305,4 +531,7 @@ def grade_quiz(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[
         "correct": correct,
         "status": status,
         "wrong_items": wrong_items,
+        "score_json": score_json,
+        "error_types": error_counts,
+        "mastery": mastery,
     }

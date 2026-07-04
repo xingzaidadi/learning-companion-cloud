@@ -150,6 +150,7 @@
             <p>${data.report.summary}</p>
             <p><strong>问题：</strong>${data.report.problems}</p>
             <p><strong>明天第一步：</strong>${data.report.tomorrow_first_step}</p>
+            ${data.report.ten_minute_action ? `<p><strong>家长 10 分钟：</strong>${data.report.ten_minute_action}</p>` : ""}
           `;
         }
 
@@ -168,10 +169,14 @@
         data.quiz_results.forEach((result) => {
           const card = document.createElement("article");
           card.className = "task-card";
+          const errorText = result.error_types && Object.keys(result.error_types).length
+            ? Object.entries(result.error_types).map(([key, value]) => `${key}×${value}`).join("、")
+            : "无错因";
           card.innerHTML = `
             <strong>${result.title}</strong>
             <span class="tag ${result.status === "completed" ? "ok" : "warn"}">${result.correct}/${result.total}</span>
-            <p class="muted">${result.wrong_items.length ? "有错题，需要订正。" : "检查通过。"}</p>
+            <p class="muted">${result.wrong_items.length ? `错因：${errorText}` : "检查通过。"}</p>
+            ${result.mastery?.next_action ? `<p><strong>下一步：</strong>${result.mastery.next_action}</p>` : ""}
           `;
           quizBox.append(card);
         });
@@ -183,7 +188,7 @@
           card.className = "task-card";
           card.innerHTML = `
             <strong>${item.question}</strong>
-            <div class="task-meta"><span class="tag">${item.status}</span><span class="tag">到期 ${item.due_date}</span><span class="tag">${item.reason}</span></div>
+            <div class="task-meta"><span class="tag">${item.status}</span><span class="tag">${item.review_stage || "D1"}</span><span class="tag">到期 ${item.due_date}</span><span class="tag">${item.reason}</span></div>
             <p class="muted">${item.explanation || item.answer || "明天会优先生成复习任务。"}</p>
           `;
           reviews.append(card);

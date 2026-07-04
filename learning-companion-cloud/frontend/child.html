@@ -136,15 +136,62 @@
         box.classList.remove("muted");
         box.innerHTML = `<h3>${data.task.title}</h3>`;
         const form = document.createElement("form");
+        const typeLabels = {
+          chinese_word_dictation: "语文听写",
+          chinese_pinyin: "拼音",
+          chinese_char_group: "组词",
+          chinese_word_explain: "词义",
+          chinese_sentence_understand: "理解",
+          chinese_summary: "概括",
+          chinese_expression: "表达",
+          english_word_cn_to_en: "中译英",
+          english_word_en_to_cn: "英译中",
+          english_spelling: "英文默写",
+          english_sentence_fill: "句型填空",
+          english_translation: "翻译",
+          english_reading_check: "课文理解",
+          english_sentence_make: "英文造句",
+          math_exact: "精确计算",
+          math_concept_choice: "概念判断",
+          math_step_explain: "步骤说明",
+          math_word_problem: "应用题",
+          math_error_reason: "错因判断",
+          math_variant: "同类变式",
+        };
+        const compactInputTypes = new Set([
+          "exact",
+          "chinese_word_dictation",
+          "chinese_pinyin",
+          "chinese_char_group",
+          "english_word_cn_to_en",
+          "english_word_en_to_cn",
+          "english_spelling",
+          "english_sentence_fill",
+          "math_exact",
+          "math_word_problem",
+          "math_variant",
+        ]);
+        const placeholders = {
+          chinese_word_dictation: "请输入听写词语，注意汉字字形",
+          chinese_pinyin: "例如：lù 或 lu4",
+          english_spelling: "请输入英文单词",
+          english_sentence_fill: "只填空缺处",
+          math_exact: "只写答案，带单位也可以",
+          math_word_problem: "写列式或答案，注意单位",
+          math_step_explain: "写清先做什么、再做什么、为什么",
+        };
         data.items.forEach((item) => {
           const wrapper = document.createElement("div");
           wrapper.className = "quiz-item";
+          const label = typeLabels[item.question_type] || (item.question_type === "choice" ? "选择题" : "小测题");
           if (item.options && item.options.length) {
-            wrapper.innerHTML = `<strong>${item.question}</strong>${item.options
+            wrapper.innerHTML = `<span class="tag">${label}</span><strong>${item.question}</strong>${item.options
               .map((option) => `<label><input type="radio" name="${item.id}" value="${option}" /> ${option}</label>`)
               .join("")}`;
+          } else if (compactInputTypes.has(item.question_type)) {
+            wrapper.innerHTML = `<label><span class="tag">${label}</span><strong>${item.question}</strong><input name="${item.id}" placeholder="${placeholders[item.question_type] || "输入答案"}" /></label>`;
           } else {
-            wrapper.innerHTML = `<label>${item.question}<textarea name="${item.id}" placeholder="写一句就可以"></textarea></label>`;
+            wrapper.innerHTML = `<label><span class="tag">${label}</span><strong>${item.question}</strong><textarea name="${item.id}" placeholder="${placeholders[item.question_type] || "写出思路或完整句子"}"></textarea></label>`;
           }
           form.append(wrapper);
         });
@@ -165,9 +212,19 @@
           });
           toast(`小测结果：${result.correct}/${result.total}`);
           await loadTasks();
-          box.innerHTML = result.status === "completed"
-            ? `<p>真棒，检查通过：${result.correct}/${result.total}</p>`
-            : `<p>需要订正：${result.correct}/${result.total}</p>`;
+          if (result.status === "completed") {
+            box.innerHTML = `<p>真棒，检查通过：${result.correct}/${result.total}</p><p class="muted">${result.mastery?.next_action || "继续保持。"}</p>`;
+          } else {
+            const wrongHtml = (result.wrong_items || []).map((item) => `
+              <div class="quiz-item">
+                <strong>${escapeHtml(item.error_type || "错因")}：${escapeHtml(item.question)}</strong>
+                <p>你的答案：${escapeHtml(item.your_answer || "未作答")}</p>
+                <p>订正答案：${escapeHtml(item.answer)}</p>
+                <p class="muted">${escapeHtml(item.next_action || item.explanation)}</p>
+              </div>
+            `).join("");
+            box.innerHTML = `<p>需要订正：${result.correct}/${result.total}</p>${wrongHtml}`;
+          }
         });
         box.append(form);
       }

@@ -5,7 +5,7 @@ from pathlib import Path
 from sqlite3 import Connection
 from typing import Any
 
-from .db import BASE_DIR, loads, utc_now
+from .db import BASE_DIR, dumps, loads, utc_now
 from .notifier import notify
 from .rewards import add_reward
 from .review import create_review_item
@@ -51,6 +51,9 @@ def _write_daily_markdown(report: dict[str, Any], tasks: list[dict[str, Any]]) -
         f"- 总结：{report['summary']}",
         f"- 问题：{report['problems']}",
         f"- 明天第一步：{report['tomorrow_first_step']}",
+        f"- 最薄弱点：{report.get('weakest_point', '暂无')}",
+        f"- 家长是否介入：{report.get('parent_attention', '暂不需要')}",
+        f"- 10 分钟陪伴建议：{report.get('ten_minute_action', '听孩子复述今天学会了什么')}",
         "",
         "## 今日任务",
     ]
@@ -59,7 +62,8 @@ def _write_daily_markdown(report: dict[str, Any], tasks: list[dict[str, Any]]) -
     lines.extend(["", "## 小测结果"])
     if report["quiz_results"]:
         for result in report["quiz_results"]:
-            lines.append(f"- {result['title']}：{result['correct']}/{result['total']}（{result['status']}）")
+            error_text = "、".join(f"{key}×{value}" for key, value in result.get("error_types", {}).items()) or "无错因"
+            lines.append(f"- {result['title']}：{result['correct']}/{result['total']}（{result['status']}，{error_text}）")
     else:
         lines.append("- 暂无小测记录")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -91,36 +95,93 @@ def build_daily_report(conn: Connection, student_id: int = 1, target_date: str |
         """,
         (student_id, today),
     ).fetchall()
+    quiz_details: list[dict[str, Any]] = []
+    error_totals: dict[str, int] = {}
+    failed_titles: list[str] = []
+    passed_titles: list[str] = []
+    for row in quiz_rows:
+        detail = dict(row)
+        detail["wrong_items"] = loads(row["wrong_items_json"], [])
+        detail["score"] = loads(row["score_json"] if "score_json" in row.keys() else None, {})
+        detail["error_types"] = loads(row["error_types_json"] if "error_types_json" in row.keys() else None, {})
+        detail["mastery"] = loads(row["mastery_json"] if "mastery_json" in row.keys() else None, {})
+        quiz_details.append(detail)
+        if detail["status"] == "completed":
+            passed_titles.append(detail["title"])
+        else:
+            failed_titles.append(detail["title"])
+        for key, value in detail["error_types"].items():
+            error_totals[key] = error_totals.get(key, 0) + int(value)
     quiz_summary = [f"{row['title']}：{row['correct']}/{row['total']}" for row in quiz_rows]
 
     summary = f"今日完成 {completed}/{total}。"
     if quiz_summary:
         summary += " 小测：" + "；".join(quiz_summary[:5]) + "。"
-    problem_text = "；".join(task["title"] for task in problems) if problems else "暂无明显卡点。"
+    weakest_point = max(error_totals.items(), key=lambda item: item[1])[0] if error_totals else "暂无明显薄弱点"
+    error_text = "；".join(f"{key}×{value}" for key, value in error_totals.items())
+    problem_parts = [task["title"] for task in problems]
+    if error_text:
+        problem_parts.append(f"错因：{error_text}")
+    problem_text = "；".join(problem_parts) if problem_parts else "暂无明显卡点。"
     if unfinished:
         tomorrow_first_step = f"先完成或订正：{unfinished[0]['title']}"
+    elif failed_titles:
+        tomorrow_first_step = f"先补漏：{failed_titles[0]}"
+    elif error_totals:
+        tomorrow_first_step = f"先做 10 分钟{weakest_point}复盘。"
     else:
         tomorrow_first_step = "先从新的 P0 任务开始，保持短时专注。"
         if total:
             add_reward(conn, student_id, 20, "今日全清", "今日任务全部完成", today)
+    if error_totals or problems:
+        parent_attention = "需要介入"
+        ten_minute_action = f"用 10 分钟陪孩子订正「{weakest_point}」，让孩子说出错因和改法。"
+    elif completed == total and total:
+        parent_attention = "暂不需要"
+        ten_minute_action = "听孩子用 2 分钟复述今天最有把握的一点，再鼓励收尾。"
+    else:
+        parent_attention = "轻度关注"
+        ten_minute_action = "只确认是否开始、是否知道第一步，不直接代做。"
+    if quiz_details:
+        summary += f" 通过项：{('、'.join(passed_titles[:3]) or '暂无')}；需补漏：{('、'.join(failed_titles[:3]) or '暂无')}。"
 
     now = utc_now()
     conn.execute(
         """
         INSERT INTO daily_reports (
             student_id, date, completed_count, total_count, summary,
-            problems, tomorrow_first_step, created_at
+            problems, tomorrow_first_step, weakest_point, parent_attention,
+            ten_minute_action, passed_points_json, failed_points_json, created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(student_id, date) DO UPDATE SET
             completed_count = excluded.completed_count,
             total_count = excluded.total_count,
             summary = excluded.summary,
             problems = excluded.problems,
             tomorrow_first_step = excluded.tomorrow_first_step,
+            weakest_point = excluded.weakest_point,
+            parent_attention = excluded.parent_attention,
+            ten_minute_action = excluded.ten_minute_action,
+            passed_points_json = excluded.passed_points_json,
+            failed_points_json = excluded.failed_points_json,
             created_at = excluded.created_at
         """,
-        (student_id, today, completed, total, summary, problem_text, tomorrow_first_step, now),
+        (
+            student_id,
+            today,
+            completed,
+            total,
+            summary,
+            problem_text,
+            tomorrow_first_step,
+            weakest_point,
+            parent_attention,
+            ten_minute_action,
+            dumps(passed_titles),
+            dumps(failed_titles),
+            now,
+        ),
     )
     report = {
         "student_id": student_id,
@@ -130,7 +191,12 @@ def build_daily_report(conn: Connection, student_id: int = 1, target_date: str |
         "summary": summary,
         "problems": problem_text,
         "tomorrow_first_step": tomorrow_first_step,
-        "quiz_results": [dict(row) | {"wrong_items": loads(row["wrong_items_json"], [])} for row in quiz_rows],
+        "weakest_point": weakest_point,
+        "passed_points": passed_titles,
+        "failed_points": failed_titles,
+        "parent_attention": parent_attention,
+        "ten_minute_action": ten_minute_action,
+        "quiz_results": quiz_details,
     }
     report["file_path"] = _write_daily_markdown(report, tasks)
     notify(
@@ -138,7 +204,7 @@ def build_daily_report(conn: Connection, student_id: int = 1, target_date: str |
         student_id,
         "daily_report",
         f"学习日报 {today}",
-        f"{summary}\n\n问题：{problem_text}\n\n明天第一步：{tomorrow_first_step}",
+        f"{summary}\n\n问题：{problem_text}\n\n明天第一步：{tomorrow_first_step}\n\n家长建议：{ten_minute_action}",
     )
     return report
 
