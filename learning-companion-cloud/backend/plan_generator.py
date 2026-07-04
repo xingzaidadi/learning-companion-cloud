@@ -23,10 +23,12 @@ def _deadline(default_days: int = 30) -> str:
 
 
 def _detect_total_units(text: str, default: int) -> int:
-    match = re.search(r"(\d+)\s*(节|课|篇|页|小节|单元|天)", text)
-    if match:
-        return int(match.group(1))
-    return default
+    matches = re.findall(r"(\d+)\s*(?:节|课|篇|页|小节|单元|天)", text)
+    if not matches:
+        return default
+    numbers = [int(value) for value in matches]
+    useful = [value for value in numbers if value >= 6]
+    return useful[0] if useful else default
 
 
 def _homework_source(text: str) -> dict[str, Any]:
@@ -61,8 +63,17 @@ def _homework_source(text: str) -> dict[str, Any]:
 
 
 def _book_source(subject: str, text: str, settings: dict[str, Any]) -> dict[str, Any]:
+    if subject == "英语" and _looks_like_fltrp_english_plan(text):
+        return _fltrp_english_source(text)
+
     region = settings.get("region", {})
-    version = region.get("chinese_version") if subject == "语文" else region.get("math_version") if subject == "数学" else region.get("english_version")
+    version = (
+        region.get("chinese_version")
+        if subject == "语文"
+        else region.get("math_version")
+        if subject == "数学"
+        else region.get("english_version")
+    )
     key = "chinese" if subject == "语文" else "math" if subject == "数学" else "english"
     lessons = _flatten_lessons(get_subject_units(key, version))
     unit_label = "篇课文" if subject == "语文" else "节" if subject == "数学" else "课"
@@ -86,11 +97,91 @@ def _book_source(subject: str, text: str, settings: dict[str, Any]) -> dict[str,
     }
 
 
+def _looks_like_fltrp_english_plan(text: str) -> bool:
+    normalized = text.lower()
+    return any(
+        keyword in normalized
+        for keyword in (
+            "外研社",
+            "刘兆义",
+            "unit 1",
+            "unit1",
+            "my school is cool",
+            "school activities are fun",
+            "the ice world",
+            "i love the sea",
+            "work it out",
+            "big days",
+            "音频",
+            "默写",
+            "字帖",
+        )
+    )
+
+
+def _fltrp_english_source(text: str) -> dict[str, Any]:
+    sequence = _fltrp_english_sequence()
+    return {
+        "category": "preview",
+        "title": "外研社刘兆义版五年级上册英语暑假预习",
+        "subject": "英语",
+        "total_units": len(sequence),
+        "completed_units": 0,
+        "deadline": _deadline(38),
+        "config": {
+            "display_label": "英语预习",
+            "estimated_minutes": 30,
+            "pacing": "每日 25–35 分钟",
+            "unit_label": "天",
+            "lesson_sequence": sequence,
+            "lesson_content": "基于五上英语课本、Unit 1–6 单词字帖、Unit 1–6 中译英默写练习和 Unit 1–3 音频推进。",
+            "knowledge_points": "听读课文；理解课文；单词认读；字帖书写；中译英默写；小测检查",
+            "resources": {
+                "textbook": "2026新五上定稿课本.pdf",
+                "copybook": "五上单词英语字帖.pdf",
+                "dictation": "单词默写练习-Unit 1 至 Unit 6",
+                "audio": "Unit 1–3 已有音频；Unit 4–6 暂无音频，用课本朗读和重点句跟读替代",
+            },
+            "study_steps": [
+                "先听音频或朗读课本 5–8 分钟，圈出不会读的词。",
+                "看课本图片和 Story/活动内容，说出今天主要讲什么。",
+                "认读并书写 3–6 个重点词，优先处理错词。",
+                "用本课重点句型说或写 1–2 个短句。",
+                "完成小测或中译英默写，低于 80% 次日先补漏。",
+            ],
+        },
+    }
+
+
+def _fltrp_english_sequence() -> list[str]:
+    units = [
+        ("Unit 1 My school is cool", True),
+        ("Unit 2 School activities are fun!", True),
+        ("Unit 3 The ice world", True),
+        ("Unit 4 I love the sea!", False),
+        ("Unit 5 Work it out!", False),
+        ("Unit 6 Big days", False),
+    ]
+    sequence: list[str] = []
+    for unit, has_audio in units:
+        audio_step = "听音频跟读" if has_audio else "课本朗读和重点句跟读"
+        sequence.extend(
+            [
+                f"{unit} 第1天：{audio_step}，整体理解单元主题",
+                f"{unit} 第2天：Story/课文精读，理解人物、场景和主要句子",
+                f"{unit} 第3天：单词认读与字帖书写，整理不会读/不会拼的词",
+                f"{unit} 第4天：中译英默写练习，订正错词并复读重点句",
+                f"{unit} 第5天：单元复习和小测，未达 80% 次日补漏",
+            ]
+        )
+    return sequence
+
+
 def _study_steps(subject: str) -> list[str]:
     if subject == "语文":
         return [
             "通读课文，圈出生字词和不理解的句子。",
-            "用 2-3 句话概括主要内容。",
+            "用 2–3 句话概括主要内容。",
             "找 1 个关键句，说明它好在哪里。",
             "完成一段仿写或口头复述。",
         ]
@@ -103,7 +194,7 @@ def _study_steps(subject: str) -> list[str]:
         ]
     return [
         "听读或朗读本课单词和句子。",
-        "抄写并记住 3-5 个关键词。",
+        "抄写并记住 3–5 个关键词。",
         "用本课句型说或写 2 个短句。",
         "标记不会读或不会用的词。",
     ]
@@ -112,20 +203,20 @@ def _study_steps(subject: str) -> list[str]:
 def generate_plan_from_text(conn: Connection, raw_text: str, student_id: int = 1) -> dict[str, Any]:
     settings = get_settings(conn)
     chunks = [chunk.strip() for chunk in re.split(r"[;\n；。]", raw_text) if chunk.strip()]
+    if _looks_like_english_request(raw_text):
+        chunks.insert(0, raw_text.strip())
+
     now = utc_now()
     created: list[dict[str, Any]] = []
+    created_keys: set[tuple[str, str]] = set()
     for chunk in chunks:
-        source: dict[str, Any] | None = None
-        if "作业" in chunk or "作业本" in chunk:
-            source = _homework_source(chunk)
-        elif "语文书" in chunk or ("语文" in chunk and ("每日" in chunk or "课文" in chunk)):
-            source = _book_source("语文", chunk, settings)
-        elif "数学书" in chunk or ("数学" in chunk and ("每日" in chunk or "一节" in chunk)):
-            source = _book_source("数学", chunk, settings)
-        elif "英语书" in chunk or ("英语" in chunk and ("每日" in chunk or "一课" in chunk)):
-            source = _book_source("英语", chunk, settings)
+        source = _source_from_chunk(chunk, settings)
         if not source:
             continue
+        key = (source["category"], source["subject"] or source["title"])
+        if key in created_keys:
+            continue
+        created_keys.add(key)
         cursor = conn.execute(
             """
             INSERT INTO task_sources (
@@ -150,3 +241,43 @@ def generate_plan_from_text(conn: Connection, raw_text: str, student_id: int = 1
         source["id"] = cursor.lastrowid
         created.append(source)
     return {"created": len(created), "items": created}
+
+
+def _source_from_chunk(chunk: str, settings: dict[str, Any]) -> dict[str, Any] | None:
+    if "作业" in chunk or "作业本" in chunk:
+        return _homework_source(chunk)
+    if _looks_like_subject_request(chunk, "语文", extra_keywords=("课文", "语文书")):
+        return _book_source("语文", chunk, settings)
+    if _looks_like_subject_request(chunk, "数学", extra_keywords=("一节", "数学书", "例题")):
+        return _book_source("数学", chunk, settings)
+    if _looks_like_english_request(chunk):
+        return _book_source("英语", chunk, settings)
+    return None
+
+
+def _looks_like_subject_request(text: str, subject: str, extra_keywords: tuple[str, ...]) -> bool:
+    if subject not in text:
+        return False
+    pacing_words = ("每日", "每天", "预习", "学习", "暑假", "寒假", "一篇", "一节", "一课")
+    return any(word in text for word in pacing_words + extra_keywords)
+
+
+def _looks_like_english_request(text: str) -> bool:
+    if not any(keyword in text for keyword in ("英语", "English", "Unit", "外研社", "刘兆义")):
+        return False
+    return any(
+        keyword in text
+        for keyword in (
+            "每日",
+            "每天",
+            "预习",
+            "学习",
+            "暑假",
+            "一课",
+            "课本",
+            "音频",
+            "默写",
+            "字帖",
+            "Unit",
+        )
+    )

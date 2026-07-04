@@ -28,11 +28,12 @@
             <textarea name="raw_text" required placeholder="寒假作业本，每日一小节；语文书，每日一篇课文"></textarea>
           </label>
           <div class="actions full">
-            <button class="primary">生成计划并生成今日任务</button>
+            <button class="primary" id="quickPlanSubmit">生成计划并生成今日任务</button>
             <button type="button" id="generateToday">只生成今日任务</button>
             <button type="button" id="refresh">刷新</button>
           </div>
         </form>
+        <div id="quickPlanResult" class="task-list" style="margin-top:16px"></div>
       </section>
 
       <section class="grid" style="margin-top:16px">
@@ -251,14 +252,50 @@
         await Promise.all([loadSources(), loadTodayTasks(), loadAgentRuns()]);
       }
 
+      function renderQuickPlanResult(plan, today) {
+        const box = document.querySelector("#quickPlanResult");
+        const items = plan.items || [];
+        const tasks = today.tasks || [];
+        if (!items.length && !tasks.length) {
+          box.innerHTML = `
+            <article class="task-card">
+              <h3 class="task-title">没有生成计划</h3>
+              <p>这次输入没有被识别成可执行学习源。请包含科目、教材/资料、频率，例如“英语五年级上册，每天 25–35 分钟，按 Unit 1 到 Unit 6 预习”。</p>
+            </article>
+          `;
+          return;
+        }
+        box.innerHTML = `
+          <article class="task-card active">
+            <h3 class="task-title">生成完成</h3>
+            <p>已生成 ${items.length} 条长期计划，今日 ${tasks.length} 个任务。</p>
+            ${items.length ? `<p><strong>长期计划：</strong>${items.map((item) => item.title).join("；")}</p>` : ""}
+            ${tasks.length ? `<p><strong>今日任务：</strong>${tasks.map((task) => task.title).join("；")}</p>` : ""}
+            <div class="actions">
+              <a class="button primary" href="/child">去孩子端开始学习</a>
+              <a class="button" href="/parent">去家长端看结果</a>
+            </div>
+          </article>
+        `;
+      }
+
       document.querySelector("#quickPlanForm").addEventListener("submit", async (event) => {
         event.preventDefault();
+        const submit = document.querySelector("#quickPlanSubmit");
+        submit.disabled = true;
+        submit.textContent = "Agent 正在生成...";
         const formData = new FormData(event.target);
-        const plan = await api("/api/study-plan/generate", { method: "POST", body: formData });
-        const today = await api("/api/daily-tasks/generate", { method: "POST" });
-        toast(`已生成 ${plan.created} 条计划，今日 ${today.count} 个任务`);
-        event.target.reset();
-        await refreshAll();
+        try {
+          const plan = await api("/api/study-plan/generate", { method: "POST", body: formData });
+          const today = await api("/api/daily-tasks/generate", { method: "POST" });
+          renderQuickPlanResult(plan, today);
+          toast(plan.created ? `已生成 ${plan.created} 条计划，今日 ${today.count} 个任务` : "没有识别到计划，请看页面提示");
+          if (plan.created) event.target.reset();
+          await refreshAll();
+        } finally {
+          submit.disabled = false;
+          submit.textContent = "生成计划并生成今日任务";
+        }
       });
 
       document.querySelector("#settingsForm").addEventListener("submit", async (event) => {
