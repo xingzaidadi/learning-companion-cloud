@@ -214,6 +214,10 @@
         await loadTasks();
       });
 
+      if (tasks.length) {
+        renderTasks();
+      }
+
       loadTasks().catch((error) => {
         document.querySelector("#tasks").innerHTML = `<p class="muted">今日任务加载失败：${escapeHtml(error.message)}</p>`;
         toast(error.message);
