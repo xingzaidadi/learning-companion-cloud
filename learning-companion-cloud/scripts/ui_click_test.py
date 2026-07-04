@@ -96,6 +96,28 @@ def run_browser_clicks(base_url: str) -> None:
 
         page.goto(f"{base_url}/admin")
         page.wait_for_selector("#quickPlanForm")
+        quick_plan_text = "寒假作业本，每日一小节；语文书，每日一篇课文"
+        page.fill("#quickPlanForm textarea[name='raw_text']", quick_plan_text)
+        page.click("#quickPlanSubmit")
+        page.wait_for_function(
+            "() => document.querySelector('#quickPlanResult')?.innerText.includes('已生成 2 条长期计划')",
+            timeout=20_000,
+        )
+        quick_result = page.locator("#quickPlanResult").inner_text()
+        today_tasks = page.locator("#todayTasks").inner_text()
+        assert "寒假作业本" in quick_result and "五年级上册语文每日学习" in quick_result
+        assert "寒假作业本" in today_tasks and ("白鹭" in today_tasks or "语文" in today_tasks)
+        page.goto(f"{base_url}/child")
+        page.wait_for_selector("#tasks .task-card")
+        child_body = page.locator("body").inner_text()
+        assert "寒假作业本" in child_body and ("白鹭" in child_body or "语文" in child_body)
+        page.goto(f"{base_url}/parent")
+        page.wait_for_selector("#tasks .task-card")
+        parent_body = page.locator("body").inner_text()
+        assert "寒假作业本" in parent_body and ("白鹭" in parent_body or "语文" in parent_body)
+
+        page.goto(f"{base_url}/admin")
+        page.wait_for_selector("#quickPlanForm")
         page.click("summary")
         page.click("#seedDemo")
         page.wait_for_timeout(500)
