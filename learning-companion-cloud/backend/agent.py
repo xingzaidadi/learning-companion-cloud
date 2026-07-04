@@ -94,7 +94,8 @@ def grade_submission(conn: Connection, task_id: int, answers: dict[str, str]) ->
     task = get_task(conn, task_id)
     if not task:
         return {"task_id": task_id, "status": "not_found", "wrong_items": []}
-    save_submissions(conn, task_id, answers)
+    if task.get("status") != "completed":
+        save_submissions(conn, task_id, answers)
     rule_result = grade_quiz(conn, task_id, answers)
     diagnosis = diagnose_learning(conn, task_id, rule_result)
     output = {**rule_result, "diagnosis": diagnosis}

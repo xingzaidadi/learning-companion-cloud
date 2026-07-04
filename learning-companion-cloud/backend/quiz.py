@@ -429,10 +429,41 @@ def _mastery_level(ratio: float) -> str:
     return "D"
 
 
+def _latest_quiz_result(conn: Connection, task_id: int) -> dict[str, Any] | None:
+    row = conn.execute(
+        """
+        SELECT total, correct, wrong_items_json, score_json,
+               error_types_json, mastery_json, status
+        FROM quiz_results
+        WHERE daily_task_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (task_id,),
+    ).fetchone()
+    if not row:
+        return None
+    return {
+        "task_id": task_id,
+        "total": row["total"],
+        "correct": row["correct"],
+        "status": row["status"],
+        "wrong_items": loads(row["wrong_items_json"], []),
+        "score_json": loads(row["score_json"], {}),
+        "error_types": loads(row["error_types_json"], {}),
+        "mastery": loads(row["mastery_json"], {}),
+        "already_checked": True,
+    }
+
+
 def grade_quiz(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[str, Any]:
     task = conn.execute("SELECT * FROM daily_tasks WHERE id = ?", (task_id,)).fetchone()
     if not task:
         raise ValueError("任务不存在")
+    if task["status"] == "completed":
+        latest = _latest_quiz_result(conn, task_id)
+        if latest:
+            return latest
     items = conn.execute(
         "SELECT * FROM quiz_items WHERE daily_task_id = ? ORDER BY id",
         (task_id,),
@@ -525,7 +556,8 @@ def grade_quiz(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[
         "UPDATE daily_tasks SET status = ?, updated_at = ? WHERE id = ?",
         (status, now, task_id),
     )
-    if status == "completed" and task["source_id"]:
+    is_new_completion = status == "completed" and task["status"] != "completed"
+    if is_new_completion and task["source_id"]:
         conn.execute(
             """
             UPDATE task_sources
@@ -534,7 +566,7 @@ def grade_quiz(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[
             """,
             (now, task["source_id"]),
         )
-    if status == "completed" and task["check_method"] == "review_quiz":
+    if is_new_completion and task["check_method"] == "review_quiz":
         link = conn.execute(
             """
             SELECT note FROM task_progress
@@ -548,7 +580,7 @@ def grade_quiz(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[
                 "UPDATE review_items SET status = 'done', last_result = 'passed', updated_at = ? WHERE id = ?",
                 (now, int(link["note"])),
             )
-    if status == "completed":
+    if is_new_completion:
         add_reward(conn, int(task["student_id"]), 10, "小测通过", f"{task['title']} 小测 {correct}/{total}")
     conn.execute(
         "INSERT INTO task_progress (daily_task_id, event_type, note, created_at) VALUES (?, 'check', ?, ?)",

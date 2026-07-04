@@ -608,6 +608,13 @@ async def task_event(task_id: int, request: Request, _: str = Depends(require_ch
         task = conn.execute("SELECT * FROM daily_tasks WHERE id = ?", (task_id,)).fetchone()
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
+        current_status = task["status"]
+        if event_type == "start" and current_status == "in_progress":
+            return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "already_applied": True}
+        if event_type == "pause" and current_status != "in_progress":
+            return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "already_applied": True}
+        if event_type == "complete" and current_status in {"checking", "completed"}:
+            return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "already_applied": True}
         conn.execute(
             "UPDATE daily_tasks SET status = ?, updated_at = ? WHERE id = ?",
             (status_map[event_type], now, task_id),

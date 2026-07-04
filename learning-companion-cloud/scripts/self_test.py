@@ -362,6 +362,14 @@ def run_e2e() -> None:
         complete = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "complete"}))
         assert_true(complete["status"] == "checking", "complete 后状态应为 checking")
         assert_true(complete["timer_state"] == "stopped", "complete 后计时器应停止")
+        duplicate_complete = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "complete"}))
+        assert_true(duplicate_complete["already_applied"] is True, "complete 连点应返回幂等结果")
+        with get_conn() as conn:
+            complete_events = conn.execute(
+                "SELECT COUNT(*) FROM task_progress WHERE daily_task_id = ? AND event_type = 'complete'",
+                (task_id,),
+            ).fetchone()[0]
+        assert_true(complete_events == 1, f"complete 连点不应重复写进度，实际 {complete_events}")
 
         quiz = assert_status(client.get(f"/api/daily-tasks/{task_id}/quiz"))
         assert_true(len(quiz["items"]) >= 3, "小测题应至少 3 道")
@@ -402,6 +410,39 @@ def run_e2e() -> None:
         assert_true("mastery" in grade and "mastery_level" in grade["mastery"], "批改应返回掌握度")
         agent_grade_result = assert_status(client.post(f"/api/agent/grade/{task_id}", json={"answers": answers}))
         assert_true(agent_grade_result["total"] == len(quiz["items"]), "Agent 批改接口应可用")
+        with get_conn() as conn:
+            correct_answers = {
+                str(row["id"]): row["answer"]
+                for row in conn.execute(
+                    "SELECT id, answer FROM quiz_items WHERE daily_task_id = ?",
+                    (task_id,),
+                ).fetchall()
+            }
+        passed_grade = assert_status(client.post(f"/api/daily-tasks/{task_id}/quiz", json={"answers": correct_answers}))
+        assert_true(passed_grade["status"] == "completed", f"正确答案应通过小测，实际 {passed_grade}")
+        with get_conn() as conn:
+            task_row = conn.execute("SELECT source_id FROM daily_tasks WHERE id = ?", (task_id,)).fetchone()
+            source_units_before_duplicate = conn.execute(
+                "SELECT completed_units FROM task_sources WHERE id = ?",
+                (task_row["source_id"],),
+            ).fetchone()[0]
+            quiz_results_before_duplicate = conn.execute(
+                "SELECT COUNT(*) FROM quiz_results WHERE daily_task_id = ?",
+                (task_id,),
+            ).fetchone()[0]
+        duplicate_grade = assert_status(client.post(f"/api/daily-tasks/{task_id}/quiz", json={"answers": correct_answers}))
+        assert_true(duplicate_grade["already_checked"] is True, "已完成小测重复提交应返回最近结果")
+        with get_conn() as conn:
+            source_units_after_duplicate = conn.execute(
+                "SELECT completed_units FROM task_sources WHERE id = ?",
+                (task_row["source_id"],),
+            ).fetchone()[0]
+            quiz_results_after_duplicate = conn.execute(
+                "SELECT COUNT(*) FROM quiz_results WHERE daily_task_id = ?",
+                (task_id,),
+            ).fetchone()[0]
+        assert_true(source_units_after_duplicate == source_units_before_duplicate, "重复提交不应重复推进学习进度")
+        assert_true(quiz_results_after_duplicate == quiz_results_before_duplicate, "重复提交不应新增批改记录")
 
         dashboard = assert_status(client.get("/api/parent/dashboard"))
         for key in ("tasks", "quiz_results", "stuck_tasks", "notifications", "mastery", "agent_runs"):

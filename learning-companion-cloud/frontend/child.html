@@ -45,6 +45,7 @@
       let tasks = [];
       let activeTaskId = null;
       let timerHandle = null;
+      const pendingActions = new Set();
 
       async function loadTasks() {
         const container = document.querySelector("#tasks");
@@ -84,7 +85,7 @@
         const renderedAt = isRunning ? Date.now() : 0;
         const startDisabled = task.status === "in_progress" ? "disabled" : "";
         const pauseDisabled = task.status !== "in_progress" ? "disabled" : "";
-        const doneDisabled = task.status === "completed" ? "disabled" : "";
+        const doneDisabled = ["checking", "completed"].includes(task.status) ? "disabled" : "";
         return `
           <div class="task-head">
             <div>
@@ -229,29 +230,38 @@
         form.append(submit);
         form.addEventListener("submit", async (event) => {
           event.preventDefault();
+          if (submit.disabled) return;
+          submit.disabled = true;
+          submit.textContent = "正在检查...";
           const answers = {};
           new FormData(form).forEach((value, key) => {
             answers[key] = value;
           });
-          const result = await api(`/api/daily-tasks/${taskId}/quiz`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ answers }),
-          });
-          toast(`小测结果：${result.correct}/${result.total}`);
-          await loadTasks();
-          if (result.status === "completed") {
-            box.innerHTML = `<p>真棒，检查通过：${result.correct}/${result.total}</p><p class="muted">${result.mastery?.next_action || "继续保持。"}</p>`;
-          } else {
-            const wrongHtml = (result.wrong_items || []).map((item) => `
-              <div class="quiz-item">
-                <strong>${escapeHtml(item.error_type || "错因")}：${escapeHtml(item.question)}</strong>
-                <p>你的答案：${escapeHtml(item.your_answer || "未作答")}</p>
-                <p>订正答案：${escapeHtml(item.answer)}</p>
-                <p class="muted">${escapeHtml(item.next_action || item.explanation)}</p>
-              </div>
-            `).join("");
-            box.innerHTML = `<p>需要订正：${result.correct}/${result.total}</p>${wrongHtml}`;
+          try {
+            const result = await api(`/api/daily-tasks/${taskId}/quiz`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ answers }),
+            });
+            toast(result.already_checked ? "这次小测已经检查过了" : `小测结果：${result.correct}/${result.total}`);
+            await loadTasks();
+            if (result.status === "completed") {
+              box.innerHTML = `<p>真棒，检查通过：${result.correct}/${result.total}</p><p class="muted">${result.mastery?.next_action || "继续保持。"}</p>`;
+            } else {
+              const wrongHtml = (result.wrong_items || []).map((item) => `
+                <div class="quiz-item">
+                  <strong>${escapeHtml(item.error_type || "错因")}：${escapeHtml(item.question)}</strong>
+                  <p>你的答案：${escapeHtml(item.your_answer || "未作答")}</p>
+                  <p>订正答案：${escapeHtml(item.answer)}</p>
+                  <p class="muted">${escapeHtml(item.next_action || item.explanation)}</p>
+                </div>
+              `).join("");
+              box.innerHTML = `<p>需要订正：${result.correct}/${result.total}</p>${wrongHtml}`;
+            }
+          } catch (error) {
+            submit.disabled = false;
+            submit.textContent = "提交小测";
+            toast(error.message);
           }
         });
         box.append(form);
@@ -304,22 +314,36 @@
         if (!button) return;
         const taskId = Number(button.dataset.id);
         const action = button.dataset.action;
-        if (action === "stuck") {
-          const note = prompt("卡在哪里？写一句话就行：") || "";
-          activeTaskId = taskId;
-          const result = await postEvent(taskId, "stuck", note);
-          updateOneTask(taskId, result);
-          showStuckAssistance(result);
-          toast(result.assistant_source === "ai" ? "AI 已给你一个提示，先试 3 分钟" : "已给你一个本地提示，先试 3 分钟");
-        } else if (action === "complete") {
-          const result = await postEvent(taskId, "complete");
-          updateOneTask(taskId, result);
-          await showQuiz(taskId);
-        } else {
-          const result = await postEvent(taskId, action);
-          if (action === "start") activeTaskId = taskId;
-          updateOneTask(taskId, result);
-          toast(action === "start" ? `已开始计时：${formatElapsed(result.elapsed_seconds || 0)}` : `已暂停，已学 ${formatElapsed(result.elapsed_seconds || 0)}`);
+        const pendingKey = `${taskId}:${action}`;
+        if (pendingActions.has(pendingKey) || button.disabled) return;
+        pendingActions.add(pendingKey);
+        button.disabled = true;
+        const originalText = button.textContent;
+        if (action === "complete") button.textContent = "正在出题...";
+        try {
+          if (action === "stuck") {
+            const note = prompt("卡在哪里？写一句话就行：") || "";
+            activeTaskId = taskId;
+            const result = await postEvent(taskId, "stuck", note);
+            updateOneTask(taskId, result);
+            showStuckAssistance(result);
+            toast(result.assistant_source === "ai" ? "AI 已给你一个提示，先试 3 分钟" : "已给你一个本地提示，先试 3 分钟");
+          } else if (action === "complete") {
+            const result = await postEvent(taskId, "complete");
+            updateOneTask(taskId, result);
+            await showQuiz(taskId);
+          } else {
+            const result = await postEvent(taskId, action);
+            if (action === "start") activeTaskId = taskId;
+            updateOneTask(taskId, result);
+            toast(action === "start" ? `已开始计时：${formatElapsed(result.elapsed_seconds || 0)}` : `已暂停，已学 ${formatElapsed(result.elapsed_seconds || 0)}`);
+          }
+        } catch (error) {
+          button.disabled = false;
+          button.textContent = originalText;
+          toast(error.message);
+        } finally {
+          pendingActions.delete(pendingKey);
         }
       });
 
