@@ -323,6 +323,12 @@ def run_e2e() -> None:
         assert_true(pause["timer_state"] == "stopped", "pause 后计时器应停止")
         assert_true(pause["elapsed_seconds"] >= 120, f"pause 后应累计已学时间，实际 {pause}")
 
+        blank_stuck = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "stuck", "note": ""}))
+        blank_assistance_text = " ".join(str(value) for value in blank_stuck.get("assistance", {}).values())
+        assert_true(blank_stuck["task_id"] == task_id, "空卡住响应也必须绑定当前英语任务")
+        assert_true("白鹭" not in blank_assistance_text and "鹭" not in blank_assistance_text, f"英语空卡住不应串到语文白鹭提示，实际 {blank_assistance_text}")
+        assert_true("具体" in blank_assistance_text and ("英语" in blank_assistance_text or "school" in blank_assistance_text.lower() or "单词" in blank_assistance_text), "空卡住应要求孩子补充具体英语卡点")
+
         stuck = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "stuck", "note": "不会读 school"}))
         assert_true(stuck["status"] == "stuck", "stuck 后状态应为 stuck")
         assert_true(stuck["timer_state"] == "stopped", "stuck 后计时器应停止")

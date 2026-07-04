@@ -111,19 +111,23 @@ def assist_stuck(conn: Connection, task_id: int, note: str = "") -> dict[str, An
     guidance = ensure_task_guidance(conn, task_id)
     fallback = _fallback_stuck_assistance(task, source, note)
     settings = get_settings(conn)
-    ai_result, ai_meta = call_ai_json_with_meta(
-        settings,
-        STUCK_ASSIST_PROMPT.format(
-            guardrails=COMMON_GUARDRAILS,
-            stuck_context={
-                "task": task,
-                "source": source,
-                "existing_guidance": guidance,
-                "child_note": note,
-            },
-        ),
-        fallback,
-    )
+    if not note.strip():
+        ai_result = fallback
+        ai_meta = {"used_ai": False, "model": "rule", "status": "rule_fallback", "error": "blank stuck note"}
+    else:
+        ai_result, ai_meta = call_ai_json_with_meta(
+            settings,
+            STUCK_ASSIST_PROMPT.format(
+                guardrails=COMMON_GUARDRAILS,
+                stuck_context={
+                    "task": task,
+                    "source": source,
+                    "existing_guidance": guidance,
+                    "child_note": note,
+                },
+            ),
+            fallback,
+        )
     assistance = _normalize_stuck_assistance(ai_result if isinstance(ai_result, dict) else fallback, fallback)
     output = {
         "task_id": task_id,
@@ -275,7 +279,9 @@ def _fallback_stuck_assistance(task: dict[str, Any], source: dict[str, Any] | No
     subject = (source or {}).get("subject") or task.get("subject") or "这项内容"
     title = task.get("title") or "当前任务"
     standard = task.get("completion_standard") or task.get("description") or "完成本任务的核心要求"
-    blocker = note.strip() or "还没有说清楚卡在哪一步"
+    blocker = note.strip()
+    if not blocker:
+        return _blank_stuck_help(subject, title, standard)
     targeted = _targeted_stuck_help(subject, blocker, title)
     if targeted:
         return targeted
@@ -289,6 +295,48 @@ def _fallback_stuck_assistance(task: dict[str, Any], source: dict[str, Any] | No
         "if_still_stuck": "如果 3 分钟后还不会，再点一次卡住或请家长看这一条提示，不要硬耗太久。",
         "review_focus": _review_focus_for_subject(subject, blocker),
         "parent_note": "孩子已触发卡住辅导；建议先让孩子说题目要求和第一步，不要直接讲完整答案。",
+    }
+
+
+def _blank_stuck_help(subject: str, title: str, standard: str) -> dict[str, str]:
+    if "英语" in subject or any(word.lower() in title.lower() for word in ("unit", "school", "english")):
+        likely = "你还没有写具体卡点。先判断是：不会读单词、听不懂音频、看不懂句子，还是不知道要交什么。"
+        hint = "这项英语任务先只做第一步：听或朗读 1 分钟，圈出 1 个不会读的词，不要一次想做完整个任务。"
+        question = "你现在最卡的是哪一个词或哪一句？如果是单词，直接写：不会读 school。"
+        example = "例如卡在 library，就先做三件事：读 library，知道它是“图书馆”，再放回句子 There is a library."
+        retry = "现在先圈出一个不会读/不会拼的词，写到卡住输入框里；如果没有，就读完第一段再点完成检查。"
+        focus = "英语具体卡点：单词读音、词义或句型"
+    elif "数学" in subject:
+        likely = "你还没有写具体卡点。数学通常卡在：不知道第一步、列式不清、计算出错、小数点或单位。"
+        hint = "先只写两行：已知条件是什么？问题要求什么？暂时不要急着算。"
+        question = "你卡在列式、计算，还是小数点/单位？可以写：不知道第一步怎么做。"
+        example = "例如 2.4×3，先写单价 2.4 元、数量 3 支，再列式 2.4×3。"
+        retry = "现在先把题里的数字和问题圈出来，再写一个算式。"
+        focus = "数学具体卡点：审题、列式、计算或单位"
+    elif "语文" in subject:
+        likely = "你还没有写具体卡点。语文通常卡在：不认识字、不懂词、不懂句子、不会概括或不会仿写。"
+        hint = "先只做一件事：回到课文或任务要求，圈出你不认识的字词或最不懂的一句话。"
+        question = "你具体卡在哪个字、词或句子？可以写：不认识鹭这个字。"
+        example = "例如卡在“鹭”，就先查读音 lù，再看它和“白鹭”这个词连在一起。"
+        retry = "现在先圈一个具体字词或一句话，再重新点卡住并写清楚。"
+        focus = "语文具体卡点：字词、句子理解或概括表达"
+    else:
+        likely = "你还没有写具体卡点。现在系统只能先帮你拆任务要求，不能准确判断是哪一步不会。"
+        hint = f"先对照完成标准：“{standard}”，圈出要交付的结果。"
+        question = "你卡在看不懂要求、不会第一步，还是做完不知道对不对？"
+        example = "先把任务拆成：看懂要求、完成第一步、检查答案。"
+        retry = "现在先写一句：我卡在____。"
+        focus = "任务要求和第一步执行"
+    return {
+        "encouragement": "你点卡住是对的，但要写清楚具体问题，系统才能真正帮到你。",
+        "likely_blocker": likely,
+        "hint_1": hint,
+        "guiding_question": question,
+        "mini_example": example,
+        "try_again": retry,
+        "if_still_stuck": "如果还是不知道怎么描述，就把任务卡里最难的一句话原样发出来。",
+        "review_focus": focus,
+        "parent_note": f"孩子在《{title}》点了卡住但未写具体问题，建议先追问卡在哪个字、词、句、步骤或单词。",
     }
 
 

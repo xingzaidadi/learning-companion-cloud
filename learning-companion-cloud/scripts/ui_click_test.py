@@ -191,12 +191,15 @@ def run_browser_clicks(base_url: str) -> None:
         page.click("#startNext")
         page.wait_for_timeout(500)
         workflow_card = page.locator("#tasks .task-card.active").first
-        page.wait_for_timeout(1_200)
+        page.wait_for_function(
+            "() => Array.from(document.querySelectorAll('#tasks .task-card.active .timer-tag')).some((node) => !node.innerText.includes('0:00'))",
+            timeout=5_000,
+        )
         workflow_card = page.locator("#tasks .task-card.active").first
         workflow_task_id = workflow_card.locator("button[data-action='pause']").get_attribute("data-id")
         assert workflow_task_id
         assert "进行中" in workflow_card.inner_text()
-        assert "已学 0:0" in workflow_card.inner_text() or "已学 0:1" in workflow_card.inner_text()
+        assert "已学 0:00" not in workflow_card.inner_text()
         page.locator(f"button[data-action='pause'][data-id='{workflow_task_id}']").click(force=True)
         page.wait_for_timeout(500)
         api_tasks = page.evaluate("async () => await (await fetch('/api/daily-tasks')).json()")

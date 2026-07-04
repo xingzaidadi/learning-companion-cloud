@@ -71,7 +71,8 @@
         tasks.forEach((task) => {
           const card = document.createElement("article");
           card.className = `task-card ${task.id === activeTaskId || task.status === "in_progress" ? "active" : ""}`;
-          const startedAt = task.last_started_at ? Date.parse(task.last_started_at) : 0;
+          const isRunning = task.timer_state === "running";
+          const renderedAt = isRunning ? Date.now() : 0;
           const startDisabled = task.status === "in_progress" ? "disabled" : "";
           const pauseDisabled = task.status !== "in_progress" ? "disabled" : "";
           const doneDisabled = task.status === "completed" ? "disabled" : "";
@@ -85,7 +86,7 @@
             </div>
             <div class="task-meta">
               <span class="tag">${task.estimated_minutes} 分钟</span>
-              <span class="tag timer-tag" data-elapsed="${Number(task.elapsed_seconds || 0)}" data-started-at="${startedAt}" data-state="${task.timer_state || "stopped"}">已学 ${formatElapsed(task.elapsed_seconds || 0)}</span>
+              <span class="tag timer-tag" data-elapsed="${Number(task.elapsed_seconds || 0)}" data-rendered-at="${renderedAt}" data-state="${task.timer_state || "stopped"}">已学 ${formatElapsed(task.elapsed_seconds || 0)}</span>
               ${checkMethodTag(task)}
             </div>
             <p><strong>完成标准：</strong>${task.completion_standard}</p>
@@ -111,9 +112,9 @@
       function updateTimers() {
         document.querySelectorAll(".timer-tag").forEach((node) => {
           const base = Number(node.dataset.elapsed || 0);
-          const startedAt = Number(node.dataset.startedAt || 0);
-          const running = node.dataset.state === "running" && startedAt > 0;
-          const extra = running ? Math.floor((Date.now() - startedAt) / 1000) : 0;
+          const renderedAt = Number(node.dataset.renderedAt || 0);
+          const running = node.dataset.state === "running" && renderedAt > 0;
+          const extra = running ? Math.floor((Date.now() - renderedAt) / 1000) : 0;
           node.textContent = `已学 ${formatElapsed(base + extra)}`;
         });
       }
