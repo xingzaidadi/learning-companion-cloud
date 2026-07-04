@@ -55,6 +55,8 @@
           tasks = tasks.value || [];
         }
         renderTasks();
+        const checkingTask = tasks.find((task) => task.status === "checking");
+        if (checkingTask) await showQuiz(checkingTask.id);
       }
 
       function renderTasks() {
@@ -83,9 +85,20 @@
       function taskCardHtml(task) {
         const isRunning = task.timer_state === "running";
         const renderedAt = isRunning ? Date.now() : 0;
-        const startDisabled = task.status === "in_progress" ? "disabled" : "";
+        const startDisabled = ["in_progress", "checking", "completed"].includes(task.status) ? "disabled" : "";
         const pauseDisabled = task.status !== "in_progress" ? "disabled" : "";
-        const doneDisabled = ["checking", "completed"].includes(task.status) ? "disabled" : "";
+        const doneAction = task.status === "checking" ? "showQuiz" : "complete";
+        const doneLabel = task.status === "checking"
+          ? "继续检查"
+          : task.status === "completed"
+            ? "已通过"
+            : task.status === "not_started"
+              ? "先点开始"
+              : task.status === "needs_revision"
+                ? "订正后重新检查"
+                : "我做完了，开始检查";
+        const doneDisabled = ["not_started", "completed"].includes(task.status) ? "disabled" : "";
+        const stuckDisabled = ["checking", "completed"].includes(task.status) ? "disabled" : "";
         return `
           <div class="task-head">
             <div>
@@ -103,8 +116,8 @@
           <div class="actions">
             <button class="primary" data-action="start" data-id="${task.id}" ${startDisabled}>开始</button>
             <button data-action="pause" data-id="${task.id}" ${pauseDisabled}>暂停</button>
-            <button class="warn" data-action="complete" data-id="${task.id}" ${doneDisabled}>我做完了，开始检查</button>
-            <button class="danger" data-action="stuck" data-id="${task.id}" ${doneDisabled}>我卡住了</button>
+            <button class="warn" data-action="${doneAction}" data-id="${task.id}" ${doneDisabled}>${doneLabel}</button>
+            <button class="danger" data-action="stuck" data-id="${task.id}" ${stuckDisabled}>我卡住了</button>
           </div>
         `;
       }
@@ -320,6 +333,7 @@
         button.disabled = true;
         const originalText = button.textContent;
         if (action === "complete") button.textContent = "正在出题...";
+        if (action === "showQuiz") button.textContent = "正在打开...";
         try {
           if (action === "stuck") {
             const note = prompt("卡在哪里？写一句话就行：") || "";
@@ -332,6 +346,10 @@
             const result = await postEvent(taskId, "complete");
             updateOneTask(taskId, result);
             await showQuiz(taskId);
+          } else if (action === "showQuiz") {
+            await showQuiz(taskId);
+            button.disabled = false;
+            button.textContent = originalText;
           } else {
             const result = await postEvent(taskId, action);
             if (action === "start") activeTaskId = taskId;

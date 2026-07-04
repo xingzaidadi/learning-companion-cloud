@@ -192,6 +192,9 @@ def run_browser_clicks(base_url: str) -> None:
 
         page.goto(f"{base_url}/child")
         page.wait_for_selector("#tasks .task-card")
+        first_card = page.locator("#tasks .task-card").first
+        assert "先点开始" in first_card.inner_text(), "未开始任务不应直接显示可检查"
+        assert first_card.locator("button.warn").first.is_disabled(), "未开始任务的检查按钮应禁用"
         page.evaluate(
             """
             () => {
@@ -233,8 +236,8 @@ def run_browser_clicks(base_url: str) -> None:
         try:
             page.wait_for_selector("#quizBox form", timeout=5_000)
         except Exception:
-            workflow_card = page.locator(f"button[data-action='complete'][data-id='{workflow_task_id}']").locator("xpath=ancestor::article[1]")
-            workflow_card.locator("button[data-action='complete']").click(force=True)
+            workflow_card = page.locator(f"button[data-action='showQuiz'][data-id='{workflow_task_id}']").locator("xpath=ancestor::article[1]")
+            workflow_card.locator("button[data-action='showQuiz']").click(force=True)
             try:
                 page.wait_for_selector("#quizBox form")
             except Exception as exc:
@@ -245,6 +248,10 @@ def run_browser_clicks(base_url: str) -> None:
                     f"errors={browser_errors}\n"
                     f"api_responses={api_responses[-20:]}"
                 ) from exc
+        workflow_card = page.locator(f"button[data-action='showQuiz'][data-id='{workflow_task_id}']").locator("xpath=ancestor::article[1]")
+        assert "继续检查" in workflow_card.inner_text(), "进入检查后应显示继续检查，而不是重复完成"
+        workflow_card.locator("button[data-action='showQuiz']").click(force=True)
+        page.wait_for_selector("#quizBox form")
         for index in range(page.locator("#quizBox textarea").count()):
             page.locator("#quizBox textarea").nth(index).fill("测试答案")
         radio_names = page.locator("#quizBox input[type='radio']").evaluate_all(
