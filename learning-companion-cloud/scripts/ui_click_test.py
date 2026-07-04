@@ -224,6 +224,10 @@ def run_browser_clicks(base_url: str) -> None:
         assert workflow_task["status"] == "paused", workflow_task
         workflow_card = page.locator(f"button[data-action='complete'][data-id='{workflow_task_id}']").locator("xpath=ancestor::article[1]")
         assert "已学" in workflow_card.inner_text()
+        paused_time = workflow_card.locator(".timer-tag").inner_text()
+        page.wait_for_timeout(1_500)
+        paused_time_after_wait = page.locator(f"button[data-action='complete'][data-id='{workflow_task_id}']").locator("xpath=ancestor::article[1]").locator(".timer-tag").inner_text()
+        assert paused_time_after_wait == paused_time, f"暂停后计时不应继续增长：{paused_time} -> {paused_time_after_wait}"
         workflow_card = page.locator(f"button[data-action='complete'][data-id='{workflow_task_id}']").locator("xpath=ancestor::article[1]")
         workflow_card.locator("button[data-action='complete']").click(force=True)
         try:
