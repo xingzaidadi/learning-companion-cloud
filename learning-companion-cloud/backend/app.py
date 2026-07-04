@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 
 try:
     from .agent import (
+        assist_stuck as agent_assist_stuck,
         generate_daily_report as agent_daily_report,
         generate_daily_tasks as agent_daily_tasks,
         generate_quiz as agent_generate_quiz,
@@ -39,6 +40,7 @@ try:
     from .settings import get_settings, save_settings
 except ImportError:
     from agent import (
+        assist_stuck as agent_assist_stuck,
         generate_daily_report as agent_daily_report,
         generate_daily_tasks as agent_daily_tasks,
         generate_quiz as agent_generate_quiz,
@@ -397,6 +399,7 @@ async def task_event(task_id: int, request: Request, _: str = Depends(require_ch
             (task_id, event_type, note, now),
         )
         if event_type == "stuck":
+            assistance = agent_assist_stuck(conn, task_id, note)
             create_review_item(
                 conn,
                 int(task["student_id"]),
@@ -408,6 +411,7 @@ async def task_event(task_id: int, request: Request, _: str = Depends(require_ch
                 1,
             )
             notify(conn, task["student_id"], "stuck", "孩子卡住了", f"{task['title']}\n\n说明：{note or '未填写'}")
+            return {"task_id": task_id, "status": status_map[event_type], **assistance}
         return {"task_id": task_id, "status": status_map[event_type]}
 
 

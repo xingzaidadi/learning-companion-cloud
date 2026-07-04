@@ -19,7 +19,15 @@ from .ai_provider import call_ai_json
 from .db import loads
 from .plan_generator import generate_plan_from_text
 from .planner import generate_daily_tasks as rule_generate_daily_tasks
-from .prompts import COMMON_GUARDRAILS, DIAGNOSIS_PROMPT, GRADE_PROMPT, PLAN_PROMPT, QUIZ_PROMPT, REPORT_PROMPT
+from .prompts import (
+    COMMON_GUARDRAILS,
+    DIAGNOSIS_PROMPT,
+    GRADE_PROMPT,
+    PLAN_PROMPT,
+    QUIZ_PROMPT,
+    REPORT_PROMPT,
+    STUCK_ASSIST_PROMPT,
+)
 from .quiz import ensure_quiz_for_task, grade_quiz, regenerate_quiz_for_task
 from .report import build_daily_report
 from .review import create_review_item
@@ -85,6 +93,46 @@ def grade_submission(conn: Connection, task_id: int, answers: dict[str, str]) ->
     diagnosis = diagnose_learning(conn, task_id, rule_result)
     output = {**rule_result, "diagnosis": diagnosis}
     log_agent_run(conn, int(task["student_id"]), "grade", {"task_id": task_id, "answers": answers}, output)
+    return output
+
+
+def assist_stuck(conn: Connection, task_id: int, note: str = "") -> dict[str, Any]:
+    task = get_task(conn, task_id)
+    if not task:
+        return {"task_id": task_id, "status": "not_found", "assistance": _fallback_stuck_assistance({}, None, note)}
+
+    source = get_task_source(conn, task.get("source_id"))
+    guidance = ensure_task_guidance(conn, task_id)
+    fallback = _fallback_stuck_assistance(task, source, note)
+    settings = get_settings(conn)
+    ai_result = call_ai_json(
+        settings,
+        STUCK_ASSIST_PROMPT.format(
+            guardrails=COMMON_GUARDRAILS,
+            stuck_context={
+                "task": task,
+                "source": source,
+                "existing_guidance": guidance,
+                "child_note": note,
+            },
+        ),
+        fallback,
+    )
+    assistance = _normalize_stuck_assistance(ai_result if isinstance(ai_result, dict) else fallback, fallback)
+    output = {
+        "task_id": task_id,
+        "status": "assisted",
+        "assistance": assistance,
+        "review_action": f"已把“{assistance['review_focus']}”加入后续补漏和复测重点。",
+    }
+    log_agent_run(
+        conn,
+        int(task["student_id"]),
+        "stuck_assist",
+        {"task_id": task_id, "note": note},
+        output,
+        _model_name(settings),
+    )
     return output
 
 
@@ -201,6 +249,63 @@ def _rule_diagnosis(score: float, quiz_result: dict[str, Any]) -> dict[str, Any]
         "parent_attention": "help" if level == "D" else "watch" if level == "C" else "none",
         "new_task_allowed": level in ("A", "B"),
     }
+
+
+def _fallback_stuck_assistance(task: dict[str, Any], source: dict[str, Any] | None, note: str) -> dict[str, str]:
+    subject = (source or {}).get("subject") or task.get("subject") or "这项内容"
+    title = task.get("title") or "当前任务"
+    standard = task.get("completion_standard") or task.get("description") or "完成本任务的核心要求"
+    blocker = note.strip() or "还没有说清楚卡在哪一步"
+    return {
+        "encouragement": "卡住很正常，先别急。我们把问题拆小，一步一步来。",
+        "likely_blocker": f"你可能卡在：{blocker}。如果不确定，就先看任务要求里最关键的一句话。",
+        "hint_1": f"先只做一件事：把《{title}》要你完成的目标圈出来，对照“{standard}”。",
+        "guiding_question": "这项任务真正问你的是什么？你已经知道了哪些条件或内容？",
+        "mini_example": _mini_example_for_subject(subject),
+        "try_again": "现在先重新尝试 3 分钟，只写第一步或先说出你的思路，不要求一次全对。",
+        "if_still_stuck": "如果 3 分钟后还不会，再点一次卡住或请家长看这一条提示，不要硬耗太久。",
+        "review_focus": _review_focus_for_subject(subject, blocker),
+        "parent_note": "孩子已触发卡住辅导；建议先让孩子说题目要求和第一步，不要直接讲完整答案。",
+    }
+
+
+def _normalize_stuck_assistance(result: dict[str, Any], fallback: dict[str, str]) -> dict[str, str]:
+    keys = (
+        "encouragement",
+        "likely_blocker",
+        "hint_1",
+        "guiding_question",
+        "mini_example",
+        "try_again",
+        "if_still_stuck",
+        "review_focus",
+        "parent_note",
+    )
+    normalized: dict[str, str] = {}
+    for key in keys:
+        value = result.get(key) if isinstance(result, dict) else ""
+        normalized[key] = str(value).strip() if value else fallback[key]
+    return normalized
+
+
+def _mini_example_for_subject(subject: str) -> str:
+    if "数学" in subject:
+        return "数学可以先用更小的数试一遍：先写已知条件，再写要求什么，最后列式。"
+    if "英语" in subject:
+        return "英语可以先找关键词：谁做了什么、时间在哪里、题目要选意思还是拼写。"
+    if "语文" in subject:
+        return "语文可以先读题干，圈出关键词，再回到课文里找对应句子。"
+    return "先把任务拆成“看懂要求、完成第一步、检查答案”三个小步骤。"
+
+
+def _review_focus_for_subject(subject: str, blocker: str) -> str:
+    if "数学" in subject:
+        return "数学审题、数量关系和第一步列式"
+    if "英语" in subject:
+        return "英语关键词、句意理解和基础表达"
+    if "语文" in subject:
+        return "语文题干理解、课文定位和表达完整性"
+    return blocker if blocker and blocker != "还没有说清楚卡在哪一步" else "任务理解和第一步执行"
 
 
 def _knowledge_point(source: dict[str, Any] | None, task: dict[str, Any]) -> str:

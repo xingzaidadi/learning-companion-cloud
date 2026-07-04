@@ -93,3 +93,31 @@ REPORT_PROMPT = """
 今日记录：
 {report_context}
 """
+
+
+STUCK_ASSIST_PROMPT = """
+孩子在学习任务中点了“我卡住了”。请你作为学习陪跑 Agent 进行即时辅导。
+要求：
+1. 不要直接替孩子完成作业或直接报最终答案。
+2. 先安抚，再给第一层提示，再问一个引导问题。
+3. 给一个更简单的同类例子或拆解方法。
+4. 给孩子一个“现在再试一次”的具体动作。
+5. 说明这次卡住点后续会进入补漏复习。
+6. 输出 JSON：
+{{
+  "encouragement": "",
+  "likely_blocker": "",
+  "hint_1": "",
+  "guiding_question": "",
+  "mini_example": "",
+  "try_again": "",
+  "if_still_stuck": "",
+  "review_focus": "",
+  "parent_note": ""
+}}
+
+{guardrails}
+
+卡住上下文：
+{stuck_context}
+"""
