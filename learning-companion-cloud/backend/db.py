@@ -169,6 +169,20 @@ def init_db() -> None:
                 created_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS learning_materials (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+                source_id INTEGER REFERENCES task_sources(id) ON DELETE SET NULL,
+                subject TEXT NOT NULL DEFAULT '',
+                material_type TEXT NOT NULL DEFAULT 'notes',
+                title TEXT NOT NULL,
+                content_text TEXT NOT NULL DEFAULT '',
+                file_path TEXT NOT NULL DEFAULT '',
+                config_json TEXT NOT NULL DEFAULT '{}',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS review_items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,

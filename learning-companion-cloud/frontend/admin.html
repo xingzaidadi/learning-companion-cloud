@@ -164,6 +164,41 @@
               </div>
             </form>
           </section>
+
+          <section class="card" style="margin-top:16px">
+            <h2>学习资料库</h2>
+            <p class="muted">把课本 PDF 摘要、单词表、听写词、音频清单粘贴进来，Agent 出题会优先引用这些资料。</p>
+            <form id="materialForm" class="form-grid">
+              <label>科目
+                <input name="subject" placeholder="语文 / 数学 / 英语" />
+              </label>
+              <label>资料类型
+                <select name="material_type">
+                  <option value="textbook_pdf">课本/PDF 摘要</option>
+                  <option value="word_list">英语单词表</option>
+                  <option value="dictation">语文听写词</option>
+                  <option value="audio_list">英语音频清单</option>
+                  <option value="notes">学习笔记</option>
+                </select>
+              </label>
+              <label>关联任务源 ID（可选）
+                <input name="source_id" type="number" min="0" value="0" />
+              </label>
+              <label class="full">资料标题
+                <input name="title" required placeholder="例如：Unit 1 单词表 / 《白鹭》听写词 / Unit 1 音频清单" />
+              </label>
+              <label class="full">资料内容
+                <textarea name="content_text" placeholder="英语：library=图书馆&#10;语文：听写词：白鹭、精巧、适宜&#10;音频：Unit1-01.mp3 跟读 Story time"></textarea>
+              </label>
+              <label class="full">本地文件路径或网盘说明（可选）
+                <input name="file_path" placeholder="例如：C:\\Users\\MI\\Downloads\\英语五上Unit1.pdf" />
+              </label>
+              <div class="actions" style="align-self:end">
+                <button class="primary">保存资料</button>
+              </div>
+            </form>
+            <div id="materials" class="task-list" style="margin-top:12px"></div>
+          </section>
         </details>
       </section>
 
@@ -221,6 +256,26 @@
         });
       }
 
+      async function loadMaterials() {
+        const data = await api("/api/materials");
+        const box = document.querySelector("#materials");
+        box.innerHTML = data.length ? "" : '<p class="muted">暂无资料。录入后会参与今天任务和小测生成。</p>';
+        data.slice(0, 10).forEach((item) => {
+          const card = document.createElement("article");
+          card.className = "task-card";
+          card.innerHTML = `
+            <div class="task-head">
+              <div>
+                <strong>${item.title}</strong>
+                <p class="muted">${item.subject || "综合"} · ${item.material_type}${item.source_title ? ` · ${item.source_title}` : ""}</p>
+              </div>
+              <span class="tag">${item.content_text ? "已录内容" : "仅文件线索"}</span>
+            </div>
+          `;
+          box.append(card);
+        });
+      }
+
       async function loadAgentRuns() {
         const data = await api("/api/agent/overview");
         const box = document.querySelector("#agentRuns");
@@ -249,7 +304,7 @@
       }
 
       async function refreshAll() {
-        await Promise.all([loadSources(), loadTodayTasks(), loadAgentRuns()]);
+        await Promise.all([loadSources(), loadTodayTasks(), loadMaterials(), loadAgentRuns()]);
       }
 
       function renderQuickPlanResult(plan, today) {
@@ -347,6 +402,14 @@
         toast(`导入完成：新增 ${result.created} 个`);
         event.target.reset();
         await loadSources();
+      });
+
+      document.querySelector("#materialForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await api("/api/materials", { method: "POST", body: new FormData(event.target) });
+        toast("资料已保存，后续出题会引用");
+        event.target.reset();
+        await loadMaterials();
       });
 
       document.querySelector("#seedDemo").addEventListener("click", async () => {

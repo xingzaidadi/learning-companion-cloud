@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
 import socket
@@ -60,8 +60,8 @@ def start_server() -> tuple[subprocess.Popen[str], str, Path]:
         [sys.executable, "-m", "uvicorn", "backend.app:app", "--host", "127.0.0.1", "--port", str(port)],
         cwd=ROOT,
         env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
         text=True,
     )
     base_url = f"http://127.0.0.1:{port}"
@@ -106,6 +106,10 @@ def run_browser_clicks(base_url: str) -> None:
             "() => document.querySelector('#quickPlanResult')?.innerText.includes('已生成 2 条长期计划')",
             timeout=20_000,
         )
+        page.wait_for_function(
+            "() => document.querySelector('#todayTasks')?.innerText.includes('寒假作业本')",
+            timeout=20_000,
+        )
         quick_result = page.locator("#quickPlanResult").inner_text()
         today_tasks = page.locator("#todayTasks").inner_text()
         assert "寒假作业本" in quick_result and "五年级上册语文每日学习" in quick_result
@@ -121,8 +125,8 @@ def run_browser_clicks(base_url: str) -> None:
             " && document.querySelector('#assistBox')?.innerText.includes('lù')",
             timeout=20_000,
         )
-        stuck_status_count = page.locator(".task-head .task-meta .tag", has_text="卡住了").count()
-        assert stuck_status_count == 1
+        api_tasks = page.evaluate("async () => await (await fetch('/api/daily-tasks')).json()")
+        assert sum(1 for task in api_tasks if task["status"] == "stuck") == 1
         page.goto(f"{base_url}/parent")
         page.wait_for_selector("#tasks .task-card")
         parent_body = page.locator("body").inner_text()
@@ -170,6 +174,13 @@ def run_browser_clicks(base_url: str) -> None:
         fill_if_present(page, "#importForm input[name='default_deadline']", "2026-08-31")
         page.click("#importForm button.primary")
         page.wait_for_timeout(500)
+        fill_if_present(page, "#materialForm input[name='subject']", "英语")
+        page.select_option("#materialForm select[name='material_type']", "word_list")
+        fill_if_present(page, "#materialForm input[name='title']", "Unit 1 单词表")
+        fill_if_present(page, "#materialForm textarea[name='content_text']", "teacher=老师\nlibrary=图书馆\nclassroom=教室")
+        page.click("#materialForm button.primary")
+        page.wait_for_timeout(500)
+        page.wait_for_selector("#materials .task-card")
         page.click("#generateToday")
         page.wait_for_selector("button[data-action='regenerateQuiz']")
         click_first(page, "button[data-action='regenerateQuiz']")
@@ -179,23 +190,26 @@ def run_browser_clicks(base_url: str) -> None:
         page.wait_for_selector("#tasks .task-card")
         page.click("#startNext")
         page.wait_for_timeout(500)
-        workflow_card = page.locator("#tasks .task-card").filter(has_text="数学").first
-        workflow_card.locator("button[data-action='start']").click()
+        workflow_card = page.locator("#tasks .task-card.active").first
         page.wait_for_timeout(1_200)
-        workflow_card = page.locator("#tasks .task-card").filter(has_text="数学").first
+        workflow_card = page.locator("#tasks .task-card.active").first
+        workflow_task_id = workflow_card.locator("button[data-action='pause']").get_attribute("data-id")
+        assert workflow_task_id
         assert "进行中" in workflow_card.inner_text()
         assert "已学 0:0" in workflow_card.inner_text() or "已学 0:1" in workflow_card.inner_text()
-        workflow_card.locator("button[data-action='pause']").click()
-        page.wait_for_timeout(300)
-        workflow_card = page.locator("#tasks .task-card").filter(has_text="数学").first
-        assert "已暂停" in workflow_card.inner_text()
+        page.locator(f"button[data-action='pause'][data-id='{workflow_task_id}']").click(force=True)
+        page.wait_for_timeout(500)
+        api_tasks = page.evaluate("async () => await (await fetch('/api/daily-tasks')).json()")
+        workflow_task = next(task for task in api_tasks if task["id"] == int(workflow_task_id))
+        assert workflow_task["status"] == "paused", workflow_task
+        workflow_card = page.locator(f"button[data-action='complete'][data-id='{workflow_task_id}']").locator("xpath=ancestor::article[1]")
         assert "已学" in workflow_card.inner_text()
-        workflow_card = page.locator("#tasks .task-card").filter(has_text="数学").first
+        workflow_card = page.locator(f"button[data-action='complete'][data-id='{workflow_task_id}']").locator("xpath=ancestor::article[1]")
         workflow_card.locator("button[data-action='complete']").click(force=True)
         try:
             page.wait_for_selector("#quizBox form", timeout=5_000)
         except Exception:
-            workflow_card = page.locator("#tasks .task-card").filter(has_text="数学").first
+            workflow_card = page.locator(f"button[data-action='complete'][data-id='{workflow_task_id}']").locator("xpath=ancestor::article[1]")
             workflow_card.locator("button[data-action='complete']").click(force=True)
             try:
                 page.wait_for_selector("#quizBox form")

@@ -106,6 +106,17 @@ def _split_values(text: str) -> list[str]:
     return values
 
 
+def _chinese_words_from_content(content: str) -> list[str]:
+    candidates: list[str] = []
+    for line in (content or "").splitlines():
+        if any(key in line for key in ("听写词", "生字词", "词语", "字词")):
+            _, _, tail = line.partition("：")
+            if not tail:
+                _, _, tail = line.partition(":")
+            candidates.extend(_split_values(tail or line))
+    return [word for word in candidates if re.search(r"[\u4e00-\u9fff]", word) and 1 <= len(word) <= 8]
+
+
 def _vocab_pairs(config: dict[str, Any], content: str) -> list[tuple[str, str]]:
     vocab_text = "\n".join(str(value) for value in (config.get("vocabulary", ""), config.get("lesson_content", ""), content) if value)
     pairs: list[tuple[str, str]] = []
@@ -125,6 +136,12 @@ def _vocab_pairs(config: dict[str, Any], content: str) -> list[tuple[str, str]]:
     seen: set[str] = set()
     unique: list[tuple[str, str]] = []
     for english, chinese in pairs:
+        english = english.strip()
+        chinese = chinese.strip()
+        if len(english) > 30 or len(chinese) > 16 or len(re.findall(r"[A-Za-z]+", english)) > 4:
+            continue
+        if not re.search(r"[\u4e00-\u9fff]", chinese):
+            continue
         key = english.lower()
         if key not in seen:
             unique.append((english, chinese))
@@ -147,7 +164,7 @@ def _guess_chinese_lesson(topic: str, content: str, version: str | None) -> tupl
 
 def _build_chinese_quiz(topic: str, content: str, config: dict[str, Any], version: str | None) -> list[dict[str, Any]]:
     lesson, bank = _guess_chinese_lesson(topic, content, version)
-    configured_words = _split_values(str(config.get("dictation_words", "") or config.get("vocabulary", "")))
+    configured_words = _split_values(str(config.get("dictation_words", "") or config.get("vocabulary", ""))) or _chinese_words_from_content(content)
     words = configured_words or list(bank["words"])
     chars: dict[str, str] = dict(bank["chars"])
     if config.get("new_chars") and isinstance(config["new_chars"], dict):
@@ -358,6 +375,7 @@ def build_content_quiz(
             config.get("knowledge_points", ""),
             config.get("vocabulary", ""),
             config.get("raw", ""),
+            config.get("materials_context", ""),
         )
         if value
     )

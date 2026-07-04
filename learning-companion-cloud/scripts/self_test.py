@@ -107,6 +107,8 @@ def run_static_button_inventory_check() -> None:
             "生成示例",
             'id="importForm"',
             "批量导入",
+            'id="materialForm"',
+            "学习资料库",
             'data-action="regenerateQuiz"',
             "重生成小测",
         ],
@@ -228,6 +230,22 @@ def run_e2e() -> None:
 
         sources = assert_status(client.get("/api/task-sources"))
         assert_true(len(sources) == 4, f"task_sources 应有 4 条，实际 {len(sources)}")
+        material = assert_status(
+            client.post(
+                "/api/materials",
+                data={
+                    "title": "Unit 1 单词表测试资料",
+                    "subject": "英语",
+                    "material_type": "word_list",
+                    "content_text": "teacher=老师\nlibrary=图书馆\nclassroom=教室",
+                    "source_id": str(item["id"]),
+                    "student_id": "1",
+                },
+            )
+        )
+        assert_true(material["status"] == "created", "管理端应能保存学习资料")
+        materials = assert_status(client.get("/api/materials"))
+        assert_true(any(row["title"] == "Unit 1 单词表测试资料" for row in materials), "资料库应能查到刚保存的资料")
 
         # 验证孩子端 GET /api/daily-tasks 在无今日任务时自动兜底生成。
         with get_conn() as conn:
@@ -344,6 +362,7 @@ def run_e2e() -> None:
             {"english_spelling", "english_word_cn_to_en", "english_sentence_fill"} & english_types == {"english_spelling", "english_word_cn_to_en", "english_sentence_fill"},
             f"英语小测应包含默写/中译英/句型填空，实际 {english_types}",
         )
+        assert_true(any("老师" in item["question"] or "teacher" in item["question"] for item in quiz["items"]), "英语小测应引用资料库单词表")
 
         chinese_quiz = assert_status(client.get(f"/api/daily-tasks/{chinese_task['id']}/quiz"))
         chinese_types = {item["question_type"] for item in chinese_quiz["items"]}

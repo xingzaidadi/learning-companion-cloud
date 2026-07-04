@@ -434,6 +434,75 @@ def create_task_source(
         return {"id": cursor.lastrowid, "status": "created"}
 
 
+@app.get("/api/materials")
+def list_materials(student_id: int = 1, _: str = Depends(require_admin_auth)) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT lm.*, ts.title AS source_title
+            FROM learning_materials lm
+            LEFT JOIN task_sources ts ON ts.id = lm.source_id
+            WHERE lm.student_id = ?
+            ORDER BY lm.id DESC
+            LIMIT 100
+            """,
+            (student_id,),
+        ).fetchall()
+        result = dict_rows(rows)
+        for item in result:
+            item["config"] = loads(item.pop("config_json"), {})
+        return result
+
+
+@app.post("/api/materials")
+def create_material(
+    title: Annotated[str, Form()],
+    subject: Annotated[str, Form()] = "",
+    material_type: Annotated[str, Form()] = "notes",
+    content_text: Annotated[str, Form()] = "",
+    file_path: Annotated[str, Form()] = "",
+    source_id: Annotated[int, Form()] = 0,
+    student_id: Annotated[int, Form()] = 1,
+    _: str = Depends(require_admin_auth),
+) -> dict[str, int | str]:
+    allowed = {"textbook_pdf", "word_list", "dictation", "audio_list", "notes"}
+    if material_type not in allowed:
+        raise HTTPException(status_code=400, detail="material_type 不合法")
+    if not title.strip():
+        raise HTTPException(status_code=400, detail="资料标题不能为空")
+    now = utc_now()
+    with get_conn() as conn:
+        if source_id:
+            source = conn.execute(
+                "SELECT id FROM task_sources WHERE id = ? AND student_id = ?",
+                (source_id, student_id),
+            ).fetchone()
+            if not source:
+                raise HTTPException(status_code=400, detail="source_id 不存在")
+        cursor = conn.execute(
+            """
+            INSERT INTO learning_materials (
+                student_id, source_id, subject, material_type, title,
+                content_text, file_path, config_json, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                student_id,
+                source_id or None,
+                subject.strip(),
+                material_type,
+                title.strip(),
+                content_text.strip(),
+                file_path.strip(),
+                dumps({"source": "admin"}),
+                now,
+                now,
+            ),
+        )
+        return {"id": cursor.lastrowid, "status": "created"}
+
+
 @app.post("/api/task-sources/seed")
 def seed_sources(student_id: int = 1, _: str = Depends(require_admin_auth)) -> dict[str, int]:
     with get_conn() as conn:

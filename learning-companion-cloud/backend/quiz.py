@@ -29,6 +29,31 @@ def _source_context(conn: Connection, task: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _materials_context(conn: Connection, task: dict[str, Any], subject: str) -> str:
+    source_id = task.get("source_id") or 0
+    rows = conn.execute(
+        """
+        SELECT material_type, title, content_text, file_path
+        FROM learning_materials
+        WHERE student_id = ?
+          AND (
+            source_id = ?
+            OR (source_id IS NULL AND (? = '' OR subject = '' OR subject = ?))
+          )
+        ORDER BY source_id DESC, id DESC
+        LIMIT 8
+        """,
+        (task["student_id"], source_id, subject, subject),
+    ).fetchall()
+    parts: list[str] = []
+    for row in rows:
+        text = row["content_text"] or row["file_path"]
+        if not text:
+            continue
+        parts.append(f"【资料:{row['material_type']}】{row['title']}\n{text}")
+    return "\n".join(parts)
+
+
 def _short(question: str, answer: str, explanation: str = "回答不为空即可，重点是说清楚思路。") -> dict[str, Any]:
     return {
         "question_type": "short",
@@ -54,7 +79,10 @@ def _templates(conn: Connection, task: dict[str, Any]) -> list[dict[str, Any]]:
     context = _source_context(conn, task)
     category = context["category"]
     subject = context["subject"]
-    config = context["config"]
+    config = dict(context["config"])
+    materials_context = _materials_context(conn, task, subject)
+    if materials_context:
+        config["materials_context"] = materials_context
     settings = get_settings(conn)
     region = settings.get("region", {})
     version = (
@@ -74,6 +102,7 @@ def _templates(conn: Connection, task: dict[str, Any]) -> list[dict[str, Any]]:
             config.get("knowledge_points", ""),
             config.get("vocabulary", ""),
             config.get("raw", ""),
+            materials_context,
         )
         if value
     )
