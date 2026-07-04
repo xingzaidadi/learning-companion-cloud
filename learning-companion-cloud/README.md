@@ -149,6 +149,10 @@ python .\scripts\ui_click_test.py
 
 `self_test.py` 覆盖接口、任务流转、出题批改、报告和静态按钮清单；`ui_click_test.py` 会启动临时服务并用 Playwright 真实点击管理端、孩子端、家长端的所有按钮。
 
+## Agent 内核升级方案
+
+完整方案见 `docs/AGENT_CORE_UPGRADE_PLAN.md`，重点升级语文听写、英语默写、数学计算/步骤题、AI 批改诊断、动态补漏和家长端智能结论。
+
 ## 生产部署提醒
 
 - 上线前必须设置 `CHILD_PASSWORD`、`PARENT_PASSWORD` 和 `ADMIN_PASSWORD`，或放到反向代理鉴权后。
