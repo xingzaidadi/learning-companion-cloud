@@ -1,0 +1,791 @@
+﻿suite:
+  id: AGENT-CORE-FULL-20260704
+  name: 学习陪跑 Agent Core 完整测试用例集
+  mode: full_case_generation
+  target: learning-companion-cloud
+  baseline_commits:
+    - b1b2732 Implement agent core learning loop
+    - be510e2 Add learning materials integration
+
+traceability_sources:
+  requirements:
+    REQ-PLAN-001: 家长输入目标或资料后自动生成长期计划和今日任务。
+    REQ-TASK-001: 今日任务按 P0 补漏、P1 新课、P2 拓展优先级生成。
+    REQ-CHILD-001: 孩子端支持开始、暂停、完成检查、卡住四按钮和计时。
+    REQ-STUCK-001: 卡住辅导只作用于当前任务，并给具体下一步。
+    REQ-QUIZ-CN-001: 语文覆盖听写、拼音、组词、词义、理解、概括、表达。
+    REQ-QUIZ-EN-001: 英语覆盖默写、互译、填空、翻译、课文理解、造句。
+    REQ-QUIZ-MA-001: 数学覆盖计算、概念、步骤、应用、错因、变式。
+    REQ-GRADE-001: 批改输出分数、错因、掌握度、下一步动作。
+    REQ-REVIEW-001: 错题进入 D1/D3/D7 间隔复习。
+    REQ-REPORT-001: 家长端输出老师式日报、风险和 10 分钟介入建议。
+    REQ-MATERIAL-001: 学习资料库资料可参与任务和小测生成。
+    REQ-AI-001: AI 参与计划、出题、开放题批改、卡住、报告；AI 不通必须规则兜底。
+    REQ-SCOPE-001: 不超出武汉五年级上册语数英范围。
+  code:
+    CODE-DB-001: backend/db.py 数据表初始化与迁移。
+    CODE-PLAN-001: backend/plan_generator.py 与 backend/agent.py 生成计划和任务。
+    CODE-QUIZ-001: backend/question_engine.py 三科题型生成。
+    CODE-GRADE-001: backend/quiz.py 批改、错因、掌握度、补漏入队。
+    CODE-REPORT-001: backend/report.py 日报/周报。
+    CODE-UI-001: frontend/admin.html、frontend/child.html、frontend/parent.html 三端页面。
+  risks:
+    RISK-EMPTY-DB-001: 空库或老库迁移失败导致页面不可用。
+    RISK-AI-FALLBACK-001: AI 失败导致孩子端或管理端不可用。
+    RISK-QUIZ-LEAK-001: 孩子端小测泄露标准答案。
+    RISK-CROSS-TASK-001: 点击卡住误把多个任务标为卡住。
+    RISK-OVER-SCOPE-001: 出题超出五年级上册范围。
+    RISK-ENC-001: 中文页面或源码出现乱码。
+    RISK-SECRET-001: API Key、learning.db、报告文件误提交。
+    RISK-UI-BUTTON-001: 页面按钮存在但点击无效果。
+    RISK-MATERIAL-001: 资料录入后没有被小测引用。
+
+coverage_map:
+  admin_plan_and_materials:
+    requirements: [REQ-PLAN-001, REQ-MATERIAL-001, REQ-AI-001]
+    cases: [AC-ADM-001, AC-ADM-002, AC-ADM-003, AC-ADM-004, AC-ADM-005, AC-MAT-001, AC-MAT-002, AC-MAT-003]
+  daily_tasks_and_priority:
+    requirements: [REQ-TASK-001, REQ-REVIEW-001]
+    cases: [AC-TASK-001, AC-TASK-002, AC-TASK-003, AC-TASK-004, AC-TASK-005]
+  child_workflow:
+    requirements: [REQ-CHILD-001, REQ-STUCK-001]
+    cases: [AC-CHILD-001, AC-CHILD-002, AC-CHILD-003, AC-CHILD-004, AC-CHILD-005, AC-CHILD-006, AC-STUCK-001, AC-STUCK-002, AC-STUCK-003, AC-STUCK-004]
+  quiz_generation:
+    requirements: [REQ-QUIZ-CN-001, REQ-QUIZ-EN-001, REQ-QUIZ-MA-001, REQ-SCOPE-001]
+    cases: [AC-QUIZ-CN-001, AC-QUIZ-CN-002, AC-QUIZ-CN-003, AC-QUIZ-EN-001, AC-QUIZ-EN-002, AC-QUIZ-EN-003, AC-QUIZ-MA-001, AC-QUIZ-MA-002, AC-QUIZ-MA-003, AC-QUIZ-SCOPE-001]
+  grading_review_report:
+    requirements: [REQ-GRADE-001, REQ-REVIEW-001, REQ-REPORT-001]
+    cases: [AC-GRADE-001, AC-GRADE-002, AC-GRADE-003, AC-GRADE-004, AC-REVIEW-001, AC-REVIEW-002, AC-REPORT-001, AC-REPORT-002, AC-REPORT-003]
+  ai_and_resilience:
+    requirements: [REQ-AI-001]
+    cases: [AC-AI-001, AC-AI-002, AC-AI-003, AC-AI-004]
+  data_security_regression:
+    requirements: [REQ-SCOPE-001]
+    cases: [AC-DATA-001, AC-DATA-002, AC-DATA-003, AC-REG-001, AC-REG-002, AC-REG-003, AC-REG-004]
+
+case_template: 每条用例包含 id、title、priority、level、type、traceability、preconditions、data、steps、expected、automation_candidate、current_automation、status。
+
+cases:
+  - id: AC-ADM-001
+    title: 管理端自然语言生成语文和作业长期计划
+    priority: P0
+    level: e2e
+    type: happy_path
+    traceability: [REQ-PLAN-001, CODE-PLAN-001]
+    preconditions: 空临时数据库，AI 关闭。
+    data: {prompt: "寒假作业本，每日一小节；语文书，每日一篇课文"}
+    steps: [打开 /admin, 输入 prompt, 点击生成计划并生成今日任务]
+    expected: [生成长期计划, 今日任务列表非空, 孩子端可见任务]
+    automation_candidate: true
+    current_automation: scripts/ui_click_test.py
+    status: automated_passed
+  - id: AC-ADM-002
+    title: 英语资料型长提示生成 30 天五上英语计划
+    priority: P0
+    level: api
+    type: happy_path
+    traceability: [REQ-PLAN-001, REQ-SCOPE-001, CODE-PLAN-001]
+    preconditions: 空临时数据库，AI 关闭。
+    data: {prompt: "外研社刘兆义版五年级上册英语，Unit 1-6，每天 25-35 分钟"}
+    steps: [POST /api/study-plan/generate]
+    expected: [created=1, total_units=30, lesson_sequence 覆盖 Unit 1 到 Unit 6]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-ADM-003
+    title: 手动录入任务源后可在列表展示
+    priority: P0
+    level: api
+    type: happy_path
+    traceability: [REQ-PLAN-001, CODE-UI-001]
+    preconditions: 服务正常。
+    data: {category: preview, subject: 语文, title: 语文五年级上册第一课预习}
+    steps: [POST /api/task-sources, GET /api/task-sources]
+    expected: [返回 created, 列表包含新增标题和配置]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-ADM-004
+    title: 批量导入 CSV 或自然语言任务源
+    priority: P1
+    level: api
+    type: integration
+    traceability: [REQ-PLAN-001, CODE-UI-001]
+    preconditions: 服务正常。
+    data: {raw_text: "preview,数学五年级上册小数除法,数学,2,0,2026-08-31,小数除法"}
+    steps: [POST /api/task-sources/import]
+    expected: [created 大于等于 1, 生成数学 preview 任务源]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-ADM-005
+    title: 今日已满后手动同步仍追加新增任务源
+    priority: P0
+    level: integration
+    type: regression
+    traceability: [REQ-TASK-001, RISK-UI-BUTTON-001]
+    preconditions: 今日已有 max_daily_tasks 个任务。
+    data: {extra_source: 管理员新增同步验证任务}
+    steps: [新增额外任务源, 调用 /api/daily-tasks/generate]
+    expected: [任务数量增加, 孩子端可见新增任务]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-MAT-001
+    title: 管理端保存学习资料库单词表
+    priority: P0
+    level: api
+    type: happy_path
+    traceability: [REQ-MATERIAL-001, CODE-DB-001]
+    preconditions: 已有英语 task_source。
+    data: {title: Unit 1 单词表测试资料, subject: 英语, material_type: word_list, content_text: "teacher=老师\nlibrary=图书馆\nclassroom=教室"}
+    steps: [POST /api/materials, GET /api/materials]
+    expected: [返回 created, 资料列表包含标题和类型]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-MAT-002
+    title: 学习资料库单词表参与英语小测生成
+    priority: P0
+    level: integration
+    type: data_driven
+    traceability: [REQ-MATERIAL-001, REQ-QUIZ-EN-001, RISK-MATERIAL-001]
+    preconditions: 已录入 teacher=老师 的英语资料。
+    data: {material_word: teacher=老师}
+    steps: [GET 英语任务小测]
+    expected: [题目出现 teacher 或 老师, 不返回 answer 字段]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-MAT-003
+    title: 语文听写资料参与听写词生成
+    priority: P1
+    level: integration
+    type: data_driven
+    traceability: [REQ-MATERIAL-001, REQ-QUIZ-CN-001]
+    preconditions: 已录入语文 dictation 资料。
+    data: {dictation_words: "白鹭、精巧、适宜"}
+    steps: [生成语文任务小测]
+    expected: [chinese_word_dictation 优先来自资料听写词, 批改严格按汉字字形判断]
+    automation_candidate: true
+    current_automation: planned
+    status: designed
+  - id: AC-TASK-001
+    title: 无今日任务时 GET /api/daily-tasks 自动兜底生成
+    priority: P0
+    level: api
+    type: resilience
+    traceability: [REQ-TASK-001, RISK-EMPTY-DB-001]
+    preconditions: task_sources 存在，daily_tasks 为空。
+    data: {}
+    steps: [GET /api/daily-tasks]
+    expected: [返回今日任务数组, 孩子端进度不是 0/0]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-TASK-002
+    title: 今日任务生成包含英语 Unit 1 第一天
+    priority: P0
+    level: api
+    type: happy_path
+    traceability: [REQ-TASK-001, REQ-SCOPE-001]
+    preconditions: 已生成五上英语 30 天计划。
+    data: {}
+    steps: [GET /api/daily-tasks]
+    expected: [标题包含 Unit 1 My school is cool, check_method=quiz]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-TASK-003
+    title: 小测未通过后第二天优先生成 P0 补漏任务
+    priority: P0
+    level: integration
+    type: state_transition
+    traceability: [REQ-TASK-001, REQ-REVIEW-001]
+    preconditions: 小测低于 80%，review_items 到期。
+    data: {}
+    steps: [生成目标日期任务]
+    expected: [生成 P0 补漏任务, 描述包含原错题或错因]
+    automation_candidate: true
+    current_automation: partially_automated
+    status: partially_automated
+  - id: AC-TASK-004
+    title: 补漏超过上限时新课不应无限堆叠
+    priority: P1
+    level: integration
+    type: boundary
+    traceability: [REQ-TASK-001]
+    preconditions: 待补漏项超过 3 个。
+    data: {}
+    steps: [生成今日任务]
+    expected: [优先返回 P0 补漏, 受 max_daily_tasks 限制]
+    automation_candidate: true
+    current_automation: planned
+    status: designed
+  - id: AC-TASK-005
+    title: 已完成 source 推进 completed_units 但不超过 total_units
+    priority: P1
+    level: api
+    type: boundary
+    traceability: [REQ-TASK-001, CODE-GRADE-001]
+    preconditions: source.completed_units=total_units-1。
+    data: {}
+    steps: [任务小测通过, 查询 task_sources]
+    expected: [completed_units 增加到 total_units, 不超过 total_units]
+    automation_candidate: true
+    current_automation: planned
+    status: designed
+  - id: AC-CHILD-001
+    title: 孩子端 HTML 服务端直出任务和初始数据
+    priority: P0
+    level: e2e
+    type: regression
+    traceability: [REQ-CHILD-001]
+    preconditions: 今日任务存在。
+    data: {}
+    steps: [GET /child]
+    expected: [HTML 包含任务标题, 包含 window.__INITIAL_TASKS__, 进度为 0/N]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-CHILD-002
+    title: 开始按钮启动当前任务并开始计时
+    priority: P0
+    level: e2e
+    type: state_transition
+    traceability: [REQ-CHILD-001]
+    preconditions: 存在 not_started 任务。
+    data: {}
+    steps: [点击开始, 等待 1 秒]
+    expected: [状态 in_progress, timer_state=running, last_started_at 非空, 页面显示已学时间]
+    automation_candidate: true
+    current_automation: scripts/self_test.py, scripts/ui_click_test.py
+    status: automated_passed
+  - id: AC-CHILD-003
+    title: 暂停按钮停止计时并保留 elapsed_seconds
+    priority: P0
+    level: e2e
+    type: state_transition
+    traceability: [REQ-CHILD-001]
+    preconditions: 任务处于 in_progress。
+    data: {}
+    steps: [点击暂停, 查询任务状态]
+    expected: [状态 paused, timer_state=stopped, elapsed_seconds 保留]
+    automation_candidate: true
+    current_automation: scripts/self_test.py, scripts/ui_click_test.py
+    status: automated_passed
+  - id: AC-CHILD-004
+    title: 完成检查按钮停止计时并展示小测
+    priority: P0
+    level: e2e
+    type: state_transition
+    traceability: [REQ-CHILD-001, REQ-GRADE-001]
+    preconditions: 任务未完成。
+    data: {}
+    steps: [点击我做完了开始检查]
+    expected: [状态 checking, 小测区域显示任务标题和至少 3 道题, 不暴露标准答案]
+    automation_candidate: true
+    current_automation: scripts/self_test.py, scripts/ui_click_test.py
+    status: automated_passed
+  - id: AC-CHILD-005
+    title: 提交小测后孩子端展示订正详情
+    priority: P0
+    level: e2e
+    type: negative
+    traceability: [REQ-GRADE-001]
+    preconditions: 小测表单已展示。
+    data: {answers: 空答案或故意错误}
+    steps: [提交小测]
+    expected: [显示 correct/total, 展示错因、孩子答案、订正答案、下一步]
+    automation_candidate: true
+    current_automation: partially_automated
+    status: partially_automated
+  - id: AC-CHILD-006
+    title: 开始下一个任务按钮启动首个未开始任务
+    priority: P1
+    level: e2e
+    type: usability
+    traceability: [REQ-CHILD-001]
+    preconditions: 存在未开始任务。
+    data: {}
+    steps: [点击开始下一个任务]
+    expected: [首个未开始任务变为 in_progress, 任务卡高亮]
+    automation_candidate: true
+    current_automation: scripts/self_test.py, scripts/ui_click_test.py
+    status: automated_passed
+  - id: AC-STUCK-001
+    title: 卡住按钮只影响当前任务
+    priority: P0
+    level: e2e
+    type: state_transition
+    traceability: [REQ-STUCK-001, RISK-CROSS-TASK-001]
+    preconditions: 今日存在多个任务。
+    data: {note: 不认识鹭这个字}
+    steps: [对语文任务点击我卡住了, 查询今日任务]
+    expected: [只有当前 task_id 状态为 stuck, 其他任务状态不变]
+    automation_candidate: true
+    current_automation: scripts/self_test.py, scripts/ui_click_test.py
+    status: automated_passed
+  - id: AC-STUCK-002
+    title: 语文不认识字卡住返回读音和下一步
+    priority: P0
+    level: e2e
+    type: domain
+    traceability: [REQ-STUCK-001, REQ-QUIZ-CN-001]
+    preconditions: 存在语文任务。
+    data: {note: 不认识鹭这个字}
+    steps: [提交卡住]
+    expected: [返回 task_title 和 child_note, assistance 包含 lù 和下一步, assistant_source 为 ai 或 rule]
+    automation_candidate: true
+    current_automation: scripts/self_test.py, scripts/ui_click_test.py
+    status: automated_passed
+  - id: AC-STUCK-003
+    title: 英语不会读单词卡住返回音节或含义提示
+    priority: P1
+    level: api
+    type: domain
+    traceability: [REQ-STUCK-001, REQ-QUIZ-EN-001]
+    preconditions: 存在英语任务。
+    data: {note: 不会读 school}
+    steps: [提交卡住]
+    expected: [返回英文单词读音或词义提示, review_focus 指向错词]
+    automation_candidate: true
+    current_automation: partially_automated
+    status: partially_automated
+  - id: AC-STUCK-004
+    title: 数学不知道第一步卡住返回拆题提示
+    priority: P1
+    level: api
+    type: domain
+    traceability: [REQ-STUCK-001, REQ-QUIZ-MA-001]
+    preconditions: 存在数学任务。
+    data: {note: 不知道第一步怎么做}
+    steps: [提交卡住]
+    expected: [提示找已知条件和问题, 给同类小例子, 不直接代做]
+    automation_candidate: true
+    current_automation: planned
+    status: designed
+  - id: AC-QUIZ-CN-001
+    title: 语文生成听写、拼音、组词、理解题
+    priority: P0
+    level: api
+    type: domain
+    traceability: [REQ-QUIZ-CN-001, CODE-QUIZ-001]
+    preconditions: 今日有语文任务。
+    data: {}
+    steps: [GET 语文任务小测]
+    expected: [包含 chinese_word_dictation、chinese_pinyin、chinese_char_group, 不返回 answer]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-QUIZ-CN-002
+    title: 语文听写严格匹配汉字
+    priority: P0
+    level: api
+    type: negative
+    traceability: [REQ-QUIZ-CN-001, REQ-GRADE-001]
+    preconditions: 存在 chinese_word_dictation 题。
+    data: {wrong_answer: 白路}
+    steps: [提交 wrong_answer]
+    expected: [判错, error_type=错字, review reason=wrong_chinese_dictation]
+    automation_candidate: true
+    current_automation: partially_automated
+    status: partially_automated
+  - id: AC-QUIZ-CN-003
+    title: 语文拼音支持带声调和数字声调宽松判断
+    priority: P1
+    level: unit
+    type: boundary
+    traceability: [REQ-QUIZ-CN-001]
+    preconditions: 存在 chinese_pinyin 题。
+    data: {accepted: [lù, lu4, lu]}
+    steps: [分别提交 accepted 值]
+    expected: [归一后可接受, 空答案判错]
+    automation_candidate: true
+    current_automation: planned
+    status: designed
+  - id: AC-QUIZ-EN-001
+    title: 英语 Unit 1 生成默写、互译、句型题
+    priority: P0
+    level: api
+    type: domain
+    traceability: [REQ-QUIZ-EN-001, CODE-QUIZ-001]
+    preconditions: 今日有 Unit 1 任务。
+    data: {}
+    steps: [GET 英语任务小测]
+    expected: [包含 english_spelling、english_word_cn_to_en、english_sentence_fill]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-QUIZ-EN-002
+    title: 英语拼写忽略大小写但不忽略漏字母
+    priority: P0
+    level: api
+    type: boundary
+    traceability: [REQ-QUIZ-EN-001, REQ-GRADE-001]
+    preconditions: 存在 english_spelling 题。
+    data: {accepted: [school, School, SCHOOL], rejected: [schoo, schol]}
+    steps: [分别提交 accepted 和 rejected]
+    expected: [accepted 判对, rejected 判错且 error_type=拼写]
+    automation_candidate: true
+    current_automation: planned
+    status: designed
+  - id: AC-QUIZ-EN-003
+    title: 英语开放造句由 AI 或本地规则批改
+    priority: P1
+    level: integration
+    type: ai_fallback
+    traceability: [REQ-QUIZ-EN-001, REQ-AI-001]
+    preconditions: 存在 english_sentence_make 题。
+    data: {answer: My school is cool.}
+    steps: [提交英文句子]
+    expected: [AI 可用时可走 AI, AI 关闭时规则兜底不报错]
+    automation_candidate: true
+    current_automation: partially_automated
+    status: partially_automated
+  - id: AC-QUIZ-MA-001
+    title: 数学生成计算、概念、步骤、应用、错因、变式题
+    priority: P0
+    level: api
+    type: domain
+    traceability: [REQ-QUIZ-MA-001, CODE-QUIZ-001]
+    preconditions: 今日有数学任务。
+    data: {}
+    steps: [GET 数学任务小测]
+    expected: [包含 math_exact、math_concept_choice、math_step_explain]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-QUIZ-MA-002
+    title: 数学精确计算支持数值等价判断
+    priority: P0
+    level: api
+    type: boundary
+    traceability: [REQ-QUIZ-MA-001, REQ-GRADE-001]
+    preconditions: 存在 math_exact 或 math_word_problem。
+    data: {accepted: [7.2, 7.20, 答案是7.2元]}
+    steps: [提交 accepted]
+    expected: [数值等价均判对, 非等价判错]
+    automation_candidate: true
+    current_automation: planned
+    status: designed
+  - id: AC-QUIZ-MA-003
+    title: 数学小数点错因可区分于普通计算错
+    priority: P1
+    level: api
+    type: negative
+    traceability: [REQ-QUIZ-MA-001, REQ-GRADE-001]
+    preconditions: 存在小数乘法题。
+    data: {wrong_answer: 48}
+    steps: [提交 wrong_answer]
+    expected: [判错, error_type=小数点, review reason=wrong_math_calculation]
+    automation_candidate: true
+    current_automation: planned
+    status: designed
+  - id: AC-QUIZ-SCOPE-001
+    title: 三科出题不超武汉五年级上册范围
+    priority: P0
+    level: exploratory
+    type: domain_guardrail
+    traceability: [REQ-SCOPE-001, RISK-OVER-SCOPE-001]
+    preconditions: 已生成三科小测。
+    data: {}
+    steps: [扫描题目文本]
+    expected: [不出现初中方程组、竞赛奥数、复杂时态系统、课文全文背诵等超纲内容]
+    automation_candidate: partial
+    current_automation: planned_static_keyword_scan
+    status: designed
+  - id: AC-GRADE-001
+    title: 小测提交返回分数、错因、掌握度、诊断
+    priority: P0
+    level: api
+    type: negative
+    traceability: [REQ-GRADE-001, CODE-GRADE-001]
+    preconditions: 小测存在。
+    data: {answers: 全空}
+    steps: [提交答案]
+    expected: [返回 total、correct、wrong_items、error_types、mastery、diagnosis]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-GRADE-002
+    title: 通过率大于等于 80% 标记 completed 并发奖励
+    priority: P1
+    level: api
+    type: boundary
+    traceability: [REQ-GRADE-001]
+    preconditions: 小测 5 题。
+    data: {correct_count: 4}
+    steps: [提交 4 对 1 错答案]
+    expected: [status=completed, daily_tasks.status=completed, 新增小测通过奖励]
+    automation_candidate: true
+    current_automation: planned
+    status: designed
+  - id: AC-GRADE-003
+    title: 通过率低于 80% 标记 needs_revision
+    priority: P0
+    level: api
+    type: boundary
+    traceability: [REQ-GRADE-001, REQ-REVIEW-001]
+    preconditions: 小测存在。
+    data: {answers: 多数错误}
+    steps: [提交答案]
+    expected: [daily_tasks.status=needs_revision, wrong_items 非空, review_items 生成]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-GRADE-004
+    title: 孩子端小测接口不泄露标准答案
+    priority: P1
+    level: api
+    type: security
+    traceability: [RISK-QUIZ-LEAK-001]
+    preconditions: 小测存在。
+    data: {}
+    steps: [GET 小测公开接口]
+    expected: [items 中无 answer 字段]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-REVIEW-001
+    title: 错题生成 D1/D3/D7 复习节奏
+    priority: P0
+    level: integration
+    type: state_transition
+    traceability: [REQ-REVIEW-001, CODE-GRADE-001]
+    preconditions: 小测提交错误答案。
+    data: {}
+    steps: [查询 review_items]
+    expected: [包含 D1、D3、D7, reason 按学科错因细分]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-REVIEW-002
+    title: 补漏任务通过后原 review_item 标记 done
+    priority: P1
+    level: integration
+    type: state_transition
+    traceability: [REQ-REVIEW-001]
+    preconditions: review_item 已生成 scheduled 补漏任务。
+    data: {}
+    steps: [完成补漏任务并小测通过, 查询 review_items]
+    expected: [review_item.status=done, last_result=passed]
+    automation_candidate: true
+    current_automation: planned
+    status: designed
+  - id: AC-REPORT-001
+    title: 家长日报包含完成情况、错因、明天第一步、10 分钟建议
+    priority: P0
+    level: api
+    type: integration
+    traceability: [REQ-REPORT-001, CODE-REPORT-001]
+    preconditions: 当天有任务和小测结果。
+    data: {}
+    steps: [POST /api/day/end]
+    expected: [返回 summary、problems、tomorrow_first_step、weakest_point、parent_attention、ten_minute_action]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-REPORT-002
+    title: 家长看板展示小测错因和补漏阶段
+    priority: P0
+    level: e2e
+    type: ui
+    traceability: [REQ-REPORT-001, CODE-UI-001]
+    preconditions: 已有错题和 review_items。
+    data: {}
+    steps: [打开 /parent]
+    expected: [小测结果区显示错因, 复习队列显示阶段、due_date、reason]
+    automation_candidate: true
+    current_automation: partially_automated
+    status: partially_automated
+  - id: AC-REPORT-003
+    title: 周报生成趋势和下周重点
+    priority: P1
+    level: api
+    type: integration
+    traceability: [REQ-REPORT-001]
+    preconditions: 已有日报或任务记录。
+    data: {}
+    steps: [POST /api/week/report]
+    expected: [返回 summary、trend、suggestions, weekly_reports 有记录]
+    automation_candidate: true
+    current_automation: scripts/self_test.py, scripts/ui_click_test.py
+    status: automated_passed
+  - id: AC-AI-001
+    title: AI 未启用时检查接口明确提示规则兜底
+    priority: P0
+    level: api
+    type: resilience
+    traceability: [REQ-AI-001, RISK-AI-FALLBACK-001]
+    preconditions: AI_ENABLED=false。
+    data: {}
+    steps: [GET /api/ai/check]
+    expected: [返回 disabled_or_missing_key 或 enabled=false, message 说明本地规则兜底]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-AI-002
+    title: AI 配置环境变量可被识别且不泄露 key
+    priority: P1
+    level: api
+    type: configuration
+    traceability: [REQ-AI-001]
+    preconditions: AI_ENABLED=true 且 base_url/model/api_key 已配置。
+    data: {}
+    steps: [GET /api/ai/check]
+    expected: [enabled=true, key_present=true, 不输出完整 key]
+    automation_candidate: partial
+    current_automation: manual_safe_check
+    status: designed
+  - id: AC-AI-003
+    title: AI 出题失败不阻断小测生成
+    priority: P0
+    level: integration
+    type: fault_injection
+    traceability: [REQ-AI-001, RISK-AI-FALLBACK-001]
+    preconditions: AI_ENABLED=true 但 base_url 不可达。
+    data: {}
+    steps: [生成任意任务小测]
+    expected: [仍返回本地规则题, 页面正常展示, 记录 rule_fallback]
+    automation_candidate: true
+    current_automation: planned
+    status: designed
+  - id: AC-AI-004
+    title: 开放题批改 AI 不通时规则兜底
+    priority: P0
+    level: integration
+    type: fault_injection
+    traceability: [REQ-AI-001, REQ-GRADE-001]
+    preconditions: AI 不可用。
+    data: {}
+    steps: [提交开放题]
+    expected: [不返回 500, 返回批改结果, grading_source=rule 或等价表现]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-DATA-001
+    title: 空库自动初始化全部表和默认学生
+    priority: P0
+    level: integration
+    type: resilience
+    traceability: [CODE-DB-001, RISK-EMPTY-DB-001]
+    preconditions: DATABASE_PATH 指向不存在文件。
+    data: {}
+    steps: [启动应用, GET /api/health, 调用核心 API]
+    expected: [无 no such table, 默认学生存在]
+    automation_candidate: true
+    current_automation: scripts/self_test.py, scripts/ui_click_test.py
+    status: automated_passed
+  - id: AC-DATA-002
+    title: 老库自动迁移新增字段
+    priority: P0
+    level: integration
+    type: migration
+    traceability: [CODE-DB-001, RISK-EMPTY-DB-001]
+    preconditions: 旧库缺少新增字段。
+    data: {}
+    steps: [启动应用执行 init_db, PRAGMA table_info]
+    expected: [quiz_results、review_items、learning_materials 迁移完成]
+    automation_candidate: true
+    current_automation: partially_automated
+    status: partially_automated
+  - id: AC-DATA-003
+    title: API Key 和本地数据库不进入 Git
+    priority: P0
+    level: static
+    type: security
+    traceability: [RISK-SECRET-001]
+    preconditions: 准备提交。
+    data: {}
+    steps: [git status, 扫描 staged diff 是否包含真实 sk- 长串]
+    expected: [.env、data/learning.db、reports 不提交, diff 不含真实 key]
+    automation_candidate: true
+    current_automation: release_check_manual_command
+    status: manual_passed_current_release
+  - id: AC-REG-001
+    title: 三端核心按钮静态库存完整
+    priority: P0
+    level: static
+    type: regression
+    traceability: [RISK-UI-BUTTON-001]
+    preconditions: 源码已 checkout。
+    data: {}
+    steps: [扫描 admin.html、child.html、parent.html]
+    expected: [管理端、孩子端、家长端关键按钮均存在]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-REG-002
+    title: 真实浏览器点击三端主要按钮
+    priority: P0
+    level: e2e
+    type: regression
+    traceability: [RISK-UI-BUTTON-001]
+    preconditions: Playwright 可用。
+    data: {}
+    steps: [运行 scripts/ui_click_test.py]
+    expected: [输出 UI_CLICK_TEST_OK, 无 console/pageerror]
+    automation_candidate: true
+    current_automation: scripts/ui_click_test.py
+    status: automated_passed
+  - id: AC-REG-003
+    title: 中文源码和页面无乱码标记
+    priority: P1
+    level: static
+    type: regression
+    traceability: [RISK-ENC-001]
+    preconditions: 源码已 checkout。
+    data: {}
+    steps: [扫描 backend/frontend/scripts 关键文件]
+    expected: [不包含锛、鏈、浠、鈥、乱码替换符、连续问号乱码]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+  - id: AC-REG-004
+    title: 公开小测接口不泄露 answer 字段
+    priority: P0
+    level: api
+    type: security
+    traceability: [RISK-QUIZ-LEAK-001]
+    preconditions: 小测存在。
+    data: {}
+    steps: [GET /api/daily-tasks/{task_id}/quiz]
+    expected: [items 中无 answer 字段]
+    automation_candidate: true
+    current_automation: scripts/self_test.py
+    status: automated_passed
+
+quality_gates:
+  - gate: P0 自动化门禁
+    command: python .\scripts\self_test.py
+    expected: SELF_TEST_OK
+  - gate: UI 点击门禁
+    command: python .\scripts\ui_click_test.py
+    expected: UI_CLICK_TEST_OK
+  - gate: 用例结构门禁
+    command: python .\scripts\validate_agent_core_cases.py
+    expected: AGENT_CORE_CASES_OK
+  - gate: 敏感信息门禁
+    command: git diff --cached | Select-String -Pattern 'sk-[A-Za-z0-9]{20,}'
+    expected: 无输出
+
+open_questions:
+  - id: OQ-AI-001
+    question: 是否在 CI 中接入真实 AI smoke 测试？
+    impact: 当前自动化默认禁用 AI，避免消耗 key；真实 AI 连通性仍建议上线前人工执行 /api/ai/check。
+  - id: OQ-AUTH-001
+    question: 生产部署是否强制启用 child/parent/admin 密码？
+    impact: 当前本地默认无密码，若上云应补角色鉴权负例。
+  - id: OQ-CONTENT-001
+    question: 后续是否补齐武汉实际使用教材资料 PDF 的结构化提取？
+    impact: 资料增强目前支持手动粘贴摘要、词表、听写词、音频清单。
+
+execution_summary:
+  last_run:
+    commands:
+      - python .\scripts\validate_agent_core_cases.py
+      - python .\scripts\self_test.py
+      - python .\scripts\ui_click_test.py
+    result: passed
+    notes: 新增或修改生产代码后必须重新执行三道门禁。
