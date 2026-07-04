@@ -15,7 +15,7 @@ from .agent_tools import (
     save_submissions,
     save_task_guidance,
 )
-from .ai_provider import call_ai_json
+from .ai_provider import call_ai_json_with_meta
 from .db import loads
 from .plan_generator import generate_plan_from_text
 from .planner import generate_daily_tasks as rule_generate_daily_tasks
@@ -36,7 +36,7 @@ from .settings import get_settings
 
 def generate_study_plan(conn: Connection, raw_goal: str, student_id: int = 1) -> dict[str, Any]:
     settings = get_settings(conn)
-    ai_plan = call_ai_json(
+    ai_plan, ai_meta = call_ai_json_with_meta(
         settings,
         PLAN_PROMPT.format(guardrails=COMMON_GUARDRAILS, goal=raw_goal),
         {},
@@ -45,16 +45,21 @@ def generate_study_plan(conn: Connection, raw_goal: str, student_id: int = 1) ->
     parsed = ai_plan if isinstance(ai_plan, dict) and ai_plan else {"rule_result": rule_plan}
     plan_id = save_learning_plan(conn, student_id, raw_goal, parsed)
     output = {"plan_id": plan_id, **rule_plan, "agent_parsed": parsed}
-    log_agent_run(conn, student_id, "plan", {"goal": raw_goal}, output, _model_name(settings))
+    log_agent_run(conn, student_id, "plan", {"goal": raw_goal}, output, ai_meta["model"], ai_meta["status"], ai_meta["error"])
     return output
 
 
-def generate_daily_tasks(conn: Connection, student_id: int = 1, target_date: str | None = None) -> dict[str, Any]:
-    tasks = rule_generate_daily_tasks(conn, student_id, target_date)
+def generate_daily_tasks(
+    conn: Connection,
+    student_id: int = 1,
+    target_date: str | None = None,
+    force_all_sources: bool = False,
+) -> dict[str, Any]:
+    tasks = rule_generate_daily_tasks(conn, student_id, target_date, force_all_sources=force_all_sources)
     for task in tasks:
         ensure_task_guidance(conn, task["id"])
     output = {"count": len(tasks), "tasks": tasks}
-    log_agent_run(conn, student_id, "daily_tasks", {"target_date": target_date}, output)
+    log_agent_run(conn, student_id, "daily_tasks", {"target_date": target_date, "force_all_sources": force_all_sources}, output)
     return output
 
 
@@ -105,7 +110,7 @@ def assist_stuck(conn: Connection, task_id: int, note: str = "") -> dict[str, An
     guidance = ensure_task_guidance(conn, task_id)
     fallback = _fallback_stuck_assistance(task, source, note)
     settings = get_settings(conn)
-    ai_result = call_ai_json(
+    ai_result, ai_meta = call_ai_json_with_meta(
         settings,
         STUCK_ASSIST_PROMPT.format(
             guardrails=COMMON_GUARDRAILS,
@@ -131,7 +136,9 @@ def assist_stuck(conn: Connection, task_id: int, note: str = "") -> dict[str, An
         "stuck_assist",
         {"task_id": task_id, "note": note},
         output,
-        _model_name(settings),
+        ai_meta["model"],
+        ai_meta["status"],
+        ai_meta["error"],
     )
     return output
 
@@ -146,7 +153,7 @@ def diagnose_learning(conn: Connection, task_id: int, quiz_result: dict[str, Any
     score = quiz_result["correct"] / quiz_result["total"] if quiz_result.get("total") else 0
     fallback = _rule_diagnosis(score, quiz_result)
     settings = get_settings(conn)
-    ai_result = call_ai_json(
+    ai_result, ai_meta = call_ai_json_with_meta(
         settings,
         DIAGNOSIS_PROMPT.format(
             guardrails=COMMON_GUARDRAILS,
@@ -182,7 +189,16 @@ def diagnose_learning(conn: Connection, task_id: int, quiz_result: dict[str, Any
             "mastery_low",
             1,
         )
-    log_agent_run(conn, int(task["student_id"]), "diagnose", {"task_id": task_id, "quiz_result": quiz_result}, result, _model_name(settings))
+    log_agent_run(
+        conn,
+        int(task["student_id"]),
+        "diagnose",
+        {"task_id": task_id, "quiz_result": quiz_result},
+        result,
+        ai_meta["model"],
+        ai_meta["status"],
+        ai_meta["error"],
+    )
     return result
 
 
@@ -190,14 +206,14 @@ def generate_daily_report(conn: Connection, student_id: int = 1, target_date: st
     report = build_daily_report(conn, student_id, target_date)
     mastery = latest_mastery(conn, student_id, 10)
     settings = get_settings(conn)
-    ai_report = call_ai_json(
+    ai_report, ai_meta = call_ai_json_with_meta(
         settings,
         REPORT_PROMPT.format(guardrails=COMMON_GUARDRAILS, report_context={"report": report, "mastery": mastery}),
         {},
     )
     if isinstance(ai_report, dict) and ai_report:
         report.update({key: ai_report[key] for key in ("summary", "problems", "tomorrow_first_step") if key in ai_report})
-    log_agent_run(conn, student_id, "daily_report", {"target_date": target_date}, report, _model_name(settings))
+    log_agent_run(conn, student_id, "daily_report", {"target_date": target_date}, report, ai_meta["model"], ai_meta["status"], ai_meta["error"])
     return report
 
 

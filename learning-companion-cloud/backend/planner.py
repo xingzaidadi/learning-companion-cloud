@@ -87,7 +87,12 @@ def _build_daily_task(source: Row, today: str) -> dict[str, Any]:
     }
 
 
-def generate_daily_tasks(conn: Connection, student_id: int = 1, target_date: str | None = None) -> list[dict[str, Any]]:
+def generate_daily_tasks(
+    conn: Connection,
+    student_id: int = 1,
+    target_date: str | None = None,
+    force_all_sources: bool = False,
+) -> list[dict[str, Any]]:
     today = target_date or date.today().isoformat()
     existing = conn.execute(
         "SELECT * FROM daily_tasks WHERE student_id = ? AND date = ? ORDER BY priority, id",
@@ -107,10 +112,11 @@ def generate_daily_tasks(conn: Connection, student_id: int = 1, target_date: str
         ensure_quiz_for_task(conn, task)
 
     remaining_slots = max(max_daily_tasks - len(tasks), 0)
-    if remaining_slots == 0:
+    if remaining_slots == 0 and not force_all_sources:
         return _today_tasks(conn, student_id, today)
 
-    block_new_preview = _should_block_new_preview(conn, student_id, today, rules)
+    block_new_preview = False if force_all_sources else _should_block_new_preview(conn, student_id, today, rules)
+    source_limit = 500 if force_all_sources else remaining_slots
 
     sources = conn.execute(
         """
@@ -133,7 +139,7 @@ def generate_daily_tasks(conn: Connection, student_id: int = 1, target_date: str
             id
         LIMIT ?
         """,
-        (student_id, 1 if block_new_preview else 0, student_id, today, remaining_slots),
+        (student_id, 1 if block_new_preview else 0, student_id, today, source_limit),
     ).fetchall()
 
     now = utc_now()

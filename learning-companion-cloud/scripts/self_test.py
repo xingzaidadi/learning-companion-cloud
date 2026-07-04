@@ -246,12 +246,33 @@ def run_e2e() -> None:
         assert_true(sum("Unit 1 My school is cool" in title for title in synced_titles) == 1, "英语任务不应重复")
         assert_true(any("数学" in title or "小数" in title for title in synced_titles), f"应补齐数学任务，实际 {synced_titles}")
 
+        extra_source = assert_status(
+            client.post(
+                "/api/task-sources",
+                data={
+                    "category": "summer_homework",
+                    "title": "管理员新增同步验证任务",
+                    "subject": "综合",
+                    "total_units": "1",
+                    "completed_units": "0",
+                    "estimated_minutes": "10",
+                    "student_id": "1",
+                },
+            )
+        )
+        assert_true(extra_source["status"] == "created", "管理员新增任务源应创建成功")
+        synced_after_extra = assert_status(client.post("/api/daily-tasks/generate"))
+        synced_after_extra_titles = [task["title"] for task in synced_after_extra["tasks"]]
+        assert_true(synced_after_extra["count"] == 6, f"今日已满后手动同步应追加新增任务，实际 {synced_after_extra_titles}")
+        assert_true(any("管理员新增同步验证任务" in title for title in synced_after_extra_titles), "新增任务源应出现在今日任务中")
+
         child_html = assert_status(client.get("/child"))
         done, total = extract_progress(child_html)
-        assert_true((done, total) == ("0", "5"), f"孩子端进度应为 0/5，实际 {done}/{total}")
+        assert_true((done, total) == ("0", "6"), f"孩子端进度应为 0/6，实际 {done}/{total}")
         assert_true("Unit 1 My school is cool" in child_html, "孩子端 HTML 应服务端直出任务标题")
         assert_true("数学" in child_html or "小数" in child_html, "孩子端 HTML 应显示新增数学任务")
         assert_true("语文" in child_html or "生字词" in child_html, "孩子端 HTML 应显示手动录入语文任务")
+        assert_true("管理员新增同步验证任务" in child_html, "孩子端 HTML 应显示今日已满后手动同步追加的任务")
         assert_true("完成后做小测" in child_html, "孩子端应显示中文检查方式")
         assert_true('<span class="tag">quiz</span>' not in child_html, "孩子端不应裸露 quiz 标签")
         assert_true("window.__INITIAL_TASKS__" in child_html, "孩子端应注入初始任务数据")

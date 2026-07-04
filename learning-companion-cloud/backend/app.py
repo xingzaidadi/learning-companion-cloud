@@ -441,7 +441,7 @@ def generate_tasks(
 ) -> dict[str, object]:
     today = target_date or date.today().isoformat()
     with get_conn() as conn:
-        result = agent_daily_tasks(conn, student_id, today)
+        result = agent_daily_tasks(conn, student_id, today, force_all_sources=True)
         tasks = result["tasks"]
         notify(conn, student_id, "tasks_generated", "今日学习任务已生成", f"今天共有 {len(tasks)} 个任务。")
         return {"date": today, "count": len(tasks), "tasks": tasks}
@@ -453,7 +453,7 @@ async def agent_daily_tasks_endpoint(request: Request, _: str = Depends(require_
     student_id = int(data.get("student_id", 1))
     target_date = data.get("target_date") or date.today().isoformat()
     with get_conn() as conn:
-        result = agent_daily_tasks(conn, student_id, target_date)
+        result = agent_daily_tasks(conn, student_id, target_date, force_all_sources=True)
         result["date"] = target_date
         return result
 

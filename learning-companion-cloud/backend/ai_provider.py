@@ -95,8 +95,18 @@ def generate_ai_questions(settings: dict[str, Any], scope: str, content: str) ->
 
 
 def call_ai_json(settings: dict[str, Any], prompt: str, fallback: Any) -> Any:
+    result, _meta = call_ai_json_with_meta(settings, prompt, fallback)
+    return result
+
+
+def call_ai_json_with_meta(settings: dict[str, Any], prompt: str, fallback: Any) -> tuple[Any, dict[str, Any]]:
     if not ai_enabled(settings):
-        return fallback
+        return fallback, {
+            "used_ai": False,
+            "model": "rule",
+            "status": "rule_fallback",
+            "error": "AI disabled or missing API key",
+        }
     ai = settings.get("ai", {})
     api_url = _effective_api_url(ai)
     model = _effective_model(ai)
@@ -118,11 +128,26 @@ def call_ai_json(settings: dict[str, Any], prompt: str, fallback: Any) -> Any:
         content_text = data["choices"][0]["message"]["content"]
         start = min([index for index in [content_text.find("{"), content_text.find("[")] if index >= 0], default=-1)
         if start < 0:
-            return fallback
+            return fallback, {
+                "used_ai": False,
+                "model": "rule",
+                "status": "rule_fallback",
+                "error": "AI response did not contain JSON",
+            }
         end = max(content_text.rfind("}"), content_text.rfind("]"))
-        return json.loads(content_text[start : end + 1])
-    except Exception:
-        return fallback
+        return json.loads(content_text[start : end + 1]), {
+            "used_ai": True,
+            "model": model,
+            "status": "ok",
+            "error": "",
+        }
+    except Exception as exc:
+        return fallback, {
+            "used_ai": False,
+            "model": "rule",
+            "status": "rule_fallback",
+            "error": f"{type(exc).__name__}: {str(exc)[:300]}",
+        }
 
 
 def check_ai_connection(settings: dict[str, Any]) -> dict[str, Any]:
