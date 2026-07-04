@@ -17,6 +17,12 @@ const statusClass = {
   paused: "warn",
 };
 
+const checkMethodText = {
+  quiz: "完成后做小测",
+  review_quiz: "补漏复测",
+  checklist_quiz: "完成后检查",
+};
+
 function $(selector) {
   return document.querySelector(selector);
 }
@@ -60,6 +66,11 @@ function priorityTag(task) {
   return `<span class="tag ${task.priority === "P0" ? "p0" : ""}">${task.priority}</span>`;
 }
 
+function checkMethodTag(task) {
+  const method = task.check_method || "";
+  return `<span class="tag">${checkMethodText[method] || method || "完成后检查"}</span>`;
+}
+
 async function postEvent(taskId, eventType, note = "") {
   return api(`/api/daily-tasks/${taskId}/event`, {
     method: "POST",
@@ -75,4 +86,5 @@ window.LearningApp = {
   postEvent,
   taskStatusTag,
   priorityTag,
+  checkMethodTag,
 };

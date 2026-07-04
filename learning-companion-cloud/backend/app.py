@@ -112,6 +112,11 @@ def _render_child_task_fallback(tasks: list[dict]) -> str:
         "needs_revision": "需订正",
         "stuck": "卡住了",
     }
+    check_method_text = {
+        "quiz": "完成后做小测",
+        "review_quiz": "补漏复测",
+        "checklist_quiz": "完成后检查",
+    }
     for task in tasks:
         task_id = int(task["id"])
         status = str(task.get("status", "not_started"))
@@ -130,7 +135,7 @@ def _render_child_task_fallback(tasks: list[dict]) -> str:
               </div>
               <div class="task-meta">
                 <span class="tag">{int(task.get("estimated_minutes", 0) or 0)} 分钟</span>
-                <span class="tag">{html.escape(str(task.get("check_method", "")))}</span>
+                <span class="tag">{html.escape(check_method_text.get(str(task.get("check_method", "")), "完成后检查"))}</span>
               </div>
               <p><strong>完成标准：</strong>{html.escape(str(task.get("completion_standard", "")))}</p>
               <div class="actions">

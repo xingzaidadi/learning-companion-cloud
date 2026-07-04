@@ -41,7 +41,7 @@
     <div class="toast"></div>
     <script src="/static/app.js"></script>
     <script>
-      const { api, postEvent, toast, taskStatusTag, priorityTag } = window.LearningApp;
+      const { api, postEvent, toast, taskStatusTag, priorityTag, checkMethodTag } = window.LearningApp;
       let tasks = [];
       let activeTaskId = null;
 
@@ -80,7 +80,7 @@
             </div>
             <div class="task-meta">
               <span class="tag">${task.estimated_minutes} 分钟</span>
-              <span class="tag">${task.check_method}</span>
+              ${checkMethodTag(task)}
             </div>
             <p><strong>完成标准：</strong>${task.completion_standard}</p>
             <div class="actions">
