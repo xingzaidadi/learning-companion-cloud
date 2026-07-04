@@ -283,14 +283,30 @@ def run_e2e() -> None:
         start_next_id = not_started[0]["id"]
         start_next = assert_status(client.post(f"/api/daily-tasks/{start_next_id}/event", json={"event_type": "start"}))
         assert_true(start_next["status"] == "in_progress", "开始下一个任务按钮应启动首个未开始任务")
+        assert_true(start_next["timer_state"] == "running", "开始下一个任务后计时器应运行")
+        assert_true("elapsed_seconds" in start_next, "开始响应应返回已学秒数")
 
         start = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "start"}))
         assert_true(start["status"] == "in_progress", "start 后状态应为 in_progress")
+        assert_true(start["timer_state"] == "running", "start 后计时器应运行")
+        assert_true(bool(start["last_started_at"]), "start 后应返回开始时间")
+        with get_conn() as conn:
+            conn.execute(
+                """
+                UPDATE task_progress
+                SET created_at = datetime('now', '-125 seconds') || 'Z'
+                WHERE daily_task_id = ? AND event_type = 'start'
+                """,
+                (task_id,),
+            )
         pause = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "pause"}))
         assert_true(pause["status"] == "paused", "pause 后状态应为 paused")
+        assert_true(pause["timer_state"] == "stopped", "pause 后计时器应停止")
+        assert_true(pause["elapsed_seconds"] >= 120, f"pause 后应累计已学时间，实际 {pause}")
 
         stuck = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "stuck", "note": "不会读 school"}))
         assert_true(stuck["status"] == "stuck", "stuck 后状态应为 stuck")
+        assert_true(stuck["timer_state"] == "stopped", "stuck 后计时器应停止")
         assert_true(stuck["task_id"] == task_id, "卡住响应应返回当前任务 id")
         assert_true(stuck["task_title"] == task["title"], "卡住响应应返回当前任务标题")
         assert_true(stuck["child_note"] == "不会读 school", "卡住响应应返回孩子填写的问题")
@@ -317,6 +333,7 @@ def run_e2e() -> None:
 
         complete = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "complete"}))
         assert_true(complete["status"] == "checking", "complete 后状态应为 checking")
+        assert_true(complete["timer_state"] == "stopped", "complete 后计时器应停止")
 
         quiz = assert_status(client.get(f"/api/daily-tasks/{task_id}/quiz"))
         assert_true(len(quiz["items"]) >= 3, "小测题应至少 3 道")

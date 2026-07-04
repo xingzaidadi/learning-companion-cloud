@@ -181,9 +181,15 @@ def run_browser_clicks(base_url: str) -> None:
         page.wait_for_timeout(500)
         workflow_card = page.locator("#tasks .task-card").filter(has_text="数学").first
         workflow_card.locator("button[data-action='start']").click()
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(1_200)
+        workflow_card = page.locator("#tasks .task-card").filter(has_text="数学").first
+        assert "进行中" in workflow_card.inner_text()
+        assert "已学 0:0" in workflow_card.inner_text() or "已学 0:1" in workflow_card.inner_text()
         workflow_card.locator("button[data-action='pause']").click()
         page.wait_for_timeout(300)
+        workflow_card = page.locator("#tasks .task-card").filter(has_text="数学").first
+        assert "已暂停" in workflow_card.inner_text()
+        assert "已学" in workflow_card.inner_text()
         workflow_card = page.locator("#tasks .task-card").filter(has_text="数学").first
         workflow_card.locator("button[data-action='complete']").click(force=True)
         try:

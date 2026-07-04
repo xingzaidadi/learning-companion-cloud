@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 import html
 import json
 from pathlib import Path
@@ -99,6 +99,66 @@ def page(name: str) -> FileResponse:
     return FileResponse(FRONTEND_DIR / name)
 
 
+def _parse_utc(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
+    except ValueError:
+        return None
+
+
+def _task_time_stats(conn, task_id: int, status: str | None = None) -> dict[str, object]:
+    rows = conn.execute(
+        """
+        SELECT event_type, created_at
+        FROM task_progress
+        WHERE daily_task_id = ?
+        ORDER BY id
+        """,
+        (task_id,),
+    ).fetchall()
+    elapsed_seconds = 0
+    running_since: datetime | None = None
+    last_started_at = ""
+    for row in rows:
+        event_time = _parse_utc(row["created_at"])
+        if not event_time:
+            continue
+        if row["event_type"] == "start":
+            if running_since is None:
+                running_since = event_time
+                last_started_at = row["created_at"]
+            else:
+                running_since = event_time
+                last_started_at = row["created_at"]
+        elif row["event_type"] in {"pause", "stuck", "complete", "check", "revise"}:
+            if running_since is not None:
+                elapsed_seconds += max(0, int((event_time - running_since).total_seconds()))
+                running_since = None
+                last_started_at = ""
+    timer_state = "stopped"
+    if status == "in_progress" and running_since is not None:
+        now = _parse_utc(utc_now()) or datetime.utcnow()
+        elapsed_seconds += max(0, int((now - running_since).total_seconds()))
+        timer_state = "running"
+    return {
+        "elapsed_seconds": elapsed_seconds,
+        "timer_state": timer_state,
+        "last_started_at": last_started_at if timer_state == "running" else "",
+    }
+
+
+def _annotate_task(conn, task: dict) -> dict:
+    annotated = dict(task)
+    annotated.update(_task_time_stats(conn, int(annotated["id"]), str(annotated.get("status", ""))))
+    return annotated
+
+
+def _annotate_tasks(conn, tasks: list[dict]) -> list[dict]:
+    return [_annotate_task(conn, dict(task)) for task in tasks]
+
+
 def _render_child_task_fallback(tasks: list[dict]) -> str:
     if not tasks:
         return '<p class="muted">今天还没有任务，请让家长在管理端生成。</p>'
@@ -135,6 +195,7 @@ def _render_child_task_fallback(tasks: list[dict]) -> str:
               </div>
               <div class="task-meta">
                 <span class="tag">{int(task.get("estimated_minutes", 0) or 0)} 分钟</span>
+                <span class="tag">已学 {int(int(task.get("elapsed_seconds", 0) or 0) / 60)} 分钟</span>
                 <span class="tag">{html.escape(check_method_text.get(str(task.get("check_method", "")), "完成后检查"))}</span>
               </div>
               <p><strong>完成标准：</strong>{html.escape(str(task.get("completion_standard", "")))}</p>
@@ -429,8 +490,8 @@ def list_daily_tasks(
             rows = result["tasks"]
             if rows:
                 notify(conn, student_id, "tasks_generated", "今日学习任务已自动生成", f"今天共有 {len(rows)} 个任务。")
-                return [dict(row) for row in rows]
-        return dict_rows(rows)
+                return _annotate_tasks(conn, [dict(row) for row in rows])
+        return _annotate_tasks(conn, dict_rows(rows))
 
 
 @app.post("/api/daily-tasks/generate")
@@ -442,7 +503,7 @@ def generate_tasks(
     today = target_date or date.today().isoformat()
     with get_conn() as conn:
         result = agent_daily_tasks(conn, student_id, today, force_all_sources=True)
-        tasks = result["tasks"]
+        tasks = _annotate_tasks(conn, [dict(task) for task in result["tasks"]])
         notify(conn, student_id, "tasks_generated", "今日学习任务已生成", f"今天共有 {len(tasks)} 个任务。")
         return {"date": today, "count": len(tasks), "tasks": tasks}
 
@@ -454,6 +515,7 @@ async def agent_daily_tasks_endpoint(request: Request, _: str = Depends(require_
     target_date = data.get("target_date") or date.today().isoformat()
     with get_conn() as conn:
         result = agent_daily_tasks(conn, student_id, target_date, force_all_sources=True)
+        result["tasks"] = _annotate_tasks(conn, [dict(task) for task in result["tasks"]])
         result["date"] = target_date
         return result
 
@@ -498,8 +560,8 @@ async def task_event(task_id: int, request: Request, _: str = Depends(require_ch
                 1,
             )
             notify(conn, task["student_id"], "stuck", "孩子卡住了", f"{task['title']}\n\n说明：{note or '未填写'}")
-            return {"task_id": task_id, **assistance, "status": status_map[event_type]}
-        return {"task_id": task_id, "status": status_map[event_type]}
+            return {"task_id": task_id, **assistance, "status": status_map[event_type], **_task_time_stats(conn, task_id, status_map[event_type])}
+        return {"task_id": task_id, "status": status_map[event_type], **_task_time_stats(conn, task_id, status_map[event_type])}
 
 
 @app.get("/api/daily-tasks/{task_id}/quiz")

@@ -44,6 +44,7 @@
       const { api, postEvent, toast, taskStatusTag, priorityTag, checkMethodTag } = window.LearningApp;
       let tasks = [];
       let activeTaskId = null;
+      let timerHandle = null;
 
       async function loadTasks() {
         const container = document.querySelector("#tasks");
@@ -70,6 +71,10 @@
         tasks.forEach((task) => {
           const card = document.createElement("article");
           card.className = `task-card ${task.id === activeTaskId || task.status === "in_progress" ? "active" : ""}`;
+          const startedAt = task.last_started_at ? Date.parse(task.last_started_at) : 0;
+          const startDisabled = task.status === "in_progress" ? "disabled" : "";
+          const pauseDisabled = task.status !== "in_progress" ? "disabled" : "";
+          const doneDisabled = task.status === "completed" ? "disabled" : "";
           card.innerHTML = `
             <div class="task-head">
               <div>
@@ -80,17 +85,36 @@
             </div>
             <div class="task-meta">
               <span class="tag">${task.estimated_minutes} 分钟</span>
+              <span class="tag timer-tag" data-elapsed="${Number(task.elapsed_seconds || 0)}" data-started-at="${startedAt}" data-state="${task.timer_state || "stopped"}">已学 ${formatElapsed(task.elapsed_seconds || 0)}</span>
               ${checkMethodTag(task)}
             </div>
             <p><strong>完成标准：</strong>${task.completion_standard}</p>
             <div class="actions">
-              <button class="primary" data-action="start" data-id="${task.id}">开始</button>
-              <button data-action="pause" data-id="${task.id}">暂停</button>
-              <button class="warn" data-action="complete" data-id="${task.id}">我做完了，开始检查</button>
-              <button class="danger" data-action="stuck" data-id="${task.id}">我卡住了</button>
+              <button class="primary" data-action="start" data-id="${task.id}" ${startDisabled}>开始</button>
+              <button data-action="pause" data-id="${task.id}" ${pauseDisabled}>暂停</button>
+              <button class="warn" data-action="complete" data-id="${task.id}" ${doneDisabled}>我做完了，开始检查</button>
+              <button class="danger" data-action="stuck" data-id="${task.id}" ${doneDisabled}>我卡住了</button>
             </div>
           `;
           container.append(card);
+        });
+        updateTimers();
+      }
+
+      function formatElapsed(seconds) {
+        const total = Math.max(0, Math.floor(Number(seconds || 0)));
+        const minutes = Math.floor(total / 60);
+        const rest = total % 60;
+        return `${minutes}:${String(rest).padStart(2, "0")}`;
+      }
+
+      function updateTimers() {
+        document.querySelectorAll(".timer-tag").forEach((node) => {
+          const base = Number(node.dataset.elapsed || 0);
+          const startedAt = Number(node.dataset.startedAt || 0);
+          const running = node.dataset.state === "running" && startedAt > 0;
+          const extra = running ? Math.floor((Date.now() - startedAt) / 1000) : 0;
+          node.textContent = `已学 ${formatElapsed(base + extra)}`;
         });
       }
 
@@ -102,7 +126,7 @@
         }
         await postEvent(next.id, "start");
         activeTaskId = next.id;
-        toast(`开始：${next.title}`);
+        toast(`已开始计时：${next.title}`);
         await loadTasks();
       }
 
@@ -211,8 +235,9 @@
           await postEvent(taskId, "complete");
           await showQuiz(taskId);
         } else {
-          await postEvent(taskId, action);
-          toast(action === "start" ? "已开始，加油！" : "已暂停，休息一下。");
+          const result = await postEvent(taskId, action);
+          if (action === "start") activeTaskId = taskId;
+          toast(action === "start" ? `已开始计时：${formatElapsed(result.elapsed_seconds || 0)}` : `已暂停，已学 ${formatElapsed(result.elapsed_seconds || 0)}`);
         }
         await loadTasks();
       });
@@ -225,6 +250,7 @@
         document.querySelector("#tasks").innerHTML = `<p class="muted">今日任务加载失败：${escapeHtml(error.message)}</p>`;
         toast(error.message);
       });
+      timerHandle = setInterval(updateTimers, 1000);
     </script>
   </body>
 </html>

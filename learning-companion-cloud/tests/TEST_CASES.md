@@ -10,6 +10,8 @@
 
 真实浏览器点击脚本：`scripts/ui_click_test.py`
 
+孩子端四按钮验收用例：`tests/BUTTON_CASES.md`
+
 ## P0 回归链路
 
 1. 健康检查和三端页面可访问。
