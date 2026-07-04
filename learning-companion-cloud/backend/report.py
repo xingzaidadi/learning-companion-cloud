@@ -191,7 +191,12 @@ def build_weekly_report(conn: Connection, student_id: int = 1, target_date: str 
     completion_rate = int((completed_tasks / total_tasks) * 100) if total_tasks else 0
     summary = f"本周记录 {total_days} 天，任务完成率 {completion_rate}%（{completed_tasks}/{total_tasks}）。"
     problems = "；".join(row["problems"] for row in problem_days) if problem_days else "本周暂无集中卡点。"
+    trend = "有卡点需要优先补漏。" if problem_days else "整体推进稳定。"
     next_week_focus = "优先复习本周错题/卡点，再推进新任务。" if problem_days else "保持每天先完成 P0，再做 KET 短练。"
+    suggestions = [
+        next_week_focus,
+        "每天学习结束后先做小测，低于通过线就进入第二天补漏。",
+    ]
     now = utc_now()
     conn.execute(
         """
@@ -214,7 +219,9 @@ def build_weekly_report(conn: Connection, student_id: int = 1, target_date: str 
         "week_end": week_end,
         "summary": summary,
         "problems": problems,
+        "trend": trend,
         "next_week_focus": next_week_focus,
+        "suggestions": suggestions,
         "daily_reports": daily_rows,
     }
     report["file_path"] = _write_weekly_markdown(report, daily_rows)

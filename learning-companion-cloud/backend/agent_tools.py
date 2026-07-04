@@ -86,14 +86,24 @@ def get_task_guidance(conn: Connection, daily_task_id: int) -> dict[str, Any] | 
 
 def save_submissions(conn: Connection, daily_task_id: int, answers: dict[str, str]) -> None:
     now = utc_now()
+    valid_item_ids = {
+        int(row["id"])
+        for row in conn.execute(
+            "SELECT id FROM quiz_items WHERE daily_task_id = ?",
+            (daily_task_id,),
+        ).fetchall()
+    }
     conn.execute("DELETE FROM submissions WHERE daily_task_id = ?", (daily_task_id,))
     for quiz_item_id, answer in answers.items():
+        item_id = int(quiz_item_id) if str(quiz_item_id).isdigit() else None
+        if item_id not in valid_item_ids:
+            item_id = None
         conn.execute(
             """
             INSERT INTO submissions (daily_task_id, quiz_item_id, answer, created_at)
             VALUES (?, ?, ?, ?)
             """,
-            (daily_task_id, int(quiz_item_id) if str(quiz_item_id).isdigit() else None, str(answer), now),
+            (daily_task_id, item_id, str(answer), now),
         )
 
 

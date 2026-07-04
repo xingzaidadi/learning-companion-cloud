@@ -285,7 +285,7 @@ def health() -> dict[str, str]:
 def curriculum(subject: str | None = None, version: str | None = None, _: str = Depends(require_admin_auth)) -> dict[str, object]:
     if subject:
         return {"defaults": WUHAN_DEFAULTS, "subject": subject, "units": get_subject_units(subject, version)}
-    return {"defaults": WUHAN_DEFAULTS, "curriculum": CURRICULUM}
+    return {"defaults": WUHAN_DEFAULTS, "curriculum": CURRICULUM, "subjects": CURRICULUM}
 
 
 @app.get("/api/settings")
@@ -376,6 +376,9 @@ def create_task_source(
 @app.post("/api/task-sources/seed")
 def seed_sources(student_id: int = 1, _: str = Depends(require_admin_auth)) -> dict[str, int]:
     with get_conn() as conn:
+        student = conn.execute("SELECT id FROM students WHERE id = ?", (student_id,)).fetchone()
+        if not student:
+            raise HTTPException(status_code=400, detail="student_id 不存在")
         return {"created": seed_demo_sources(conn, student_id)}
 
 

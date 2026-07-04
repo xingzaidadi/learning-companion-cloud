@@ -138,9 +138,11 @@ def check_ai_connection(settings: dict[str, Any]) -> dict[str, Any]:
         "ok": False,
         "status": "not_checked",
         "error": "",
+        "message": "",
     }
     if not result["enabled"] or not api_key:
         result["status"] = "disabled_or_missing_key"
+        result["message"] = "AI 未启用或缺少 API Key，系统会使用本地规则兜底。"
         return result
 
     payload = {
@@ -158,15 +160,18 @@ def check_ai_connection(settings: dict[str, Any]) -> dict[str, Any]:
         with request.urlopen(req, timeout=20) as response:
             result["ok"] = 200 <= response.status < 300
             result["status"] = str(response.status)
+            result["message"] = "AI 连接可用。" if result["ok"] else "AI 连接未通过。"
             return result
     except urlerror.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="ignore")
         result["status"] = str(exc.code)
         result["error"] = body[:500]
+        result["message"] = "AI 服务返回错误，系统会使用本地规则兜底。"
         return result
     except Exception as exc:
         result["status"] = "exception"
         result["error"] = f"{type(exc).__name__}: {str(exc)[:300]}"
+        result["message"] = "AI 检查异常，系统会使用本地规则兜底。"
         return result
 
 

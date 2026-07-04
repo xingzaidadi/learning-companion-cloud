@@ -124,5 +124,6 @@ def review_book(conn: Connection, student_id: int) -> dict[str, Any]:
         "pending": sum(1 for row in rows if row["status"] == "pending"),
         "scheduled": sum(1 for row in rows if row["status"] == "scheduled"),
         "done": sum(1 for row in rows if row["status"] == "done"),
+        "items": rows,
         "groups": grouped,
     }

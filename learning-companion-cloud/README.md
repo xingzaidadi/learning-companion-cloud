@@ -140,6 +140,15 @@ ADMIN_PASSWORD=管理端密码
 
 备份文件会生成到 `backups` 目录。
 
+## 自测
+
+```powershell
+python .\scripts\self_test.py
+python .\scripts\ui_click_test.py
+```
+
+`self_test.py` 覆盖接口、任务流转、出题批改、报告和静态按钮清单；`ui_click_test.py` 会启动临时服务并用 Playwright 真实点击管理端、孩子端、家长端的所有按钮。
+
 ## 生产部署提醒
 
 - 上线前必须设置 `CHILD_PASSWORD`、`PARENT_PASSWORD` 和 `ADMIN_PASSWORD`，或放到反向代理鉴权后。

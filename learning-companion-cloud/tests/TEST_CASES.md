@@ -8,6 +8,8 @@
 
 自动化自测脚本：`scripts/self_test.py`
 
+真实浏览器点击脚本：`scripts/ui_click_test.py`
+
 ## P0 回归链路
 
 1. 健康检查和三端页面可访问。
@@ -29,6 +31,8 @@
 ```powershell
 cd learning-companion-cloud
 python .\scripts\self_test.py
+python .\scripts\ui_click_test.py
 ```
 
 脚本会创建临时 SQLite 数据库，设置 `AI_ENABLED=false`、`NOTIFY_CHANNEL=none`，不会污染正式 `data/learning.db`。
+`ui_click_test.py` 会用 Playwright 启动临时服务并逐个点击管理端、孩子端、家长端按钮，验证前端事件绑定没有失效。

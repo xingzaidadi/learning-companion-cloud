@@ -1,3 +1,4 @@
+(function () {
 const statusText = {
   not_started: "未开始",
   in_progress: "进行中",
@@ -88,3 +89,4 @@ window.LearningApp = {
   priorityTag,
   checkMethodTag,
 };
+})();

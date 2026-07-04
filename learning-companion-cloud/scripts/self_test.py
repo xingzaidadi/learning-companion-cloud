@@ -54,6 +54,11 @@ def extract_progress(html: str) -> tuple[str, str]:
     return done.group(1), total.group(1)
 
 
+def assert_contains_all(text: str, needles: list[str], context: str) -> None:
+    missing = [needle for needle in needles if needle not in text]
+    assert_true(not missing, f"{context} 缺少页面动作/文案：{missing}")
+
+
 def run_static_encoding_check() -> None:
     suspicious = ("锛", "鏈", "浠", "鈥", "�", "????")
     files = [
@@ -64,6 +69,8 @@ def run_static_encoding_check() -> None:
         ROOT / "backend" / "scheduler.py",
         ROOT / "backend" / "plan_generator.py",
         ROOT / "backend" / "curriculum.py",
+        ROOT / "backend" / "report.py",
+        ROOT / "backend" / "review.py",
         ROOT / "frontend" / "child.html",
         ROOT / "frontend" / "admin.html",
         ROOT / "frontend" / "parent.html",
@@ -77,6 +84,54 @@ def run_static_encoding_check() -> None:
                 offenders.append(f"{path.relative_to(ROOT)} contains {marker!r}")
                 break
     assert_true(not offenders, "发现疑似中文乱码：\n" + "\n".join(offenders))
+
+
+def run_static_button_inventory_check() -> None:
+    pages = {
+        "admin.html": [
+            'id="quickPlanForm"',
+            'id="quickPlanSubmit"',
+            "生成计划并生成今日任务",
+            'id="generateToday"',
+            "补齐/同步今日任务",
+            'id="refresh"',
+            "刷新",
+            'id="settingsForm"',
+            "保存配置",
+            'id="checkAi"',
+            "检查 AI",
+            'id="sourceForm"',
+            "保存任务源",
+            'id="seedDemo"',
+            "生成示例",
+            'id="importForm"',
+            "批量导入",
+            'data-action="regenerateQuiz"',
+            "重生成小测",
+        ],
+        "child.html": [
+            'id="startNext"',
+            "开始下一个任务",
+            'data-action="start"',
+            "开始",
+            'data-action="pause"',
+            "暂停",
+            'data-action="complete"',
+            "我做完了，开始检查",
+            'data-action="stuck"',
+            "我卡住了",
+            "form.addEventListener",
+        ],
+        "parent.html": [
+            'id="endDay"',
+            "生成今天日报",
+            'id="weekReport"',
+            "生成本周周报",
+        ],
+    }
+    for page_name, needles in pages.items():
+        text = (ROOT / "frontend" / page_name).read_text(encoding="utf-8")
+        assert_contains_all(text, needles, page_name)
 
 
 def run_e2e() -> None:
@@ -96,6 +151,73 @@ def run_e2e() -> None:
             html = assert_status(client.get(path))
             assert_true("<html" in html.lower(), f"{path} should return HTML")
 
+        settings_before = assert_status(client.get("/api/settings"))
+        assert_true(settings_before["region"]["city"] == "武汉", "默认城市应为武汉")
+        saved_settings = assert_status(
+            client.post(
+                "/api/settings",
+                json={
+                    "region": {
+                        "city": "武汉",
+                        "grade": "五年级",
+                        "semester": "上册",
+                        "chinese_version": "统编版/人民教育出版社",
+                        "math_version": "北师大版/北京师范大学出版社",
+                        "english_version": "外研社三年级起点/刘兆义",
+                    },
+                    "daily_limits": {"max_total_minutes": 110},
+                    "path_rules": {"quiz_pass_score": 0.8},
+                    "ai": {"enabled": False, "api_url": "", "model": ""},
+                },
+            )
+        )
+        assert_true(saved_settings["daily_limits"]["max_total_minutes"] == 110, "保存配置按钮应写入每日时长")
+        ai_status = assert_status(client.get("/api/ai/check"))
+        for key in ("ok", "enabled", "message"):
+            assert_true(key in ai_status, f"检查 AI 返回缺少 {key}")
+
+        seeded_empty = assert_status(client.post("/api/task-sources/seed"))
+        assert_true(seeded_empty["created"] >= 3, "空库点击生成示例应创建示例任务源")
+        with get_conn() as conn:
+            conn.execute(
+                "DELETE FROM task_sources WHERE title IN (?, ?, ?)",
+                ("数学暑假作业", "五年级数学第一节：小数乘整数", "KET 词汇与听力"),
+            )
+
+        manual_source = assert_status(
+            client.post(
+                "/api/task-sources",
+                data={
+                    "category": "preview",
+                    "title": "语文五年级上册第一课预习",
+                    "subject": "语文",
+                    "total_units": "3",
+                    "completed_units": "0",
+                    "deadline": "2026-08-31",
+                    "module": "第一单元",
+                    "topic": "第一课",
+                    "lesson_content": "读课文、圈生字、说主要内容",
+                    "knowledge_points": "生字词、课文理解",
+                    "vocabulary": "",
+                    "estimated_minutes": "25",
+                    "student_id": "1",
+                },
+            )
+        )
+        assert_true(manual_source["status"] == "created", "保存任务源按钮应创建任务源")
+
+        imported = assert_status(
+            client.post(
+                "/api/task-sources/import",
+                data={
+                    "raw_text": "preview,数学五年级上册小数乘法,数学,2,0,2026-08-31,小数乘整数\n暑假作业本每日一小节 5",
+                    "default_deadline": "2026-08-31",
+                    "student_id": "1",
+                },
+            )
+        )
+        assert_true(imported["created"] == 2, f"批量导入按钮应创建 2 条，实际 {imported}")
+
         plan = assert_status(client.post("/api/study-plan/generate", data={"raw_text": ENGLISH_PLAN_PROMPT, "student_id": "1"}))
         assert_true(plan["created"] == 1, f"英语计划应创建 1 条，实际 {plan}")
         item = plan["items"][0]
@@ -104,14 +226,14 @@ def run_e2e() -> None:
         assert_true(item["total_units"] == 30, "英语计划应为 30 天")
 
         sources = assert_status(client.get("/api/task-sources"))
-        assert_true(len(sources) == 1, "task_sources 应有 1 条")
+        assert_true(len(sources) == 4, f"task_sources 应有 4 条，实际 {len(sources)}")
 
         # 验证孩子端 GET /api/daily-tasks 在无今日任务时自动兜底生成。
         with get_conn() as conn:
             conn.execute("DELETE FROM daily_tasks")
         tasks = assert_status(client.get("/api/daily-tasks"))
-        assert_true(len(tasks) == 1, f"今日任务应自动生成 1 条，实际 {tasks}")
-        task = tasks[0]
+        assert_true(len(tasks) == 4, f"今日任务应自动生成 4 条，实际 {tasks}")
+        task = next(task for task in tasks if "Unit 1 My school is cool" in task["title"])
         task_id = task["id"]
         assert_true("Unit 1 My school is cool" in task["title"], "今日任务标题应进入 Unit 1")
         assert_true(task["check_method"] == "quiz", "内部检查方式应为 quiz")
@@ -120,18 +242,26 @@ def run_e2e() -> None:
         assert_true(math_plan["created"] == 1, f"数学计划应创建 1 条，实际 {math_plan}")
         synced = assert_status(client.post("/api/daily-tasks/generate"))
         synced_titles = [task["title"] for task in synced["tasks"]]
-        assert_true(synced["count"] == 2, f"补齐今日任务后应为 2 条，实际 {synced_titles}")
+        assert_true(synced["count"] == 5, f"补齐今日任务后应为 5 条，实际 {synced_titles}")
         assert_true(sum("Unit 1 My school is cool" in title for title in synced_titles) == 1, "英语任务不应重复")
         assert_true(any("数学" in title or "小数" in title for title in synced_titles), f"应补齐数学任务，实际 {synced_titles}")
 
         child_html = assert_status(client.get("/child"))
         done, total = extract_progress(child_html)
-        assert_true((done, total) == ("0", "2"), f"孩子端进度应为 0/2，实际 {done}/{total}")
+        assert_true((done, total) == ("0", "5"), f"孩子端进度应为 0/5，实际 {done}/{total}")
         assert_true("Unit 1 My school is cool" in child_html, "孩子端 HTML 应服务端直出任务标题")
         assert_true("数学" in child_html or "小数" in child_html, "孩子端 HTML 应显示新增数学任务")
+        assert_true("语文" in child_html or "生字词" in child_html, "孩子端 HTML 应显示手动录入语文任务")
         assert_true("完成后做小测" in child_html, "孩子端应显示中文检查方式")
         assert_true('<span class="tag">quiz</span>' not in child_html, "孩子端不应裸露 quiz 标签")
         assert_true("window.__INITIAL_TASKS__" in child_html, "孩子端应注入初始任务数据")
+
+        current_tasks = assert_status(client.get("/api/daily-tasks"))
+        not_started = [item for item in current_tasks if item["status"] == "not_started"]
+        assert_true(len(not_started) >= 1, "开始下一个任务按钮需要至少一个未开始任务")
+        start_next_id = not_started[0]["id"]
+        start_next = assert_status(client.post(f"/api/daily-tasks/{start_next_id}/event", json={"event_type": "start"}))
+        assert_true(start_next["status"] == "in_progress", "开始下一个任务按钮应启动首个未开始任务")
 
         start = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "start"}))
         assert_true(start["status"] == "in_progress", "start 后状态应为 in_progress")
@@ -151,10 +281,18 @@ def run_e2e() -> None:
         assert_true(len(quiz["items"]) >= 3, "小测题应至少 3 道")
         assert_true(all("answer" not in item for item in quiz["items"]), "孩子端小测不应暴露标准答案")
 
+        regenerated = assert_status(client.post(f"/api/daily-tasks/{task_id}/quiz/regenerate"))
+        assert_true(len(regenerated["items"]) >= 3, "重生成小测按钮应返回至少 3 道题")
+
+        guidance = assert_status(client.get(f"/api/agent/task-guidance/{task_id}"))
+        assert_true("guidance" in guidance or "steps" in guidance, f"任务指导应返回可读内容，实际 {guidance}")
+
         answers = {str(item["id"]): "" for item in quiz["items"]}
         grade = assert_status(client.post(f"/api/daily-tasks/{task_id}/quiz", json={"answers": answers}))
         assert_true(grade["total"] == len(quiz["items"]), "批改总题数应等于小测题数")
         assert_true("diagnosis" in grade, "批改应返回诊断")
+        agent_grade_result = assert_status(client.post(f"/api/agent/grade/{task_id}", json={"answers": answers}))
+        assert_true(agent_grade_result["total"] == len(quiz["items"]), "Agent 批改接口应可用")
 
         dashboard = assert_status(client.get("/api/parent/dashboard"))
         for key in ("tasks", "quiz_results", "stuck_tasks", "notifications", "mastery", "agent_runs"):
@@ -165,11 +303,33 @@ def run_e2e() -> None:
         report = assert_status(client.post("/api/day/end"))
         for key in ("summary", "problems", "tomorrow_first_step"):
             assert_true(key in report, f"日报缺少 {key}")
+        agent_report_result = assert_status(client.post("/api/agent/daily-report", json={"student_id": 1}))
+        for key in ("summary", "problems", "tomorrow_first_step"):
+            assert_true(key in agent_report_result, f"Agent 日报缺少 {key}")
+        weekly_report = assert_status(client.post("/api/week/report"))
+        for key in ("summary", "trend", "suggestions"):
+            assert_true(key in weekly_report, f"周报缺少 {key}")
+        reviews = assert_status(client.get("/api/review-items"))
+        assert_true(isinstance(reviews, list), "补漏列表应返回数组")
+        review_book_payload = assert_status(client.get("/api/review-book"))
+        assert_true("items" in review_book_payload, "补漏本应返回 items")
+        overview = assert_status(client.get("/api/agent/overview"))
+        assert_true("runs" in overview, "Agent 总览应返回 runs")
+
+        agent_plan_result = assert_status(client.post("/api/agent/plan", json={"goal": "语文书每日一篇课文，五年级上册", "student_id": 1}))
+        assert_true(agent_plan_result["created"] >= 1, "Agent 规划接口应创建计划")
+        agent_daily_tasks_result = assert_status(client.post("/api/agent/daily-tasks", json={"student_id": 1}))
+        assert_true("tasks" in agent_daily_tasks_result, "Agent 今日任务接口应返回 tasks")
+
+        curriculum = assert_status(client.get("/api/curriculum"))
+        assert_true("subjects" in curriculum and "defaults" in curriculum, "教材接口应返回 subjects/defaults")
 
         with get_conn() as conn:
             review_count = conn.execute("SELECT COUNT(*) FROM review_items").fetchone()[0]
             run_count = conn.execute("SELECT COUNT(*) FROM agent_runs WHERE run_type = 'stuck_assist'").fetchone()[0]
             log_count = conn.execute("SELECT COUNT(*) FROM notification_logs").fetchone()[0]
+        seeded_existing = assert_status(client.post("/api/task-sources/seed"))
+        assert_true(seeded_existing["created"] == 0, "已有计划时生成示例按钮应安全跳过重复创建")
         assert_true(review_count >= 1, "卡住/错题应进入补漏队列")
         assert_true(run_count >= 1, "卡住应记录 Agent stuck_assist 日志")
         assert_true(log_count >= 1, "提醒日志应写入 notification_logs")
@@ -178,6 +338,7 @@ def run_e2e() -> None:
 def main() -> None:
     try:
         run_static_encoding_check()
+        run_static_button_inventory_check()
         run_e2e()
     finally:
         # 临时目录可保留给失败排查；成功时删除数据库文件即可。
