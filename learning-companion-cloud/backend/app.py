@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import date
+import html
+import json
 from pathlib import Path
 from typing import Annotated
 
@@ -97,6 +99,52 @@ def page(name: str) -> FileResponse:
     return FileResponse(FRONTEND_DIR / name)
 
 
+def _render_child_task_fallback(tasks: list[dict]) -> str:
+    if not tasks:
+        return '<p class="muted">今天还没有任务，请让家长在管理端生成。</p>'
+    cards: list[str] = []
+    status_text = {
+        "not_started": "未开始",
+        "in_progress": "进行中",
+        "paused": "已暂停",
+        "checking": "检查中",
+        "completed": "已完成",
+        "needs_revision": "需订正",
+        "stuck": "卡住了",
+    }
+    for task in tasks:
+        task_id = int(task["id"])
+        status = str(task.get("status", "not_started"))
+        cards.append(
+            f"""
+            <article class="task-card {'active' if status == 'in_progress' else ''}">
+              <div class="task-head">
+                <div>
+                  <h3 class="task-title">{html.escape(str(task.get("title", "")))}</h3>
+                  <p class="muted">{html.escape(str(task.get("description", "")))}</p>
+                </div>
+                <div class="task-meta">
+                  <span class="tag {'p0' if task.get("priority") == "P0" else ''}">{html.escape(str(task.get("priority", "")))}</span>
+                  <span class="tag">{html.escape(status_text.get(status, status))}</span>
+                </div>
+              </div>
+              <div class="task-meta">
+                <span class="tag">{int(task.get("estimated_minutes", 0) or 0)} 分钟</span>
+                <span class="tag">{html.escape(str(task.get("check_method", "")))}</span>
+              </div>
+              <p><strong>完成标准：</strong>{html.escape(str(task.get("completion_standard", "")))}</p>
+              <div class="actions">
+                <button class="primary" data-action="start" data-id="{task_id}">开始</button>
+                <button data-action="pause" data-id="{task_id}">暂停</button>
+                <button class="warn" data-action="complete" data-id="{task_id}">我做完了，开始检查</button>
+                <button class="danger" data-action="stuck" data-id="{task_id}">我卡住了</button>
+              </div>
+            </article>
+            """
+        )
+    return "\n".join(cards)
+
+
 def _check_basic(
     credentials: HTTPBasicCredentials | None,
     expected_user: str,
@@ -184,8 +232,29 @@ def index() -> RedirectResponse:
 
 
 @app.get("/child", response_class=HTMLResponse)
-def child_page(_: str = Depends(require_child_auth)) -> FileResponse:
-    return page("child.html")
+def child_page(_: str = Depends(require_child_auth)) -> HTMLResponse:
+    html_text = (FRONTEND_DIR / "child.html").read_text(encoding="utf-8")
+    today = date.today().isoformat()
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM daily_tasks WHERE student_id = ? AND date = ? ORDER BY priority, id",
+            (1, today),
+        ).fetchall()
+        if not rows:
+            result = agent_daily_tasks(conn, 1, today)
+            rows = result["tasks"]
+        tasks = [dict(row) for row in rows]
+    fallback_html = _render_child_task_fallback(tasks)
+    html_text = html_text.replace(
+        '<div id="tasks" class="task-list"><p class="muted">正在加载今日任务...</p></div>',
+        f'<div id="tasks" class="task-list">{fallback_html}</div>',
+    )
+    initial_data = json.dumps(tasks, ensure_ascii=False)
+    html_text = html_text.replace(
+        "let tasks = [];",
+        f"window.__INITIAL_TASKS__ = {initial_data};\n      let tasks = window.__INITIAL_TASKS__ || [];",
+    )
+    return HTMLResponse(html_text, headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"})
 
 
 @app.get("/parent", response_class=HTMLResponse)
