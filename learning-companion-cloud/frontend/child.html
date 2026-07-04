@@ -29,7 +29,7 @@
       <section class="grid" style="margin-top:16px">
         <div class="card span-8">
           <h2>今日任务</h2>
-          <div id="tasks" class="task-list"></div>
+          <div id="tasks" class="task-list"><p class="muted">正在加载今日任务...</p></div>
         </div>
         <div class="card span-4">
           <h2>小测 / 检查</h2>
@@ -46,7 +46,12 @@
       let activeTaskId = null;
 
       async function loadTasks() {
-        tasks = await api("/api/daily-tasks");
+        const container = document.querySelector("#tasks");
+        container.innerHTML = '<p class="muted">正在加载今日任务...</p>';
+        tasks = await api(`/api/daily-tasks?_=${Date.now()}`, { cache: "no-store" });
+        if (!Array.isArray(tasks)) {
+          tasks = tasks.value || [];
+        }
         renderTasks();
       }
 
@@ -209,7 +214,10 @@
         await loadTasks();
       });
 
-      loadTasks().catch((error) => toast(error.message));
+      loadTasks().catch((error) => {
+        document.querySelector("#tasks").innerHTML = `<p class="muted">今日任务加载失败：${escapeHtml(error.message)}</p>`;
+        toast(error.message);
+      });
     </script>
   </body>
 </html>

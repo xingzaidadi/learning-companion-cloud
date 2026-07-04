@@ -343,6 +343,12 @@ def list_daily_tasks(
             "SELECT * FROM daily_tasks WHERE student_id = ? AND date = ? ORDER BY priority, id",
             (student_id, today),
         ).fetchall()
+        if not rows:
+            result = agent_daily_tasks(conn, student_id, today)
+            rows = result["tasks"]
+            if rows:
+                notify(conn, student_id, "tasks_generated", "今日学习任务已自动生成", f"今天共有 {len(rows)} 个任务。")
+                return [dict(row) for row in rows]
         return dict_rows(rows)
 
 
