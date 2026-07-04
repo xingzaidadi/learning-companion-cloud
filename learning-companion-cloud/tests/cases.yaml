@@ -1,0 +1,244 @@
+suite:
+  name: learning_companion_core_regression
+  version: 2026-07-04
+  mode: regression_api_e2e
+  assumptions:
+    - 本地默认不启用登录密码；有密码时需补充鉴权负例。
+    - 自动化自测使用临时 SQLite 数据库，不污染正式 data/learning.db。
+    - AI 可用性由环境变量决定；核心链路必须在 AI 不可用时仍可回退。
+coverage_map:
+  REQ-PLAN-001: 家长在管理端用自然语言生成长期学习计划。
+  REQ-PLAN-002: 外研社/刘兆义五上英语 Unit 1-6 可生成 30 天暑假预习计划。
+  REQ-TASK-001: 今日任务可从长期计划同步生成。
+  REQ-CHILD-001: 孩子端必须直接显示今日任务、真实进度和中文检查方式。
+  REQ-CHILD-002: 孩子端开始、暂停、卡住、完成检查状态可流转。
+  REQ-STUCK-001: 卡住时 Agent 返回分层提示，不直接给答案，并记录补漏。
+  REQ-QUIZ-001: 完成任务后可生成小测并提交批改。
+  REQ-PARENT-001: 家长端可查看任务、卡住、小测、掌握度和提醒记录。
+  REQ-REPORT-001: 可生成日报/周报。
+  REQ-NOTIFY-001: 提醒通道支持 local/console/none/pushplus，不配置外部 token 不阻塞主流程。
+  RISK-CACHE-001: 浏览器缓存或 JS 失败不应导致孩子端空白。
+  RISK-DB-001: 空数据库应自动初始化，不应出现 no such table。
+  RISK-ENC-001: 中文页面、通知、报告、调度日志不应出现乱码。
+cases:
+  - id: LC-SMOKE-001
+    title: 健康检查与页面可访问
+    priority: P0
+    level: e2e
+    type: smoke
+    traceability: [REQ-CHILD-001, RISK-DB-001]
+    preconditions: 临时数据库；服务启动。
+    steps:
+      - GET /api/health。
+      - GET /admin、/child、/parent。
+    expected:
+      - health 返回 status=ok。
+      - 三个页面 HTTP 200，HTML 可解析。
+    automation_candidate: true
+    status: automated
+  - id: LC-PLAN-001
+    title: 外研社五上英语长提示生成长期计划
+    priority: P0
+    level: api
+    type: functional
+    traceability: [REQ-PLAN-001, REQ-PLAN-002]
+    preconditions: 临时数据库为空。
+    steps:
+      - POST /api/study-plan/generate，提交包含 Unit 1-6、音频、字帖、默写、每日 25-35 分钟的英语计划提示。
+      - GET /api/task-sources。
+    expected:
+      - created=1。
+      - 任务源标题为“外研社刘兆义版五年级上册英语暑假预习”。
+      - total_units=30，subject=英语。
+    automation_candidate: true
+    status: automated
+  - id: LC-TASK-001
+    title: 今日任务从长期计划生成
+    priority: P0
+    level: api
+    type: functional
+    traceability: [REQ-TASK-001]
+    preconditions: 已存在英语长期计划。
+    steps:
+      - POST /api/daily-tasks/generate。
+      - GET /api/daily-tasks。
+    expected:
+      - 今日任务数量 >=1。
+      - 第一条任务标题包含 Unit 1 My school is cool。
+      - check_method 内部值为 quiz。
+    automation_candidate: true
+    status: automated
+  - id: LC-TASK-002
+    title: 孩子端 GET 今日任务自动兜底生成
+    priority: P0
+    level: integration
+    type: regression
+    traceability: [REQ-TASK-001, RISK-CACHE-001]
+    preconditions: 已存在长期计划；daily_tasks 表为空。
+    steps:
+      - 删除今日任务。
+      - GET /api/daily-tasks。
+    expected:
+      - 接口自动生成并返回今日任务。
+      - 不返回 500 或空数组。
+    automation_candidate: true
+    status: automated
+  - id: LC-CHILD-001
+    title: 孩子端服务端渲染任务和进度
+    priority: P0
+    level: e2e
+    type: regression
+    traceability: [REQ-CHILD-001, RISK-CACHE-001]
+    preconditions: 今日已有 1 条未完成任务。
+    steps:
+      - GET /child。
+      - 检查 HTML 源码。
+    expected:
+      - 源码包含任务标题。
+      - doneCount=0，totalCount=1。
+      - 检查方式显示“完成后做小测”，不显示裸露的 quiz 标签。
+    automation_candidate: true
+    status: automated
+  - id: LC-CHILD-002
+    title: 开始和暂停任务状态流转
+    priority: P0
+    level: api
+    type: state
+    traceability: [REQ-CHILD-002]
+    preconditions: 今日任务状态 not_started。
+    steps:
+      - POST /api/daily-tasks/{id}/event event_type=start。
+      - POST /api/daily-tasks/{id}/event event_type=pause。
+    expected:
+      - 第一次返回 in_progress。
+      - 第二次返回 paused。
+      - task_progress 有对应记录。
+    automation_candidate: true
+    status: automated
+  - id: LC-STUCK-001
+    title: 卡住时返回 Agent 分层辅导
+    priority: P0
+    level: integration
+    type: functional
+    traceability: [REQ-STUCK-001]
+    preconditions: 今日任务存在。
+    steps:
+      - POST /api/daily-tasks/{id}/event event_type=stuck，note=不会读 school。
+    expected:
+      - 返回 status=stuck。
+      - assistance 包含 encouragement、hint_1、guiding_question、try_again、review_focus。
+      - review_items 新增卡住补漏项。
+      - agent_runs 新增 stuck_assist。
+    automation_candidate: true
+    status: automated
+  - id: LC-QUIZ-001
+    title: 完成任务后生成小测
+    priority: P0
+    level: integration
+    type: functional
+    traceability: [REQ-QUIZ-001]
+    preconditions: 今日任务存在。
+    steps:
+      - POST /api/daily-tasks/{id}/event event_type=complete。
+      - GET /api/daily-tasks/{id}/quiz。
+    expected:
+      - 状态变为 checking。
+      - 返回 3-5 道小测题。
+      - 题目不暴露 answer 字段。
+    automation_candidate: true
+    status: automated
+  - id: LC-QUIZ-002
+    title: 小测提交后生成批改和掌握度记录
+    priority: P0
+    level: integration
+    type: functional
+    traceability: [REQ-QUIZ-001, REQ-PARENT-001]
+    preconditions: 已有小测题。
+    steps:
+      - 提交空答案或错误答案。
+      - GET /api/parent/dashboard。
+    expected:
+      - 返回 total、correct、status、diagnosis。
+      - 家长端 dashboard 包含 quiz_results。
+      - 低分时生成 review_items 或 mastery_records。
+    automation_candidate: true
+    status: automated
+  - id: LC-PARENT-001
+    title: 家长端 Dashboard 聚合数据
+    priority: P1
+    level: api
+    type: integration
+    traceability: [REQ-PARENT-001]
+    preconditions: 已有任务、卡住记录、小测记录。
+    steps:
+      - GET /api/parent/dashboard。
+    expected:
+      - 返回 tasks、quiz_results、stuck_tasks、notifications、mastery、agent_runs。
+      - 数据结构稳定，不因空列表报错。
+    automation_candidate: true
+    status: automated
+  - id: LC-REPORT-001
+    title: 日报生成
+    priority: P1
+    level: api
+    type: functional
+    traceability: [REQ-REPORT-001]
+    preconditions: 当天已有任务和学习事件。
+    steps:
+      - POST /api/day/end。
+    expected:
+      - 返回 summary、problems、tomorrow_first_step。
+      - daily_reports 表有记录。
+    automation_candidate: true
+    status: automated
+  - id: LC-NOTIFY-001
+    title: 通知通道 none/console 不阻塞主流程
+    priority: P1
+    level: unit
+    type: resilience
+    traceability: [REQ-NOTIFY-001]
+    preconditions: NOTIFY_CHANNEL=none 或 console。
+    steps:
+      - 触发生成任务或卡住提醒。
+    expected:
+      - notification_logs 写入 skipped/sent。
+      - API 请求不失败。
+    automation_candidate: true
+    status: automated
+  - id: LC-AUTH-001
+    title: 本地密码为空时不拦截页面
+    priority: P1
+    level: api
+    type: security-control
+    traceability: [INF-AUTH-001]
+    preconditions: CHILD_PASSWORD/PARENT_PASSWORD/ADMIN_PASSWORD 为空。
+    steps:
+      - 不带 Basic Auth 访问 /child、/parent、/admin。
+    expected:
+      - 本地使用场景返回 200。
+    automation_candidate: true
+    status: automated
+  - id: LC-ENC-001
+    title: 核心源码中文文案不含乱码标记
+    priority: P1
+    level: static
+    type: regression
+    traceability: [RISK-ENC-001]
+    preconditions: 源码已 checkout。
+    steps:
+      - 扫描 backend/frontend 中关键 Python/HTML/JS 文件。
+    expected:
+      - 不包含明显 mojibake 字符串：锛、鏈、浠、鈥、�、????。
+    automation_candidate: true
+    status: automated
+open_questions:
+  - id: OQ-001
+    question: 是否要新增有密码场景的鉴权负例和角色隔离测试？
+    impact: 当前本地默认密码为空，生产部署前应补充。
+  - id: OQ-002
+    question: Unit 4-6 音频补齐后是否需要把听力任务从“朗读替代”切回“音频跟读”？
+    impact: 影响英语计划后半段任务模板。
+quality_gates:
+  - P0 用例必须全部自动化通过。
+  - 自测必须使用临时数据库，不能污染正式 learning.db。
+  - 孩子端 HTML 源码必须直接包含任务卡和进度，防止浏览器 JS 缓存导致空白。

@@ -495,7 +495,7 @@ async def task_event(task_id: int, request: Request, _: str = Depends(require_ch
                 1,
             )
             notify(conn, task["student_id"], "stuck", "孩子卡住了", f"{task['title']}\n\n说明：{note or '未填写'}")
-            return {"task_id": task_id, "status": status_map[event_type], **assistance}
+            return {"task_id": task_id, **assistance, "status": status_map[event_type]}
         return {"task_id": task_id, "status": status_map[event_type]}
 
 
