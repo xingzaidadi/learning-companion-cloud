@@ -274,27 +274,21 @@
         box.innerHTML = `
           <h3>当前卡住：${escapeHtml(result.task_title || "这项任务")}</h3>
           <p class="muted">${escapeHtml(sourceText)} · 你的问题：${escapeHtml(result.child_note || "还没有填写具体问题")}</p>
-          <p>${escapeHtml(assistance.encouragement || "卡住很正常，我们一步一步来。")}</p>
+          <p>${escapeHtml(assistance.encouragement || "直接按下面步骤做。")}</p>
           <div class="quiz-item">
-            <strong>可能卡在</strong>
+            <strong>你现在要做</strong>
+            <p>${escapeHtml(assistance.hint_1 || "先只做第一步。")}</p>
+          </div>
+          <div class="quiz-item">
+            <strong>如果还不行</strong>
+            <p>${escapeHtml(assistance.try_again || assistance.guiding_question || "把具体不会的词、句子或步骤写出来。")}</p>
+          </div>
+          <details>
+            <summary>为什么这样做</summary>
             <p>${escapeHtml(assistance.likely_blocker || "任务要求或第一步还没想清楚。")}</p>
-          </div>
-          <div class="quiz-item">
-            <strong>第一层提示</strong>
-            <p>${escapeHtml(assistance.hint_1 || "先圈出题目要求，再只做第一步。")}</p>
-          </div>
-          <div class="quiz-item">
-            <strong>想一想</strong>
             <p>${escapeHtml(assistance.guiding_question || "这项任务真正问你的是什么？")}</p>
-          </div>
-          <div class="quiz-item">
-            <strong>同类小例子</strong>
             <p>${escapeHtml(assistance.mini_example || "先把任务拆成看懂要求、完成第一步、检查答案。")}</p>
-          </div>
-          <div class="quiz-item">
-            <strong>现在再试一次</strong>
-            <p>${escapeHtml(assistance.try_again || "重新尝试 3 分钟，只写第一步。")}</p>
-          </div>
+          </details>
           <p class="muted">${escapeHtml(result.review_action || "这次卡住点会进入后续补漏复习。")}</p>
         `;
       }

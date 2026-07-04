@@ -339,6 +339,9 @@ def run_e2e() -> None:
         assistance = stuck.get("assistance", {})
         for key in ("encouragement", "hint_1", "guiding_question", "try_again", "review_focus"):
             assert_true(bool(assistance.get(key)), f"卡住辅导缺少 {key}")
+        assert_true("1." in assistance.get("hint_1", "") or "1．" in assistance.get("hint_1", ""), f"卡住辅导应直接给步骤，实际 {assistance}")
+        generic_words = ("卡住很正常", "可能卡在", "想一想", "同类小例子")
+        assert_true(not any(word in assistance.get("encouragement", "") for word in generic_words), f"卡住辅导不应是统一废话，实际 {assistance}")
 
         current_task_rows = assert_status(client.get("/api/daily-tasks"))
         stuck_rows = [item for item in current_task_rows if item["status"] == "stuck"]

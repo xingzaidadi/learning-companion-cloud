@@ -286,13 +286,13 @@ def _fallback_stuck_assistance(task: dict[str, Any], source: dict[str, Any] | No
     if targeted:
         return targeted
     return {
-        "encouragement": "卡住很正常，先别急。我们把问题拆小，一步一步来。",
-        "likely_blocker": f"你可能卡在：{blocker}。如果不确定，就先看任务要求里最关键的一句话。",
-        "hint_1": f"先只做一件事：把《{title}》要你完成的目标圈出来，对照“{standard}”。",
-        "guiding_question": "这项任务真正问你的是什么？你已经知道了哪些条件或内容？",
+        "encouragement": "按下面 3 步做，不用再猜。",
+        "likely_blocker": f"你说的卡点是：{blocker}。",
+        "hint_1": _direct_solution_for_subject(subject, blocker, title, standard),
+        "guiding_question": "做完第 1 步后，如果还不会，把卡住的那个词/句/算式原样发出来。",
         "mini_example": _mini_example_for_subject(subject),
-        "try_again": "现在先重新尝试 3 分钟，只写第一步或先说出你的思路，不要求一次全对。",
-        "if_still_stuck": "如果 3 分钟后还不会，再点一次卡住或请家长看这一条提示，不要硬耗太久。",
+        "try_again": "现在只执行第 1 步，完成后再点“我做完了，开始检查”。",
+        "if_still_stuck": "不要耗着；把具体卡点补充清楚，系统继续给下一步。",
         "review_focus": _review_focus_for_subject(subject, blocker),
         "parent_note": "孩子已触发卡住辅导；建议先让孩子说题目要求和第一步，不要直接讲完整答案。",
     }
@@ -328,16 +328,39 @@ def _blank_stuck_help(subject: str, title: str, standard: str) -> dict[str, str]
         retry = "现在先写一句：我卡在____。"
         focus = "任务要求和第一步执行"
     return {
-        "encouragement": "你点卡住是对的，但要写清楚具体问题，系统才能真正帮到你。",
-        "likely_blocker": likely,
-        "hint_1": hint,
+        "encouragement": "先别看长说明，只做下面这一步。",
+        "likely_blocker": "你还没写具体问题，所以我不能直接判断答案。",
+        "hint_1": f"{hint} {question}",
         "guiding_question": question,
         "mini_example": example,
         "try_again": retry,
-        "if_still_stuck": "如果还是不知道怎么描述，就把任务卡里最难的一句话原样发出来。",
+        "if_still_stuck": "下一次点卡住时，只写一个具体点：不会读哪个词、不会哪一步、哪个字不认识。",
         "review_focus": focus,
         "parent_note": f"孩子在《{title}》点了卡住但未写具体问题，建议先追问卡在哪个字、词、句、步骤或单词。",
     }
+
+
+def _direct_solution_for_subject(subject: str, blocker: str, title: str, standard: str) -> str:
+    lower = blocker.lower()
+    if "英语" in subject or any(key in lower for key in ("school", "word", "unit", "读", "拼", "记")):
+        if "记" in blocker or "背" in blocker:
+            return "1. 把这个词抄 3 遍；2. 盖住英文，看中文写 1 遍；3. 放进句子读 1 遍。"
+        if "读" in blocker or "不会读" in blocker:
+            return "1. 先把不会读的单词单独圈出来；2. 看音节或跟读 3 遍；3. 放回原句再读 1 遍。"
+        return "1. 找出这句里的关键词；2. 先翻译主语和动词；3. 再补地点/形容词。"
+    if "数学" in subject:
+        if "小数点" in blocker:
+            return "1. 先按整数算；2. 数小数因数有几位小数；3. 在积里从右往左点同样位数。"
+        if "第一步" in blocker or "列式" in blocker:
+            return "1. 圈已知条件；2. 圈问题要求；3. 写出关系式，不急着算。"
+        return "1. 重写题目数字；2. 写算式；3. 算完检查小数点和单位。"
+    if "语文" in subject:
+        if "不认识" in blocker or "怎么读" in blocker:
+            return "1. 圈出生字；2. 查/写拼音；3. 用这个字组一个课文里的词。"
+        if "概括" in blocker:
+            return "1. 找谁/什么；2. 找做了什么；3. 加上表达的情感或道理。"
+        return "1. 回到课文找原句；2. 圈关键词；3. 用自己的话说这一句什么意思。"
+    return f"1. 对照完成标准：{standard}；2. 只做第一步；3. 做完再检查。"
 
 
 def _targeted_stuck_help(subject: str, blocker: str, title: str) -> dict[str, str] | None:
@@ -349,7 +372,7 @@ def _targeted_stuck_help(subject: str, blocker: str, title: str) -> dict[str, st
         return {
             "encouragement": "这个问题问得很好，不认识词先解决读音和意思，再继续做任务。",
             "likely_blocker": f"你卡在“{word}”这个词，不是整项任务都不会。",
-            "hint_1": f"先把“{word}”在课文或任务里圈出来，看它前后分别在说什么。",
+            "hint_1": f"1. 圈出“{word}”；2. 查读音和意思；3. 放回原句，用自己的话说这一句。",
             "guiding_question": f"“{word}”前后一句是在写景、写人，还是写要完成的动作？",
             "mini_example": "遇到不会的词，可以按“读音—意思—放回句子”三步处理。",
             "try_again": f"现在先查清“{word}”的读音和意思，再用自己的话说一遍这一句。",
@@ -361,7 +384,7 @@ def _targeted_stuck_help(subject: str, blocker: str, title: str) -> dict[str, st
         return {
             "encouragement": "不是不会做，是题目要求还没拆开。先把要求翻译成自己的话。",
             "likely_blocker": "你卡在任务要求：不知道先做哪一步。",
-            "hint_1": f"这张卡片先只看任务名《{title}》和“完成标准”，把动词圈出来，比如读、圈、概括、说明。",
+            "hint_1": f"1. 只看任务名《{title}》；2. 圈动词：读/圈/概括/说明；3. 先完成第一个动词。",
             "guiding_question": "这项任务最后要你交出什么：一句话、几道题、一个解释，还是一段复述？",
             "mini_example": "比如“概括主要内容”不是背全文，而是说清：谁/什么，怎么样，表达了什么。",
             "try_again": "现在只写第一步：我今天要先完成____。",
@@ -411,9 +434,9 @@ def _unknown_char_help(char: str, title: str) -> dict[str, str]:
         },
     )
     return {
-        "encouragement": f"你问的是一个很具体的问题：不认识“{char}”字。先解决这个字就能继续。",
+        "encouragement": "直接按下面步骤做。",
         "likely_blocker": f"你卡在生字“{char}”：读音是 {info['pinyin']}；意思：{info['meaning']}",
-        "hint_1": f"记法：{info['memory']} 把“{char}”在《{title}》里圈出来，旁边写上读音。",
+        "hint_1": f"1. 在课文里圈出“{char}”；2. 旁边写拼音 {info['pinyin']}；3. 读“{info['words'].split('、')[0]}”三遍。",
         "guiding_question": f"“{char}”在课文里和哪个词连在一起？它是在写一种事物，还是写动作/样子？",
         "mini_example": f"同类例子：{info['words']}。先会读，再放回原句理解。",
         "try_again": f"现在读三遍：{char}，再用“{info['words'].split('、')[0]}”说一句话。",

@@ -125,6 +125,10 @@ def run_browser_clicks(base_url: str) -> None:
             " && document.querySelector('#assistBox')?.innerText.includes('lù')",
             timeout=20_000,
         )
+        assist_text = page.locator("#assistBox").inner_text()
+        assert "你现在要做" in assist_text
+        assert "1." in assist_text or "1．" in assist_text
+        assert "可能卡在" not in assist_text and "想一想" not in assist_text and "同类小例子" not in assist_text
         api_tasks = page.evaluate("async () => await (await fetch('/api/daily-tasks')).json()")
         assert sum(1 for task in api_tasks if task["status"] == "stuck") == 1
         page.goto(f"{base_url}/parent")
