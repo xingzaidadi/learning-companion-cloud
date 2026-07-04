@@ -10,6 +10,7 @@ coverage_map:
   REQ-PLAN-001: 家长在管理端用自然语言生成长期学习计划。
   REQ-PLAN-002: 外研社/刘兆义五上英语 Unit 1-6 可生成 30 天暑假预习计划。
   REQ-TASK-001: 今日任务可从长期计划同步生成。
+  REQ-TASK-002: 今天已有任务时，新增长期计划后可补齐今日任务。
   REQ-CHILD-001: 孩子端必须直接显示今日任务、真实进度和中文检查方式。
   REQ-CHILD-002: 孩子端开始、暂停、卡住、完成检查状态可流转。
   REQ-STUCK-001: 卡住时 Agent 返回分层提示，不直接给答案，并记录补漏。
@@ -81,6 +82,23 @@ cases:
     expected:
       - 接口自动生成并返回今日任务。
       - 不返回 500 或空数组。
+    automation_candidate: true
+    status: automated
+  - id: LC-TASK-003
+    title: 今日已有任务后新增计划源并补齐今日任务
+    priority: P0
+    level: integration
+    type: regression
+    traceability: [REQ-TASK-002]
+    preconditions: 今日已存在 1 条英语任务。
+    steps:
+      - 通过管理端 API 新增“数学书每日一节”长期计划。
+      - 点击/调用“补齐/同步今日任务”。
+      - GET /api/daily-tasks。
+    expected:
+      - 今日任务从 1 条增加到 2 条。
+      - 已有英语任务不重复。
+      - 新增数学任务可在孩子端显示。
     automation_candidate: true
     status: automated
   - id: LC-CHILD-001

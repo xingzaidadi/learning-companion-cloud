@@ -29,7 +29,7 @@
           </label>
           <div class="actions full">
             <button class="primary" id="quickPlanSubmit">生成计划并生成今日任务</button>
-            <button type="button" id="generateToday">只生成今日任务</button>
+            <button type="button" id="generateToday">补齐/同步今日任务</button>
             <button type="button" id="refresh">刷新</button>
           </div>
         </form>
@@ -357,7 +357,8 @@
 
       document.querySelector("#generateToday").addEventListener("click", async () => {
         const result = await api("/api/daily-tasks/generate", { method: "POST" });
-        toast(`今日任务 ${result.count} 个`);
+        renderQuickPlanResult({ items: [] }, result);
+        toast(`今日任务已同步，共 ${result.count} 个`);
         await Promise.all([loadTodayTasks(), loadAgentRuns()]);
       });
 

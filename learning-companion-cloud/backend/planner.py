@@ -93,19 +93,22 @@ def generate_daily_tasks(conn: Connection, student_id: int = 1, target_date: str
         "SELECT * FROM daily_tasks WHERE student_id = ? AND date = ? ORDER BY priority, id",
         (student_id, today),
     ).fetchall()
-    if existing:
-        return [dict(row) for row in existing]
 
     settings = get_settings(conn)
     rules = settings.get("path_rules", {})
     max_daily_tasks = int(rules.get("max_daily_tasks", 5))
-    tasks: list[dict[str, Any]] = create_review_tasks(conn, student_id, today)
+    tasks: list[dict[str, Any]] = [dict(row) for row in existing]
+
+    existing_source_ids = {int(task["source_id"]) for task in tasks if task.get("source_id") is not None}
+    if len(tasks) < max_daily_tasks:
+        review_tasks = create_review_tasks(conn, student_id, today)
+        tasks.extend(review_tasks)
     for task in tasks:
         ensure_quiz_for_task(conn, task)
 
     remaining_slots = max(max_daily_tasks - len(tasks), 0)
     if remaining_slots == 0:
-        return tasks
+        return _today_tasks(conn, student_id, today)
 
     block_new_preview = _should_block_new_preview(conn, student_id, today, rules)
 
@@ -114,6 +117,10 @@ def generate_daily_tasks(conn: Connection, student_id: int = 1, target_date: str
         SELECT * FROM task_sources
         WHERE student_id = ? AND status = 'active'
           AND (? = 0 OR category != 'preview')
+          AND id NOT IN (
+              SELECT source_id FROM daily_tasks
+              WHERE student_id = ? AND date = ? AND source_id IS NOT NULL
+          )
         ORDER BY
             CASE category
                 WHEN 'summer_homework' THEN 1
@@ -126,11 +133,13 @@ def generate_daily_tasks(conn: Connection, student_id: int = 1, target_date: str
             id
         LIMIT ?
         """,
-        (student_id, 1 if block_new_preview else 0, remaining_slots),
+        (student_id, 1 if block_new_preview else 0, student_id, today, remaining_slots),
     ).fetchall()
 
     now = utc_now()
     for source in sources:
+        if int(source["id"]) in existing_source_ids:
+            continue
         task = _build_daily_task(source, today)
         cursor = conn.execute(
             """
@@ -162,7 +171,15 @@ def generate_daily_tasks(conn: Connection, student_id: int = 1, target_date: str
         ensure_quiz_for_task(conn, task)
         tasks.append(task)
 
-    return tasks
+    return _today_tasks(conn, student_id, today)
+
+
+def _today_tasks(conn: Connection, student_id: int, target_date: str) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT * FROM daily_tasks WHERE student_id = ? AND date = ? ORDER BY priority, id",
+        (student_id, target_date),
+    ).fetchall()
+    return [dict(row) for row in rows]
 
 
 def _should_block_new_preview(conn: Connection, student_id: int, today: str, rules: dict[str, Any]) -> bool:
