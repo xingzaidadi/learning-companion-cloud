@@ -253,7 +253,13 @@
       </section>
 
       <section class="card" style="margin-top:16px">
-        <h2>Agent 决策日志</h2>
+        <div class="section-head">
+          <div>
+            <h2>Agent 决策日志</h2>
+            <p class="muted">不是流水账：这里用来审计 Agent 为什么生成任务、为什么出题、为什么让孩子补漏。</p>
+          </div>
+          <span class="tag">可追踪 · 可复盘</span>
+        </div>
         <div id="agentRuns" class="task-list"></div>
       </section>
     </main>
@@ -350,9 +356,39 @@
         const box = document.querySelector("#agentRuns");
         box.innerHTML = data.runs && data.runs.length ? "" : '<p class="muted">暂无 Agent 决策日志。</p>';
         (data.runs || []).slice(0, 10).forEach((run) => {
+          const display = run.display || {};
+          const metrics = display.metrics || [];
+          const severityClass = display.severity === "warn" ? "warn" : "ok";
+          const traceButton = run.trace_id ? `<button data-action="showTrace" data-trace="${run.trace_id}">查看轨迹</button>` : "";
           const card = document.createElement("article");
-          card.className = "task-card";
-          card.innerHTML = `<div class="task-head"><strong>${run.run_type} · ${run.status}</strong><span class="tag">${run.model || "rule"}</span></div><p class="muted">${run.created_at}</p>`;
+          card.className = `task-card agent-run-card ${severityClass}`;
+          card.innerHTML = `
+            <div class="task-head">
+              <div>
+                <h3 class="task-title">${display.title || run.run_type}</h3>
+                <p class="muted">${display.created_at_local || run.created_at} · ${display.engine || run.model || "规则兜底"} · ${run.status}</p>
+              </div>
+              <span class="tag ${severityClass}">${run.run_type}</span>
+            </div>
+            <div class="agent-run-body">
+              <p><strong>为什么：</strong>${display.reason || "系统根据当前学习状态自动触发。"}</p>
+              <p><strong>结果：</strong>${display.result || "已完成。"}</p>
+              <p><strong>影响：</strong>${display.impact || "进入后续学习闭环。"}</p>
+              ${display.next_action ? `<p><strong>下一步：</strong>${display.next_action}</p>` : ""}
+            </div>
+            ${metrics.length ? `
+              <div class="agent-run-metrics">
+                ${metrics.map((metric) => `<span><small>${metric.label}</small><strong>${metric.value}</strong></span>`).join("")}
+              </div>
+            ` : ""}
+            <details class="agent-run-raw">
+              <summary>看原始输入/输出</summary>
+              <pre>${JSON.stringify({ input: run.input, output: run.output }, null, 2)}</pre>
+            </details>
+            <div class="actions">
+              ${traceButton}
+            </div>
+          `;
           box.append(card);
         });
       }
@@ -537,6 +573,33 @@
         if (!button) return;
         const result = await api(`/api/daily-tasks/${button.dataset.id}/quiz/regenerate`, { method: "POST" });
         toast(`已重生成 ${result.items.length} 道小测题`);
+      });
+
+      document.querySelector("#agentRuns").addEventListener("click", async (event) => {
+        const button = event.target.closest("button[data-action='showTrace']");
+        if (!button) return;
+        const card = button.closest(".agent-run-card");
+        let panel = card.querySelector(".agent-trace-panel");
+        if (panel) {
+          panel.remove();
+          button.textContent = "查看轨迹";
+          return;
+        }
+        const steps = await api(`/api/agent/traces/${button.dataset.trace}`);
+        panel = document.createElement("div");
+        panel.className = "agent-trace-panel";
+        panel.innerHTML = steps.length ? `
+          <strong>工具轨迹</strong>
+          ${steps.map((step) => `
+            <div class="trace-step">
+              <span class="tag">${step.step_index}. ${step.tool_name}</span>
+              <p><strong>输入：</strong>${JSON.stringify(step.args)}</p>
+              <p><strong>校验：</strong>${JSON.stringify(step.validation)}</p>
+            </div>
+          `).join("")}
+        ` : '<p class="muted">这次运行暂无轨迹明细。</p>';
+        card.append(panel);
+        button.textContent = "收起轨迹";
       });
 
       Promise.all([loadSettings(), refreshAll()]).catch((error) => toast(error.message));

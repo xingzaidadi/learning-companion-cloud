@@ -610,6 +610,88 @@ button:disabled {
   color: #9a6400;
 }
 
+.agent-run-card {
+  border-left: 6px solid var(--primary);
+  background: linear-gradient(135deg, #ffffff, #f8fbff);
+}
+
+.agent-run-card.warn {
+  border-left-color: #f59e0b;
+}
+
+.agent-run-body {
+  display: grid;
+  gap: 6px;
+}
+
+.agent-run-body p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.agent-run-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.agent-run-metrics span {
+  display: grid;
+  gap: 3px;
+  min-width: 98px;
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: #eef4ff;
+}
+
+.agent-run-metrics small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.agent-run-metrics strong {
+  font-size: 20px;
+}
+
+.agent-run-raw {
+  border-top: 1px dashed var(--line);
+  padding-top: 8px;
+}
+
+.agent-run-raw summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.agent-run-raw pre,
+.agent-trace-panel {
+  overflow: auto;
+  max-height: 260px;
+  border-radius: 14px;
+  padding: 12px;
+  background: #0f172a;
+  color: #dbeafe;
+  font-size: 12px;
+}
+
+.agent-trace-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.trace-step {
+  border: 1px solid rgba(219, 234, 254, 0.18);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.trace-step p {
+  margin: 6px 0 0;
+  word-break: break-word;
+}
+
 .timer-tag {
   background: linear-gradient(135deg, #111827, #334155);
   color: #ffffff;
