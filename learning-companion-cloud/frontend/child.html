@@ -26,24 +26,30 @@
         <button id="startNext" class="primary big-action">开始下一个任务</button>
       </section>
 
-      <section class="grid child-workbench">
-        <div class="card span-5 task-column">
+      <section class="child-workbench child-focus-layout">
+        <section class="card current-task-card">
           <div class="section-head">
             <div>
-              <p class="eyebrow">Step List</p>
-              <h2>今日任务</h2>
+              <p class="eyebrow">Current Step</p>
+              <h2>当前任务</h2>
             </div>
-            <span class="tag">按顺序完成</span>
+            <span class="tag ok">只看这一张</span>
           </div>
-          <div id="tasks" class="task-list"><p class="muted">正在加载今日任务...</p></div>
-        </div>
-        <div class="card span-7 workspace-card">
+          <div id="currentTask" class="current-task-shell">
+            <div class="empty-state">
+              <strong>正在加载当前任务...</strong>
+              <p>系统会自动选出现在最该做的一项。</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="card workspace-card full-workspace-card">
           <div class="section-head">
             <div>
               <p class="eyebrow">Focus Zone</p>
-              <h2>检查与求助工作区</h2>
+              <h2>全宽检查与求助工作区</h2>
             </div>
-            <span class="tag ok">大屏作答</span>
+            <span class="tag ok">大屏作答 · 不挤在侧栏</span>
           </div>
           <div class="workspace-layout">
             <section class="workspace-panel quiz-panel">
@@ -73,7 +79,18 @@
               </div>
             </section>
           </div>
-        </div>
+        </section>
+
+        <section class="card task-column queue-card">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Up Next</p>
+              <h2>后续任务队列</h2>
+            </div>
+            <span class="tag">只展示，不抢焦点</span>
+          </div>
+          <div id="tasks" class="task-list compact-task-list"><p class="muted">正在加载今日任务...</p></div>
+        </section>
       </section>
     </main>
     <div class="toast"></div>
@@ -102,14 +119,25 @@
         document.querySelector("#doneCount").textContent = done;
         document.querySelector("#totalCount").textContent = tasks.length;
         const container = document.querySelector("#tasks");
+        const currentContainer = document.querySelector("#currentTask");
         container.innerHTML = "";
+        currentContainer.innerHTML = "";
         if (!tasks.length) {
           container.innerHTML = '<p class="muted">今天还没有任务，请让家长在管理端生成。</p>';
+          currentContainer.innerHTML = `
+            <div class="empty-state">
+              <strong>今天还没有任务</strong>
+              <p>请让家长在管理端生成，生成后这里会只显示当前第一项。</p>
+            </div>
+          `;
           document.querySelector("#startNext").disabled = true;
           return;
         }
         updatePrimaryActionButton();
-        tasks.forEach((task) => container.append(createTaskCard(task)));
+        const primary = primaryAction();
+        const currentTask = primary.task || [...tasks].reverse().find((task) => task.status === "completed") || tasks[0];
+        currentContainer.append(createTaskCard(currentTask, "focus"));
+        tasks.forEach((task) => container.append(createTaskCard(task, "queue", currentTask.id)));
         updateTimers();
       }
 
@@ -136,16 +164,33 @@
         button.textContent = action.label;
       }
 
-      function createTaskCard(task) {
+      function createTaskCard(task, variant = "focus", currentTaskId = null) {
         const card = document.createElement("article");
         card.dataset.taskId = String(task.id);
-        updateTaskCardElement(card, task);
+        card.dataset.variant = variant;
+        updateTaskCardElement(card, task, variant, currentTaskId);
         return card;
       }
 
-      function taskCardHtml(task) {
+      function taskCardHtml(task, variant = "focus", currentTaskId = null) {
         const isRunning = task.timer_state === "running";
         const renderedAt = isRunning ? Date.now() : 0;
+        if (variant === "queue") {
+          const isCurrent = currentTaskId === task.id;
+          return `
+            <div class="queue-task-row">
+              <div>
+                <div class="task-meta">${priorityTag(task)}${taskStatusTag(task)}${isCurrent ? '<span class="tag ok">当前</span>' : ""}</div>
+                <h3 class="task-title">${task.title}</h3>
+                <p class="muted">${task.description}</p>
+              </div>
+              <div class="task-meta queue-meta">
+                <span class="tag">${task.estimated_minutes} 分钟</span>
+                <span class="tag timer-tag" data-elapsed="${Number(task.elapsed_seconds || 0)}" data-rendered-at="${renderedAt}" data-state="${task.timer_state || "stopped"}">已学 ${formatElapsed(task.elapsed_seconds || 0)}</span>
+              </div>
+            </div>
+          `;
+        }
         const primary = primaryAction();
         const isPrimaryTask = primary.task?.id === task.id;
         const canStartTask = isPrimaryTask && (primary.type === "start" || task.status === "stuck");
@@ -207,9 +252,11 @@
         `;
       }
 
-      function updateTaskCardElement(card, task) {
-        card.className = `task-card ${task.id === activeTaskId || task.status === "in_progress" ? "active" : ""}`;
-        card.innerHTML = taskCardHtml(task);
+      function updateTaskCardElement(card, task, variant = card.dataset.variant || "focus", currentTaskId = null) {
+        const isCurrent = variant === "focus" || currentTaskId === task.id;
+        const activeClass = isCurrent || task.id === activeTaskId || task.status === "in_progress" ? "active" : "";
+        card.className = `task-card ${variant === "queue" ? "queue-task-card" : "focus-task-card"} ${activeClass}`;
+        card.innerHTML = taskCardHtml(task, variant, currentTaskId);
       }
 
       function mergeTaskResult(taskId, result) {
@@ -220,10 +267,19 @@
       }
 
       function updateOneTask(taskId, result) {
+        const previousCurrentId = primaryAction().task?.id || null;
         const task = mergeTaskResult(taskId, result);
         if (!task) return;
-        const card = document.querySelector(`#tasks .task-card[data-task-id="${taskId}"]`);
-        if (card) updateTaskCardElement(card, task);
+        const currentAction = primaryAction();
+        const currentTaskId = currentAction.task?.id || null;
+        if (previousCurrentId !== currentTaskId) {
+          renderTasks();
+        } else {
+          const currentCard = document.querySelector(`#currentTask .task-card[data-task-id="${taskId}"]`);
+          if (currentCard) updateTaskCardElement(currentCard, task, "focus", currentTaskId);
+          const queueCard = document.querySelector(`#tasks .task-card[data-task-id="${taskId}"]`);
+          if (queueCard) updateTaskCardElement(queueCard, task, "queue", currentTaskId);
+        }
         document.querySelector("#doneCount").textContent = tasks.filter((item) => item.status === "completed").length;
         updatePrimaryActionButton();
         updateTimers();
@@ -432,7 +488,7 @@
           </div>
           <div class="quiz-item">
             <strong>学会以后</strong>
-            <p>还没学完：点左侧“我学会了，继续学”。已经学完：点“学完了，开始检查”。</p>
+            <p>还没学完：点当前任务卡里的“我学会了，继续学”。已经学完：点“学完了，开始检查”。</p>
           </div>
           <details>
             <summary>为什么这样做</summary>
@@ -450,7 +506,7 @@
       }
 
       document.querySelector("#startNext").addEventListener("click", startNext);
-      document.querySelector("#tasks").addEventListener("click", async (event) => {
+      async function handleTaskAction(event) {
         const button = event.target.closest("button[data-action]");
         if (!button) return;
         const taskId = Number(button.dataset.id);
@@ -491,6 +547,11 @@
         } finally {
           pendingActions.delete(pendingKey);
         }
+      }
+
+      document.addEventListener("click", async (event) => {
+        if (!event.target.closest("#currentTask, #tasks")) return;
+        await handleTaskAction(event);
       });
 
       if (tasks.length) {

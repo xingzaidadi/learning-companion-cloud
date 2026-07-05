@@ -119,8 +119,8 @@ def run_browser_clicks(base_url: str) -> None:
         child_body = page.locator("body").inner_text()
         assert "寒假作业本" in child_body and ("白鹭" in child_body or "语文" in child_body)
         page.click("#startNext")
-        page.wait_for_selector("#tasks .task-card.active")
-        page.locator("#tasks .task-card.active").locator("button[data-action='stuck']").click()
+        page.wait_for_selector("#currentTask .task-card.active")
+        page.locator("#currentTask .task-card.active").locator("button[data-action='stuck']").click()
         page.wait_for_function(
             "() => document.querySelector('#assistBox')?.innerText.includes('当前卡住')"
             " && document.querySelector('#assistBox')?.innerText.includes('你现在要做')",
@@ -192,18 +192,22 @@ def run_browser_clicks(base_url: str) -> None:
         page.wait_for_timeout(500)
 
         page.goto(f"{base_url}/child")
+        page.wait_for_selector("#currentTask .task-card")
         page.wait_for_selector("#tasks .task-card")
-        assert page.locator(".workspace-card").count() == 1, "孩子端应有大检查/求助工作区"
-        assert "检查与求助工作区" in page.locator(".workspace-card").inner_text(), "工作区标题应清晰"
+        assert page.locator(".current-task-card").count() == 1, "孩子端应有当前任务焦点卡"
+        assert "当前任务" in page.locator(".current-task-card").inner_text(), "焦点卡标题应清晰"
+        assert "后续任务队列" in page.locator(".queue-card").inner_text(), "其他任务应弱化为队列"
+        assert page.locator(".workspace-card").count() == 1, "孩子端应有全宽检查/求助工作区"
+        assert "全宽检查与求助工作区" in page.locator(".workspace-card").inner_text(), "工作区标题应清晰"
         assert page.locator(".quiz-panel").count() == 1 and page.locator(".assist-panel").count() == 1, "小测和卡住应分成两个清晰面板"
-        first_card = page.locator("#tasks .task-card").first
+        current_card = page.locator("#currentTask .task-card").first
         if "先处理卡住任务" in page.locator("#startNext").inner_text():
-            assert "我学会了，继续学" in page.locator("#tasks").inner_text(), "有卡住任务时应先处理卡住任务"
+            assert "我学会了，继续学" in current_card.inner_text(), "有卡住任务时应先处理卡住任务"
             page.locator("button[data-action='start']").filter(has_text="我学会了，继续学").first.click(force=True)
             page.wait_for_timeout(500)
         else:
-            assert "先点开始" in first_card.inner_text(), "未开始任务不应直接显示可检查"
-            assert first_card.locator("button.warn").first.is_disabled(), "未开始任务的检查按钮应禁用"
+            assert "先点开始" in current_card.inner_text(), "未开始任务不应直接显示可检查"
+            assert current_card.locator("button.warn").first.is_disabled(), "未开始任务的检查按钮应禁用"
         page.evaluate(
             """
             () => {
@@ -217,31 +221,43 @@ def run_browser_clicks(base_url: str) -> None:
             """
         )
         if "继续当前任务" in page.locator("#startNext").inner_text():
-            page.locator("#tasks .task-card.active").first.scroll_into_view_if_needed()
+            page.locator("#currentTask .task-card.active").first.scroll_into_view_if_needed()
         else:
             page.click("#startNext")
         page.wait_for_timeout(500)
         assert page.evaluate("() => window.__taskListChildMutations") == 0, "点击开始不应重绘整个任务列表"
-        workflow_card = page.locator("#tasks .task-card.active").first
+        workflow_card = page.locator("#currentTask .task-card.active").first
         page.wait_for_function(
-            "() => Array.from(document.querySelectorAll('#tasks .task-card.active .timer-tag')).some((node) => !node.innerText.includes('0:00'))",
+            "() => Array.from(document.querySelectorAll('#currentTask .task-card.active .timer-tag')).some((node) => !node.innerText.includes('0:00'))",
             timeout=5_000,
         )
-        workflow_card = page.locator("#tasks .task-card.active").first
+        workflow_card = page.locator("#currentTask .task-card.active").first
         workflow_task_id = workflow_card.locator("button[data-action='pause']").get_attribute("data-id")
         assert workflow_task_id
         assert "进行中" in workflow_card.inner_text()
         assert "已学 0:00" not in workflow_card.inner_text()
         stuck_notes.insert(0, "刚才不会读 school，现在会了")
-        workflow_card.locator("button[data-action='stuck']").click(force=True)
-        page.wait_for_timeout(500)
-        workflow_card = page.locator(f"button[data-action='start'][data-id='{workflow_task_id}']").locator("xpath=ancestor::article[1]")
+        page.wait_for_function("() => !document.querySelector('#currentTask button[data-action=\"stuck\"]')?.disabled")
+        page.click("#currentTask button[data-action='stuck']")
+        try:
+            page.wait_for_function("() => document.querySelector('#currentTask')?.innerText.includes('我学会了，继续学')")
+        except Exception as exc:
+            api_tasks = page.evaluate("async () => await (await fetch('/api/daily-tasks')).json()")
+            raise AssertionError(
+                "点击“我卡住了”后当前任务没有进入卡住态。\n"
+                f"currentTask={page.locator('#currentTask').inner_text()}\n"
+                f"assistBox={page.locator('#assistBox').inner_text()}\n"
+                f"api_tasks={api_tasks}\n"
+                f"errors={browser_errors}\n"
+                f"api_responses={api_responses[-20:]}"
+            ) from exc
+        workflow_card = page.locator("#currentTask .task-card").first
         assert "我学会了，继续学" in workflow_card.inner_text(), "卡住后应有明确的继续学习按钮"
         assert "学完了，开始检查" in workflow_card.inner_text(), "卡住后应保留学完检查入口"
         assert "学会以后" in page.locator("#assistBox").inner_text(), "卡住提示区应说明学会后怎么继续"
         workflow_card.locator("button[data-action='start']").click(force=True)
-        page.wait_for_timeout(500)
-        workflow_card = page.locator(f"button[data-action='pause'][data-id='{workflow_task_id}']").locator("xpath=ancestor::article[1]")
+        page.wait_for_function("() => document.querySelector('#currentTask')?.innerText.includes('进行中')")
+        workflow_card = page.locator("#currentTask .task-card").first
         assert "进行中" in workflow_card.inner_text(), "点击我学会了继续学后应回到进行中"
         page.locator(f"button[data-action='pause'][data-id='{workflow_task_id}']").click(force=True)
         page.wait_for_timeout(500)
@@ -267,6 +283,7 @@ def run_browser_clicks(base_url: str) -> None:
                 raise AssertionError(
                     "点击“我做完了，开始检查”后没有出现小测表单。\n"
                     f"quizBox={page.locator('#quizBox').inner_text()}\n"
+                    f"currentTask={page.locator('#currentTask').inner_text()}\n"
                     f"tasks={page.locator('#tasks').inner_text()}\n"
                     f"errors={browser_errors}\n"
                     f"api_responses={api_responses[-20:]}"

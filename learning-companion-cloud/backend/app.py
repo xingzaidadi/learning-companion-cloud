@@ -359,9 +359,20 @@ def child_page(_: str = Depends(require_child_auth)) -> HTMLResponse:
     done_count = sum(1 for task in tasks if task.get("status") == "completed")
     total_count = len(tasks)
     fallback_html = _render_child_task_fallback(tasks)
+    current_task_html = _render_child_task_fallback(tasks[:1])
+    current_placeholder = """<div id="currentTask" class="current-task-shell">
+            <div class="empty-state">
+              <strong>正在加载当前任务...</strong>
+              <p>系统会自动选出现在最该做的一项。</p>
+            </div>
+          </div>"""
     html_text = html_text.replace(
-        '<div id="tasks" class="task-list"><p class="muted">正在加载今日任务...</p></div>',
-        f'<div id="tasks" class="task-list">{fallback_html}</div>',
+        current_placeholder,
+        f'<div id="currentTask" class="current-task-shell">{current_task_html}</div>',
+    )
+    html_text = html_text.replace(
+        '<div id="tasks" class="task-list compact-task-list"><p class="muted">正在加载今日任务...</p></div>',
+        f'<div id="tasks" class="task-list compact-task-list">{fallback_html}</div>',
     )
     html_text = html_text.replace('<span id="doneCount">0</span>', f'<span id="doneCount">{done_count}</span>')
     html_text = html_text.replace('<span id="totalCount">0</span>', f'<span id="totalCount">{total_count}</span>')

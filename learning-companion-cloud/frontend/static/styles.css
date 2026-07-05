@@ -181,9 +181,35 @@ button:disabled {
   align-items: start;
 }
 
-.task-column,
-.workspace-card {
-  min-height: 620px;
+.child-focus-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.current-task-card {
+  min-height: 300px;
+  background:
+    radial-gradient(circle at top right, rgba(56, 103, 255, 0.14), transparent 34%),
+    rgba(255, 255, 255, 0.94);
+}
+
+.current-task-shell {
+  display: grid;
+  gap: 14px;
+}
+
+.full-workspace-card {
+  min-height: 560px;
+}
+
+.queue-card {
+  min-height: auto;
+}
+
+.compact-task-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
 }
 
 .section-head,
@@ -211,7 +237,8 @@ button:disabled {
 
 .workspace-layout {
   display: grid;
-  gap: 16px;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 18px;
 }
 
 .workspace-panel {
@@ -222,11 +249,11 @@ button:disabled {
 }
 
 .quiz-panel {
-  min-height: 390px;
+  min-height: 420px;
 }
 
 .assist-panel {
-  min-height: 210px;
+  min-height: 420px;
   background: linear-gradient(180deg, #fffdf8 0%, #ffffff 100%);
 }
 
@@ -273,6 +300,58 @@ button:disabled {
 .task-card.active {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px var(--soft-blue);
+}
+
+.focus-task-card {
+  border-radius: 24px;
+  padding: clamp(18px, 3vw, 28px);
+  gap: 16px;
+}
+
+.focus-task-card .task-title {
+  font-size: clamp(24px, 4vw, 36px);
+  letter-spacing: -0.03em;
+}
+
+.focus-task-card .actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.focus-task-card .actions button {
+  min-height: 54px;
+  white-space: normal;
+}
+
+.queue-task-card {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: none;
+}
+
+.queue-task-card.active {
+  border-color: rgba(56, 103, 255, 0.45);
+  box-shadow: inset 4px 0 0 var(--primary);
+}
+
+.queue-task-row {
+  display: grid;
+  gap: 10px;
+}
+
+.queue-task-row .task-title {
+  margin-top: 6px;
+  font-size: 15px;
+}
+
+.queue-task-row .muted {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+.queue-meta {
+  justify-content: flex-start;
 }
 
 .task-head {
@@ -525,8 +604,14 @@ textarea {
   }
 
   .task-column,
-  .workspace-card {
+  .workspace-card,
+  .current-task-card {
     min-height: auto;
+  }
+
+  .workspace-layout,
+  .focus-task-card .actions {
+    grid-template-columns: 1fr;
   }
 
   .form-grid {
