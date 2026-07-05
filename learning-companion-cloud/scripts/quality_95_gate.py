@@ -92,6 +92,7 @@ def main() -> None:
         "tests": [
             ("senior_qa_gate", (ROOT / "scripts/senior_qa_gate.py").exists()),
             ("ui_click_test", (ROOT / "scripts/ui_click_test.py").exists()),
+            ("full_ui_audit", (ROOT / "scripts/full_ui_audit.py").exists()),
             ("child_flow_test", (ROOT / "scripts/child_flow_integration_test.py").exists()),
             ("eval_cases_80_plus", count_cases("eval_harness/datasets/learning_agent/golden_set.yaml") + count_cases("eval_harness/datasets/demo_agent/golden_set.yaml") >= 80),
             ("github_actions", (ROOT.parent / ".github/workflows/qa.yml").exists() and (ROOT.parent / ".github/workflows/agent-eval.yml").exists()),

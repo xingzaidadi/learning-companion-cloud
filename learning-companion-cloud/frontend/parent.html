@@ -134,9 +134,10 @@
           });
         }
         weak.forEach((item) => {
+          const point = item.knowledge_point || item.skill || item.lesson || item.unit || "待补知识点";
           actions.push({
             level: "warn",
-            title: `薄弱点：${item.subject} · ${item.knowledge_point}`,
+            title: `薄弱点：${item.subject || "综合"} · ${point}`,
             body: `当前 ${percent(item.mastery_score)}，目标 ${percent(item.target_score)}。`,
             next: item.next_action || "明天优先安排 10 分钟补漏。",
           });
@@ -281,7 +282,7 @@
           const card = document.createElement("article");
           card.className = "task-card compact-card";
           card.innerHTML = `
-            <strong>${item.subject || "综合"} · ${item.knowledge_point}</strong>
+            <strong>${item.subject || "综合"} · ${item.knowledge_point || item.skill || item.lesson || item.unit || "待补知识点"}</strong>
             <span class="tag ${["A", "B"].includes(item.mastery_level) ? "ok" : "warn"}">掌握 ${item.mastery_level}</span>
             <p class="muted">${item.next_action}</p>
           `;

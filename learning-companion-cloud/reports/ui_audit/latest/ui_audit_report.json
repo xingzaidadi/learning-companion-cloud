@@ -1,0 +1,330 @@
+{
+  "created_at": "2026-07-05T21:53:16",
+  "results": [
+    {
+      "page": "admin",
+      "action": "no horizontal overflow",
+      "ok": true,
+      "detail": "overflow=0"
+    },
+    {
+      "page": "admin",
+      "action": "no unresolved template text",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "admin",
+      "action": "no visible dirty text",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "admin",
+      "action": "no empty cards",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "admin",
+      "action": "button touch height",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "admin",
+      "action": "quick plan submit",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "admin",
+      "action": "generate today",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "admin",
+      "action": "refresh",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "admin",
+      "action": "save settings",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "admin",
+      "action": "check ai",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "admin",
+      "action": "save task source",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "admin",
+      "action": "batch import",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "admin",
+      "action": "save material",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "admin",
+      "action": "regenerate quiz",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "admin",
+      "action": "show trace",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "admin_after_clicks",
+      "action": "no horizontal overflow",
+      "ok": true,
+      "detail": "overflow=0"
+    },
+    {
+      "page": "admin_after_clicks",
+      "action": "no unresolved template text",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "admin_after_clicks",
+      "action": "no visible dirty text",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "admin_after_clicks",
+      "action": "no empty cards",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "admin_after_clicks",
+      "action": "button touch height",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "child",
+      "action": "no horizontal overflow",
+      "ok": true,
+      "detail": "overflow=0"
+    },
+    {
+      "page": "child",
+      "action": "no unresolved template text",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "child",
+      "action": "no visible dirty text",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "child",
+      "action": "no empty cards",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "child",
+      "action": "button touch height",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "child",
+      "action": "primary next/start",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "child",
+      "action": "pause current",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "child",
+      "action": "stuck current",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "child",
+      "action": "resume after stuck",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "child",
+      "action": "complete/check current",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "child",
+      "action": "show quiz",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "child_after_clicks",
+      "action": "no horizontal overflow",
+      "ok": true,
+      "detail": "overflow=0"
+    },
+    {
+      "page": "child_after_clicks",
+      "action": "no unresolved template text",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "child_after_clicks",
+      "action": "no visible dirty text",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "child_after_clicks",
+      "action": "no empty cards",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "child_after_clicks",
+      "action": "button touch height",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "parent",
+      "action": "no horizontal overflow",
+      "ok": true,
+      "detail": "overflow=0"
+    },
+    {
+      "page": "parent",
+      "action": "no unresolved template text",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "parent",
+      "action": "no visible dirty text",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "parent",
+      "action": "no empty cards",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "parent",
+      "action": "button touch height",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "parent",
+      "action": "generate daily report",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "parent",
+      "action": "generate weekly report",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "page": "parent_after_clicks",
+      "action": "no horizontal overflow",
+      "ok": true,
+      "detail": "overflow=0"
+    },
+    {
+      "page": "parent_after_clicks",
+      "action": "no unresolved template text",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "parent_after_clicks",
+      "action": "no visible dirty text",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "parent_after_clicks",
+      "action": "no empty cards",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "page": "parent_after_clicks",
+      "action": "button touch height",
+      "ok": true,
+      "detail": "[]"
+    }
+  ],
+  "failures": [],
+  "console_errors": [],
+  "screenshots": [
+    "reports\\ui_audit\\latest\\admin_initial_01.png",
+    "reports\\ui_audit\\latest\\admin_initial_02.png",
+    "reports\\ui_audit\\latest\\admin_after_01.png",
+    "reports\\ui_audit\\latest\\admin_after_02.png",
+    "reports\\ui_audit\\latest\\admin_after_03.png",
+    "reports\\ui_audit\\latest\\admin_after_04.png",
+    "reports\\ui_audit\\latest\\admin_after_05.png",
+    "reports\\ui_audit\\latest\\admin_after_06.png",
+    "reports\\ui_audit\\latest\\admin_after_07.png",
+    "reports\\ui_audit\\latest\\admin_after_08.png",
+    "reports\\ui_audit\\latest\\admin_after_09.png",
+    "reports\\ui_audit\\latest\\admin_after_10.png",
+    "reports\\ui_audit\\latest\\admin_after_11.png",
+    "reports\\ui_audit\\latest\\child_initial_01.png",
+    "reports\\ui_audit\\latest\\child_initial_02.png",
+    "reports\\ui_audit\\latest\\child_after_01.png",
+    "reports\\ui_audit\\latest\\child_after_02.png",
+    "reports\\ui_audit\\latest\\child_after_03.png",
+    "reports\\ui_audit\\latest\\child_after_04.png",
+    "reports\\ui_audit\\latest\\parent_initial_01.png",
+    "reports\\ui_audit\\latest\\parent_initial_02.png",
+    "reports\\ui_audit\\latest\\parent_initial_03.png",
+    "reports\\ui_audit\\latest\\parent_after_01.png",
+    "reports\\ui_audit\\latest\\parent_after_02.png",
+    "reports\\ui_audit\\latest\\parent_after_03.png",
+    "reports\\ui_audit\\latest\\parent_after_04.png"
+  ],
+  "summary": {
+    "checks": 48,
+    "passed": 48,
+    "failed": 0,
+    "console_error_count": 0,
+    "screenshot_count": 26
+  }
+}
