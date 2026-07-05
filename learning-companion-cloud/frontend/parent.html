@@ -41,6 +41,11 @@
       </section>
 
       <section class="card" style="margin-top:16px">
+        <h2>95+ 目标达成看板</h2>
+        <div id="target95" class="task-list"></div>
+      </section>
+
+      <section class="card" style="margin-top:16px">
         <h2>Agent 学习结论</h2>
         <div id="mastery" class="task-list"></div>
       </section>
@@ -106,6 +111,36 @@
             rewards.append(card);
           });
         }
+
+        const targetBox = document.querySelector("#target95");
+        const target = data.target_95 || {};
+        const adjustment = data.daily_adjustment || {};
+        targetBox.innerHTML = `
+          <article class="task-card active">
+            <div class="task-head">
+              <div>
+                <strong>${target.headline || "正在建立 95+ 学习画像"}</strong>
+                <p class="muted">目标：${target.exam_target?.goal || "五年级上册语数英稳定 95+"}</p>
+              </div>
+              <span class="tag ok">达成度 ${Math.round((target.readiness_score || 0) * 100)}%</span>
+            </div>
+            <p><strong>今日排程建议：</strong>${(adjustment.recommendations || ["按计划推进"]).join("；")}</p>
+          </article>
+        `;
+        (target.weak_points || []).slice(0, 4).forEach((item) => {
+          const card = document.createElement("article");
+          card.className = "task-card";
+          card.innerHTML = `
+            <div class="task-head">
+              <div>
+                <strong>${item.subject} · ${item.skill}</strong>
+                <p class="muted">${(item.evidence || []).join("；") || "等待小测和卡住记录积累证据"}</p>
+              </div>
+              <span class="tag warn">${Math.round(item.mastery_score * 100)}% / 目标 ${Math.round(item.target_score * 100)}%</span>
+            </div>
+          `;
+          targetBox.append(card);
+        });
 
         const mastery = document.querySelector("#mastery");
         mastery.innerHTML = data.mastery && data.mastery.length ? "" : '<p class="muted">暂无 Agent 掌握度结论，完成小测后会出现。</p>';

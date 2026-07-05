@@ -280,7 +280,116 @@ def init_db() -> None:
                 next_action TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS skill_mastery (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+                subject TEXT NOT NULL DEFAULT '',
+                skill TEXT NOT NULL DEFAULT '',
+                grade TEXT NOT NULL DEFAULT '五年级',
+                book TEXT NOT NULL DEFAULT '上册',
+                unit TEXT NOT NULL DEFAULT '',
+                lesson TEXT NOT NULL DEFAULT '',
+                mastery_score REAL NOT NULL DEFAULT 0.5,
+                confidence REAL NOT NULL DEFAULT 0.5,
+                evidence_json TEXT NOT NULL DEFAULT '[]',
+                last_task_id INTEGER REFERENCES daily_tasks(id) ON DELETE SET NULL,
+                last_quiz_result_id INTEGER REFERENCES quiz_results(id) ON DELETE SET NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE(student_id, subject, skill, unit, lesson)
+            );
+
+            CREATE TABLE IF NOT EXISTS memory_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+                memory_type TEXT NOT NULL DEFAULT 'episodic',
+                subject TEXT NOT NULL DEFAULT '',
+                skill TEXT NOT NULL DEFAULT '',
+                content TEXT NOT NULL,
+                source_type TEXT NOT NULL DEFAULT '',
+                source_id INTEGER,
+                confidence REAL NOT NULL DEFAULT 0.6,
+                status TEXT NOT NULL DEFAULT 'active',
+                expires_at TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS material_chunks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                material_id INTEGER NOT NULL REFERENCES learning_materials(id) ON DELETE CASCADE,
+                student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+                subject TEXT NOT NULL DEFAULT '',
+                grade TEXT NOT NULL DEFAULT '五年级',
+                book TEXT NOT NULL DEFAULT '上册',
+                unit TEXT NOT NULL DEFAULT '',
+                lesson TEXT NOT NULL DEFAULT '',
+                section TEXT NOT NULL DEFAULT '',
+                knowledge_type TEXT NOT NULL DEFAULT '',
+                chunk_text TEXT NOT NULL,
+                keywords_json TEXT NOT NULL DEFAULT '[]',
+                source_ref TEXT NOT NULL DEFAULT '',
+                exam_weight TEXT NOT NULL DEFAULT 'medium',
+                must_master INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS tutor_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                daily_task_id INTEGER NOT NULL REFERENCES daily_tasks(id) ON DELETE CASCADE,
+                student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+                status TEXT NOT NULL DEFAULT 'opened',
+                stuck_note TEXT NOT NULL DEFAULT '',
+                subject TEXT NOT NULL DEFAULT '',
+                skill TEXT NOT NULL DEFAULT '',
+                resolution TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS tutor_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL REFERENCES tutor_sessions(id) ON DELETE CASCADE,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                meta_json TEXT NOT NULL DEFAULT '{}',
+                created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS quiz_quality_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                daily_task_id INTEGER NOT NULL REFERENCES daily_tasks(id) ON DELETE CASCADE,
+                score REAL NOT NULL DEFAULT 0,
+                passed INTEGER NOT NULL DEFAULT 0,
+                issues_json TEXT NOT NULL DEFAULT '[]',
+                checked_at TEXT NOT NULL
+            );
             """
+        )
+        _ensure_columns(
+            conn,
+            "quiz_items",
+            {
+                "subject": "TEXT NOT NULL DEFAULT ''",
+                "skill": "TEXT NOT NULL DEFAULT ''",
+                "difficulty": "TEXT NOT NULL DEFAULT 'basic'",
+                "source_ref": "TEXT NOT NULL DEFAULT ''",
+                "quality_score": "REAL NOT NULL DEFAULT 0",
+                "answer_aliases_json": "TEXT NOT NULL DEFAULT '[]'",
+                "grading_rubric_json": "TEXT NOT NULL DEFAULT '{}'",
+            },
+        )
+        _ensure_columns(
+            conn,
+            "agent_runs",
+            {
+                "confidence": "REAL NOT NULL DEFAULT 0",
+                "evidence_json": "TEXT NOT NULL DEFAULT '[]'",
+                "warnings_json": "TEXT NOT NULL DEFAULT '[]'",
+                "latency_ms": "INTEGER NOT NULL DEFAULT 0",
+                "quality_score": "REAL NOT NULL DEFAULT 0",
+                "trace_id": "TEXT NOT NULL DEFAULT ''",
+            },
         )
         _ensure_columns(
             conn,

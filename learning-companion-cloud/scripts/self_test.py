@@ -269,8 +269,14 @@ def run_e2e() -> None:
             )
         )
         assert_true(material["status"] == "created", "管理端应能保存学习资料")
+        assert_true(material["rag_index"]["count"] >= 1, f"资料保存后应自动 RAG 切片，实际 {material}")
         materials = assert_status(client.get("/api/materials"))
         assert_true(any(row["title"] == "Unit 1 单词表测试资料" for row in materials), "资料库应能查到刚保存的资料")
+        material_hits = assert_status(client.get("/api/materials/search?q=library&subject=英语"))
+        assert_true(any("library" in row["chunk_text"] for row in material_hits), f"RAG 检索应命中 library 资料，实际 {material_hits}")
+        targets = assert_status(client.get("/api/learning-targets"))
+        assert_true(targets["exam_target"]["pass_score"] == 0.95, "学习目标应明确指向 95+")
+        assert_true(any(item["skill"] == "日积月累背默" for item in targets["subjects"]["语文"]), "语文能力点必须覆盖日积月累")
 
         # 验证孩子端 GET /api/daily-tasks 在无今日任务时自动兜底生成。
         with get_conn() as conn:
@@ -372,6 +378,7 @@ def run_e2e() -> None:
         assert_true("1." in assistance.get("hint_1", "") or "1．" in assistance.get("hint_1", ""), f"卡住辅导应直接给步骤，实际 {assistance}")
         generic_words = ("卡住很正常", "可能卡在", "想一想", "同类小例子")
         assert_true(not any(word in assistance.get("encouragement", "") for word in generic_words), f"卡住辅导不应是统一废话，实际 {assistance}")
+        assert_true(stuck.get("tutor_session", {}).get("micro_practice", {}).get("prompt"), f"卡住后应创建多轮辅导微练习，实际 {stuck}")
 
         current_task_rows = assert_status(client.get("/api/daily-tasks"))
         stuck_rows = [item for item in current_task_rows if item["status"] == "stuck"]
@@ -409,6 +416,7 @@ def run_e2e() -> None:
 
         quiz = assert_status(client.get(f"/api/daily-tasks/{task_id}/quiz"))
         assert_true(len(quiz["items"]) >= 3, "小测题应至少 3 道")
+        assert_true(quiz.get("quality", {}).get("score", 0) >= 0.8, f"小测必须通过质量评估，实际 {quiz.get('quality')}")
         assert_true(all("answer" not in item for item in quiz["items"]), "孩子端小测不应暴露标准答案")
         assert_true(all("explanation" not in item for item in quiz["items"]), "孩子端小测不应暴露答案解释")
         with get_conn() as conn:
@@ -507,6 +515,11 @@ def run_e2e() -> None:
         assert_true("error_types" in grade and grade["error_types"], "批改应返回错因统计")
         assert_true(all("error_type" in item for item in grade["wrong_items"]), "每道错题应有错因")
         assert_true("mastery" in grade and "mastery_level" in grade["mastery"], "批改应返回掌握度")
+        assert_true("target_95_mastery_update" in grade, f"批改后应更新 95+ 能力画像，实际 {grade}")
+        mastery_rows = assert_status(client.get("/api/student/mastery"))
+        assert_true(any(row["subject"] == "英语" and row["skill"] for row in mastery_rows), "学生画像应包含英语能力点")
+        memory_rows = assert_status(client.get("/api/student/memory"))
+        assert_true(any("未达到 95+" in row["content"] or "卡住" in row["content"] for row in memory_rows), f"长期记忆应记录卡点或未达标证据，实际 {memory_rows}")
         start_while_revision = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "start"}))
         assert_true(start_while_revision["blocked"] is True, "需订正不能被开始按钮重新启动")
         assert_true(start_while_revision["status"] == "needs_revision", "需订正误点开始后仍应保持 needs_revision")
@@ -547,10 +560,15 @@ def run_e2e() -> None:
         assert_true(quiz_results_after_duplicate == quiz_results_before_duplicate, "重复提交不应新增批改记录")
 
         dashboard = assert_status(client.get("/api/parent/dashboard"))
-        for key in ("tasks", "quiz_results", "stuck_tasks", "notifications", "mastery", "agent_runs"):
+        for key in ("tasks", "quiz_results", "stuck_tasks", "notifications", "mastery", "agent_runs", "target_95", "daily_adjustment"):
             assert_true(key in dashboard, f"家长端 dashboard 缺少 {key}")
         assert_true(len(dashboard["tasks"]) >= 1, "dashboard 应包含任务")
         assert_true(len(dashboard["quiz_results"]) >= 1, "dashboard 应包含小测结果")
+        assert_true(dashboard["target_95"]["exam_target"]["pass_score"] == 0.95, "家长端应展示 95+ 目标")
+        insights = assert_status(client.get("/api/parent/insights"))
+        assert_true("weak_points" in insights and "tomorrow_actions" in insights, f"家长洞察应包含薄弱点和明日建议，实际 {insights}")
+        adjustments = assert_status(client.get("/api/agent/daily-adjustments"))
+        assert_true(adjustments["recommendations"], f"动态排程建议不能为空，实际 {adjustments}")
 
         report = assert_status(client.post("/api/day/end"))
         for key in ("summary", "problems", "tomorrow_first_step", "weakest_point", "parent_attention", "ten_minute_action"):

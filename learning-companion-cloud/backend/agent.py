@@ -16,6 +16,12 @@ from .agent_tools import (
     save_submissions,
     save_task_guidance,
 )
+from .agent_core import (
+    evaluate_quiz_quality,
+    open_or_update_tutor_session,
+    recommend_daily_adjustments,
+    update_mastery_from_quiz_result,
+)
 from .ai_provider import call_ai_json_with_meta
 from .db import loads
 from .plan_generator import generate_plan_from_text
@@ -59,7 +65,8 @@ def generate_daily_tasks(
     tasks = rule_generate_daily_tasks(conn, student_id, target_date, force_all_sources=force_all_sources)
     for task in tasks:
         ensure_task_guidance(conn, task["id"])
-    output = {"count": len(tasks), "tasks": tasks}
+    adjustment = recommend_daily_adjustments(conn, student_id, target_date)
+    output = {"count": len(tasks), "tasks": tasks, "target_95_adjustment": adjustment}
     log_agent_run(conn, student_id, "daily_tasks", {"target_date": target_date, "force_all_sources": force_all_sources}, output)
     return output
 
@@ -85,7 +92,8 @@ def generate_quiz(conn: Connection, task_id: int, force: bool = False) -> dict[s
     if not task:
         return {"task_id": task_id, "items": []}
     items = regenerate_quiz_for_task(conn, task_id) if force else ensure_quiz_for_task(conn, task)
-    output = {"task_id": task_id, "items": [_public_quiz_item(item) for item in items]}
+    quality = evaluate_quiz_quality(conn, task_id)
+    output = {"task_id": task_id, "items": [_public_quiz_item(item) for item in items], "quality": quality}
     log_agent_run(conn, int(task["student_id"]), "quiz", {"task_id": task_id, "force": force}, output)
     return output
 
@@ -98,7 +106,8 @@ def grade_submission(conn: Connection, task_id: int, answers: dict[str, str]) ->
         save_submissions(conn, task_id, answers)
     rule_result = grade_quiz(conn, task_id, answers)
     diagnosis = diagnose_learning(conn, task_id, rule_result)
-    output = {**rule_result, "diagnosis": diagnosis}
+    mastery_update = update_mastery_from_quiz_result(conn, task_id, rule_result)
+    output = {**rule_result, "diagnosis": diagnosis, "target_95_mastery_update": mastery_update}
     log_agent_run(conn, int(task["student_id"]), "grade", {"task_id": task_id, "answers": answers}, output)
     return output
 
@@ -139,6 +148,7 @@ def assist_stuck(conn: Connection, task_id: int, note: str = "") -> dict[str, An
         "assistance": assistance,
         "review_action": f"已把“{assistance['review_focus']}”加入后续补漏和复测重点。",
     }
+    output["tutor_session"] = open_or_update_tutor_session(conn, task, note, assistance)
     log_agent_run(
         conn,
         int(task["student_id"]),

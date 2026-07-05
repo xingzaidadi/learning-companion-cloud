@@ -515,6 +515,7 @@
       function showStuckAssistance(result) {
         const box = document.querySelector("#assistBox");
         const assistance = result.assistance || {};
+        const microPractice = result.tutor_session?.micro_practice || {};
         const sourceText = result.assistant_source === "ai" ? "AI 辅导" : "本地辅导";
         box.className = "assist-workspace";
         box.innerHTML = `
@@ -533,6 +534,11 @@
           <div class="quiz-item">
             <strong>如果还不行</strong>
             <p>${escapeHtml(assistance.try_again || assistance.guiding_question || "把具体不会的词、句子或步骤写出来。")}</p>
+          </div>
+          <div class="quiz-item">
+            <strong>微练习确认</strong>
+            <p>${escapeHtml(microPractice.prompt || "先做一个最小练习，确认自己真的会了再继续。")}</p>
+            <p class="muted">${escapeHtml(microPractice.success_rule || "能完成就继续，不能完成就继续提示。")}</p>
           </div>
           <div class="quiz-item">
             <strong>学会以后</strong>

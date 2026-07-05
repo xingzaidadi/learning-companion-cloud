@@ -27,6 +27,15 @@ try:
         grade_submission,
         ensure_task_guidance,
     )
+    from .agent_core import (
+        build_target_insights,
+        index_material,
+        list_active_memories,
+        list_skill_mastery,
+        recommend_daily_adjustments,
+        search_material_chunks,
+        skill_targets,
+    )
     from .ai_provider import check_ai_connection
     from .curriculum import CURRICULUM, WUHAN_DEFAULTS, get_subject_units
     from .db import dict_rows, dumps, get_conn, init_db, loads, utc_now
@@ -50,6 +59,15 @@ except ImportError:
         get_agent_overview,
         grade_submission,
         ensure_task_guidance,
+    )
+    from agent_core import (
+        build_target_insights,
+        index_material,
+        list_active_memories,
+        list_skill_mastery,
+        recommend_daily_adjustments,
+        search_material_chunks,
+        skill_targets,
     )
     from ai_provider import check_ai_connection
     from curriculum import CURRICULUM, WUHAN_DEFAULTS, get_subject_units
@@ -491,6 +509,56 @@ def create_task_source(
         return {"id": cursor.lastrowid, "status": "created"}
 
 
+@app.get("/api/materials/search")
+def search_materials(
+    q: str,
+    subject: str = "",
+    student_id: int = 1,
+    _: str = Depends(require_parent_or_admin_auth),
+) -> list[dict[str, object]]:
+    with get_conn() as conn:
+        return search_material_chunks(conn, q, subject, student_id)
+
+
+@app.post("/api/materials/{material_id}/index")
+def reindex_material(material_id: int, _: str = Depends(require_admin_auth)) -> dict[str, object]:
+    with get_conn() as conn:
+        return index_material(conn, material_id)
+
+
+@app.get("/api/learning-targets")
+def learning_targets(_: str = Depends(require_parent_or_admin_auth)) -> dict[str, object]:
+    return skill_targets()
+
+
+@app.get("/api/student/mastery")
+def student_mastery(student_id: int = 1, _: str = Depends(require_parent_or_admin_auth)) -> list[dict[str, object]]:
+    with get_conn() as conn:
+        return list_skill_mastery(conn, student_id)
+
+
+@app.get("/api/student/memory")
+def student_memory(student_id: int = 1, _: str = Depends(require_parent_or_admin_auth)) -> list[dict[str, object]]:
+    with get_conn() as conn:
+        return list_active_memories(conn, student_id)
+
+
+@app.get("/api/parent/insights")
+def parent_insights(student_id: int = 1, _: str = Depends(require_parent_or_admin_auth)) -> dict[str, object]:
+    with get_conn() as conn:
+        return build_target_insights(conn, student_id)
+
+
+@app.get("/api/agent/daily-adjustments")
+def daily_adjustments(
+    student_id: int = 1,
+    target_date: str | None = None,
+    _: str = Depends(require_parent_or_admin_auth),
+) -> dict[str, object]:
+    with get_conn() as conn:
+        return recommend_daily_adjustments(conn, student_id, target_date)
+
+
 @app.get("/api/materials")
 def list_materials(student_id: int = 1, _: str = Depends(require_admin_auth)) -> list[dict]:
     with get_conn() as conn:
@@ -521,7 +589,7 @@ def create_material(
     source_id: Annotated[int, Form()] = 0,
     student_id: Annotated[int, Form()] = 1,
     _: str = Depends(require_admin_auth),
-) -> dict[str, int | str]:
+) -> dict[str, object]:
     allowed = {"textbook_pdf", "word_list", "dictation", "audio_list", "notes"}
     if material_type not in allowed:
         raise HTTPException(status_code=400, detail="material_type 不合法")
@@ -557,7 +625,9 @@ def create_material(
                 now,
             ),
         )
-        return {"id": cursor.lastrowid, "status": "created"}
+        material_id = int(cursor.lastrowid)
+        indexed = index_material(conn, material_id)
+        return {"id": material_id, "status": "created", "rag_index": indexed}
 
 
 @app.post("/api/task-sources/seed")
@@ -730,7 +800,7 @@ def get_quiz(task_id: int, _: str = Depends(require_child_or_admin_auth)) -> dic
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
         result = agent_generate_quiz(conn, task_id)
-        return {"task": dict(task), "items": result["items"]}
+        return {"task": dict(task), "items": result["items"], "quality": result.get("quality", {})}
 
 
 @app.get("/api/agent/task-guidance/{task_id}")
@@ -887,6 +957,8 @@ def parent_dashboard(
             (student_id,),
         ).fetchone()
         agent_overview_data = get_agent_overview(conn, student_id)
+        target_insights = build_target_insights(conn, student_id)
+        adjustment = recommend_daily_adjustments(conn, student_id, today)
         return {
             "date": today,
             "total": len(tasks),
@@ -902,4 +974,6 @@ def parent_dashboard(
             "mastery": agent_overview_data["mastery"],
             "agent_runs": agent_overview_data["runs"][:10],
             "notifications": notifications,
+            "target_95": target_insights,
+            "daily_adjustment": adjustment,
         }

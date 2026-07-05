@@ -269,7 +269,7 @@
                 <strong>${item.title}</strong>
                 <p class="muted">${item.subject || "综合"} · ${item.material_type}${item.source_title ? ` · ${item.source_title}` : ""}</p>
               </div>
-              <span class="tag">${item.content_text ? "已录内容" : "仅文件线索"}</span>
+              <span class="tag">${item.content_text ? "已录内容 · 已进 RAG" : "仅文件线索"}</span>
             </div>
           `;
           box.append(card);
@@ -406,8 +406,8 @@
 
       document.querySelector("#materialForm").addEventListener("submit", async (event) => {
         event.preventDefault();
-        await api("/api/materials", { method: "POST", body: new FormData(event.target) });
-        toast("资料已保存，后续出题会引用");
+        const result = await api("/api/materials", { method: "POST", body: new FormData(event.target) });
+        toast(`资料已保存，RAG 切片 ${result.rag_index?.count || 0} 条，后续出题会引用`);
         event.target.reset();
         await loadMaterials();
       });
