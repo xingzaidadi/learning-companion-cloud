@@ -195,6 +195,62 @@ def _templates(conn: Connection, task: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+HIDDEN_ENGLISH_ANSWER_TYPES = {"english_word_cn_to_en", "english_spelling"}
+
+
+def _english_answer_tokens(answer: str) -> set[str]:
+    return {
+        token.lower()
+        for token in re.findall(r"[A-Za-z][A-Za-z'-]*", answer or "")
+        if len(token) >= 3
+    }
+
+
+def _question_contains_token(question: str, token: str) -> bool:
+    return re.search(rf"(?<![A-Za-z]){re.escape(token)}(?![A-Za-z])", question or "", re.I) is not None
+
+
+def _safe_english_sentence_fill(question: str, protected_tokens: set[str]) -> str:
+    cleaned = question
+    for token in protected_tokens:
+        cleaned = re.sub(rf"(?<![A-Za-z]){re.escape(token)}(?![A-Za-z])", "desk", cleaned, flags=re.I)
+    if any(_question_contains_token(cleaned, token) for token in protected_tokens):
+        return "句型填空：There ___ a desk here."
+    return cleaned
+
+
+def _leak_scan_text(item: dict[str, Any]) -> str:
+    options = loads(str(item.get("options_json", "[]")), [])
+    return "\n".join([str(item.get("question", "")), *(str(option) for option in options)])
+
+
+def _remove_cross_answer_leaks(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    protected_by_index: dict[int, set[str]] = {
+        index: _english_answer_tokens(str(item.get("answer", "")))
+        for index, item in enumerate(items)
+        if item.get("question_type") in HIDDEN_ENGLISH_ANSWER_TYPES
+    }
+    protected_tokens = {token for tokens in protected_by_index.values() for token in tokens}
+    if not protected_tokens:
+        return items
+
+    cleaned_items: list[dict[str, Any]] = []
+    for index, item in enumerate(items):
+        own_tokens = protected_by_index.get(index, set())
+        tokens_to_hide = protected_tokens - own_tokens
+        question = str(item.get("question", ""))
+        scan_text = _leak_scan_text(item)
+        leaked_tokens = {token for token in tokens_to_hide if _question_contains_token(scan_text, token)}
+        if leaked_tokens and item.get("question_type") == "english_sentence_fill":
+            item = {**item, "question": _safe_english_sentence_fill(question, leaked_tokens)}
+            scan_text = _leak_scan_text(item)
+            leaked_tokens = {token for token in tokens_to_hide if _question_contains_token(scan_text, token)}
+        if leaked_tokens:
+            continue
+        cleaned_items.append(item)
+    return cleaned_items if len(cleaned_items) >= 3 else items
+
+
 def ensure_quiz_for_task(conn: Connection, task: dict[str, Any]) -> list[dict[str, Any]]:
     existing = conn.execute(
         "SELECT * FROM quiz_items WHERE daily_task_id = ? ORDER BY id",
@@ -204,7 +260,7 @@ def ensure_quiz_for_task(conn: Connection, task: dict[str, Any]) -> list[dict[st
         return [dict(row) for row in existing]
 
     now = utc_now()
-    items = _templates(conn, task)
+    items = _remove_cross_answer_leaks(_templates(conn, task))
     for item in items:
         conn.execute(
             """

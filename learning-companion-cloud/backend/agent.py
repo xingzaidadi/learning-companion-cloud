@@ -245,6 +245,7 @@ def _public_quiz_item(item: dict[str, Any]) -> dict[str, Any]:
     data = dict(item)
     data["options"] = loads(data.pop("options_json", "[]"), [])
     data.pop("answer", None)
+    data.pop("explanation", None)
     return data
 
 

@@ -77,7 +77,7 @@ def seed_quiz(conn: Any, task_id: int) -> list[int]:
     items = [
         ("english_spelling", "拼写：老师", "[]", "teacher", "记住 teacher 的拼写。"),
         ("english_word_cn_to_en", "中译英：图书馆", "[]", "library", "library 是图书馆。"),
-        ("english_sentence_fill", "句型：There __ a library in my school.", "[]", "is", "There is 表示有。"),
+        ("english_sentence_fill", "句型：There __ a desk here.", "[]", "is", "There is 表示有。"),
         ("choice", "遇到不会的题应该怎么做？", dumps(["直接跳过", "说明卡在哪里", "直接点完成"]), "说明卡在哪里", "卡住要说明问题。"),
         ("math_exact", "计算：2+3", "[]", "5", "2+3=5。"),
     ]
@@ -161,6 +161,9 @@ def run_child_flow() -> None:
         quiz = assert_status(client.get(f"/api/daily-tasks/{task1}/quiz"))
         assert_true(len(quiz["items"]) == len(item_ids), f"小测题数量错误：{quiz}")
         assert_true(all("answer" not in item for item in quiz["items"]), "孩子端小测不能暴露答案")
+        assert_true(all("explanation" not in item for item in quiz["items"]), "孩子端小测不能暴露答案解释")
+        quiz_text = "\n".join(item["question"].lower() for item in quiz["items"])
+        assert_true("there __ a library" not in quiz_text and "there ___ a library" not in quiz_text, "小测题干不应用句型题泄露 library")
 
         wrong_answers = {str(item_id): "" for item_id in item_ids}
         revision = assert_status(client.post(f"/api/daily-tasks/{task1}/quiz", json={"answers": wrong_answers}))

@@ -396,6 +396,34 @@ def run_e2e() -> None:
         quiz = assert_status(client.get(f"/api/daily-tasks/{task_id}/quiz"))
         assert_true(len(quiz["items"]) >= 3, "小测题应至少 3 道")
         assert_true(all("answer" not in item for item in quiz["items"]), "孩子端小测不应暴露标准答案")
+        assert_true(all("explanation" not in item for item in quiz["items"]), "孩子端小测不应暴露答案解释")
+        with get_conn() as conn:
+            private_english_items = [
+                dict(row)
+                for row in conn.execute(
+                    """
+                    SELECT id, question_type, answer
+                    FROM quiz_items
+                    WHERE daily_task_id = ?
+                      AND question_type IN ('english_word_cn_to_en', 'english_spelling')
+                    """,
+                    (task_id,),
+                ).fetchall()
+            ]
+        public_question_texts = {
+            int(item["id"]): "\n".join([item["question"], *(str(option) for option in item.get("options", []))]).lower()
+            for item in quiz["items"]
+        }
+        for private_item in private_english_items:
+            answer = str(private_item["answer"]).lower()
+            if len(answer) < 3:
+                continue
+            leaking_questions = [
+                question
+                for item_id, question in public_question_texts.items()
+                if item_id != int(private_item["id"]) and re.search(rf"(?<![a-z]){re.escape(answer)}(?![a-z])", question)
+            ]
+            assert_true(not leaking_questions, f"英语小测题干不应泄露其他题答案 {answer}，实际 {leaking_questions}")
         english_types = {item["question_type"] for item in quiz["items"]}
         assert_true(
             {"english_spelling", "english_word_cn_to_en", "english_sentence_fill"} & english_types == {"english_spelling", "english_word_cn_to_en", "english_sentence_fill"},

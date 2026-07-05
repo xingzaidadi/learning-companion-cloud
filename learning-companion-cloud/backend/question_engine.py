@@ -247,30 +247,39 @@ def _build_english_quiz(topic: str, content: str, config: dict[str, Any], versio
     word1, cn1 = pairs[0]
     word2, cn2 = pairs[1]
     word3, cn3 = pairs[2]
+    protected_words = {word1.lower(), word2.lower(), word3.lower()}
+    sentence_noun = next(
+        (
+            candidate
+            for candidate in ("desk", "book", "map", "door", "window", "bag")
+            if candidate.lower() not in protected_words
+        ),
+        "desk",
+    )
     return [
         _exact(f"中译英：{cn1}", word1, f"{cn1} = {word1}", "english_word_cn_to_en"),
         _exact(f"英译中：{word2}", cn2, f"{word2} = {cn2}", "english_word_en_to_cn"),
         _exact(f"默写：请家长读中文「{cn3}」，孩子写英文单词。", word3, "默写单词忽略大小写，但不能漏字母。", "english_spelling"),
         _short(
-            "句型填空：There ___ a library in my school.",
+            f"句型填空：There ___ a {sentence_noun} here.",
             "is",
             "There is + 单数名词；There are + 复数名词。",
             "english_sentence_fill",
         ),
         _short(
-            f"翻译：我的学校很棒。（围绕 {unit}）",
+            "翻译：我的学校很棒。",
             "My school is cool.",
             "中译英重点检查核心词和基本句型，标点可宽松。",
             "english_translation",
         ),
         _short(
-            "造句：用 My school is ... 写一个完整英文句子。",
+            "造句：写一个介绍学校的完整英文句子。",
             "My school is cool.",
             "造句要有主语、be 动词和描述词。",
             "english_sentence_make",
         ),
         _short(
-            f"课文理解：{unit} 这一节主要介绍什么？",
+            "课文理解：这一节主要介绍什么？",
             "school",
             "能说出单元主题或课文信息即可。",
             "english_reading_check",
