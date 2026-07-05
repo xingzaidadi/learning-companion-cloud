@@ -261,7 +261,7 @@ details.card > summary::-webkit-details-marker {
 
 .child-detail-card > summary::after,
 details.card > summary::after {
-  content: "??";
+  content: "\5c55\5f00";
   border-radius: 999px;
   padding: 6px 12px;
   color: var(--primary);
@@ -271,7 +271,7 @@ details.card > summary::after {
 
 .child-detail-card[open] > summary::after,
 details.card[open] > summary::after {
-  content: "??";
+  content: "\6536\8d77";
 }
 
 .child-detail-card summary small {

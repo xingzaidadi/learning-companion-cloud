@@ -40,6 +40,16 @@ def main() -> None:
     tool_registry = read("backend/agent_tool_registry.py")
     eval_runner = read("eval_harness/runners/eval_runner.py")
 
+    visible_question_mark_noise = [
+        'content: \"??\"',
+        "content: '??'",
+        ">??<",
+        "??</span>",
+        "??</small>",
+        "??</p>",
+        "????",
+    ]
+
     checks: dict[str, list[tuple[str, bool]]] = {
         "child_ui": [
             ("one_current_focus", has_quality(child, "child-one-focus") and "currentTask" in child),
@@ -85,6 +95,8 @@ def main() -> None:
             ("collapsible_styles", "child-detail-card" in css and "details.card" in css),
             ("parent_layout", "parent-layout" in css and "parent-detail-grid" in css),
             ("agent_audit_styles", "agent-run-card" in css and "agent-trace-panel" in css),
+            ("no_visible_question_mark_noise", not any(noise in child + parent + admin + css for noise in visible_question_mark_noise)),
+            ("css_collapsible_labels_not_garbled", 'content: "??"' not in css and "\\5c55\\5f00" in css and "\\6536\\8d77" in css),
         ],
     }
 
