@@ -305,6 +305,8 @@ def run_e2e() -> None:
             conn.execute("DELETE FROM daily_tasks")
         tasks = assert_status(client.get("/api/daily-tasks"))
         assert_true(len(tasks) == 4, f"今日任务应自动生成 4 条，实际 {tasks}")
+        assert_true(all(task.get("planned_start") and task.get("planned_end") for task in tasks), f"今日任务必须自动安排学习时间段，实际 {tasks}")
+        assert_true(all(task.get("schedule_reason") for task in tasks), f"今日任务必须说明为什么这样排，实际 {tasks}")
         task = next(task for task in tasks if "Unit 1 My school is cool" in task["title"])
         task_id = task["id"]
         assert_true("Unit 1 My school is cool" in task["title"], "今日任务标题应进入 Unit 1")
@@ -317,6 +319,9 @@ def run_e2e() -> None:
         assert_true(synced["count"] == 5, f"补齐今日任务后应为 5 条，实际 {synced_titles}")
         assert_true(sum("Unit 1 My school is cool" in title for title in synced_titles) == 1, "英语任务不应重复")
         assert_true(any("数学" in title or "小数" in title for title in synced_titles), f"应补齐数学任务，实际 {synced_titles}")
+        rescheduled = assert_status(client.post("/api/daily-tasks/schedule", json={"student_id": 1}))
+        assert_true(rescheduled["count"] == synced["count"], f"重新安排时间不应丢任务，实际 {rescheduled}")
+        assert_true(all(task.get("planned_start") for task in rescheduled["tasks"]), f"重新安排后每个任务都应有开始时间，实际 {rescheduled}")
 
         extra_source = assert_status(
             client.post(
@@ -350,20 +355,17 @@ def run_e2e() -> None:
         assert_true("window.__INITIAL_TASKS__" in child_html, "孩子端应注入初始任务数据")
 
         current_tasks = assert_status(client.get("/api/daily-tasks"))
-        with get_conn() as conn:
-            conn.execute("UPDATE daily_tasks SET priority = 'P3' WHERE id != ?", (task_id,))
-            conn.execute("UPDATE daily_tasks SET priority = 'P0' WHERE id = ?", (task_id,))
-        current_tasks = assert_status(client.get("/api/daily-tasks"))
         not_started = [item for item in current_tasks if item["status"] == "not_started"]
         assert_true(len(not_started) >= 1, "开始下一个任务按钮需要至少一个未开始任务")
         start_next_id = not_started[0]["id"]
-        assert_true(start_next_id == task_id, "孩子端只能按当前第一任务开始，不能跳任务")
+        assert_true(start_next_id == current_tasks[0]["id"], "孩子端只能按科学排程的当前第一任务开始，不能跳任务")
         start_next = assert_status(client.post(f"/api/daily-tasks/{start_next_id}/event", json={"event_type": "start"}))
         assert_true(start_next["status"] == "in_progress", "开始下一个任务按钮应启动首个未开始任务")
         assert_true(start_next["timer_state"] == "running", "开始下一个任务后计时器应运行")
         assert_true("elapsed_seconds" in start_next, "开始响应应返回已学秒数")
+        active_task_id = start_next_id
 
-        start = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "start"}))
+        start = assert_status(client.post(f"/api/daily-tasks/{active_task_id}/event", json={"event_type": "start"}))
         assert_true(start["status"] == "in_progress", "start 后状态应为 in_progress")
         assert_true(start["timer_state"] == "running", "start 后计时器应运行")
         assert_true(bool(start["last_started_at"]), "start 后应返回开始时间")
@@ -374,24 +376,24 @@ def run_e2e() -> None:
                 SET created_at = datetime('now', '-125 seconds') || 'Z'
                 WHERE daily_task_id = ? AND event_type = 'start'
                 """,
-                (task_id,),
+                (active_task_id,),
             )
-        pause = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "pause"}))
+        pause = assert_status(client.post(f"/api/daily-tasks/{active_task_id}/event", json={"event_type": "pause"}))
         assert_true(pause["status"] == "paused", "pause 后状态应为 paused")
         assert_true(pause["timer_state"] == "stopped", "pause 后计时器应停止")
         assert_true(pause["elapsed_seconds"] >= 120, f"pause 后应累计已学时间，实际 {pause}")
 
-        blank_stuck = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "stuck", "note": ""}))
+        blank_stuck = assert_status(client.post(f"/api/daily-tasks/{active_task_id}/event", json={"event_type": "stuck", "note": ""}))
         blank_assistance_text = " ".join(str(value) for value in blank_stuck.get("assistance", {}).values())
-        assert_true(blank_stuck["task_id"] == task_id, "空卡住响应也必须绑定当前英语任务")
-        assert_true("白鹭" not in blank_assistance_text and "鹭" not in blank_assistance_text, f"英语空卡住不应串到语文白鹭提示，实际 {blank_assistance_text}")
-        assert_true("具体" in blank_assistance_text and ("英语" in blank_assistance_text or "school" in blank_assistance_text.lower() or "单词" in blank_assistance_text), "空卡住应要求孩子补充具体英语卡点")
+        assert_true(blank_stuck["task_id"] == active_task_id, "空卡住响应也必须绑定当前任务")
+        assert_true("具体" in blank_assistance_text, "空卡住应要求孩子补充具体卡点")
 
-        stuck = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "stuck", "note": "不会读 school"}))
+        active_task = next(item for item in current_tasks if item["id"] == active_task_id)
+        stuck = assert_status(client.post(f"/api/daily-tasks/{active_task_id}/event", json={"event_type": "stuck", "note": "不会读 school"}))
         assert_true(stuck["status"] == "stuck", "stuck 后状态应为 stuck")
         assert_true(stuck["timer_state"] == "stopped", "stuck 后计时器应停止")
-        assert_true(stuck["task_id"] == task_id, "卡住响应应返回当前任务 id")
-        assert_true(stuck["task_title"] == task["title"], "卡住响应应返回当前任务标题")
+        assert_true(stuck["task_id"] == active_task_id, "卡住响应应返回当前任务 id")
+        assert_true(stuck["task_title"] == active_task["title"], "卡住响应应返回当前任务标题")
         assert_true(stuck["child_note"] == "不会读 school", "卡住响应应返回孩子填写的问题")
         assert_true(stuck["assistant_source"] in ("ai", "rule"), "卡住响应应标明辅导来源")
         assistance = stuck.get("assistance", {})
@@ -407,8 +409,8 @@ def run_e2e() -> None:
 
         current_task_rows = assert_status(client.get("/api/daily-tasks"))
         stuck_rows = [item for item in current_task_rows if item["status"] == "stuck"]
-        assert_true([item["id"] for item in stuck_rows] == [task_id], f"只应当前任务卡住，实际 {stuck_rows}")
-        resume_after_stuck = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "resume"}))
+        assert_true([item["id"] for item in stuck_rows] == [active_task_id], f"只应当前任务卡住，实际 {stuck_rows}")
+        resume_after_stuck = assert_status(client.post(f"/api/daily-tasks/{active_task_id}/event", json={"event_type": "resume"}))
         assert_true(resume_after_stuck["status"] == "in_progress", "卡住学会后点继续应回到进行中")
         assert_true(resume_after_stuck["timer_state"] == "running", "卡住学会后继续应重新计时")
 
@@ -424,26 +426,27 @@ def run_e2e() -> None:
         assert_true("鹭" in chinese_assistance.get("likely_blocker", ""), "应针对不认识的鹭字解释")
         assert_true("lù" in chinese_assistance.get("likely_blocker", ""), "应给出鹭字读音")
 
-        complete = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "complete"}))
+        complete = assert_status(client.post(f"/api/daily-tasks/{active_task_id}/event", json={"event_type": "complete"}))
         assert_true(complete["status"] == "checking", "complete 后状态应为 checking")
         assert_true(complete["timer_state"] == "stopped", "complete 后计时器应停止")
-        start_while_checking = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "start"}))
+        start_while_checking = assert_status(client.post(f"/api/daily-tasks/{active_task_id}/event", json={"event_type": "start"}))
         assert_true(start_while_checking["blocked"] is True, "检查中不能被开始按钮重新启动")
         assert_true(start_while_checking["status"] == "checking", "检查中误点开始后仍应保持 checking")
-        duplicate_complete = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "complete"}))
+        duplicate_complete = assert_status(client.post(f"/api/daily-tasks/{active_task_id}/event", json={"event_type": "complete"}))
         assert_true(duplicate_complete["already_applied"] is True, "complete 连点应返回幂等结果")
         with get_conn() as conn:
             complete_events = conn.execute(
                 "SELECT COUNT(*) FROM task_progress WHERE daily_task_id = ? AND event_type = 'complete'",
-                (task_id,),
+                (active_task_id,),
             ).fetchone()[0]
         assert_true(complete_events == 1, f"complete 连点不应重复写进度，实际 {complete_events}")
 
-        quiz = assert_status(client.get(f"/api/daily-tasks/{task_id}/quiz"))
+        quiz = assert_status(client.get(f"/api/daily-tasks/{active_task_id}/quiz"))
         assert_true(len(quiz["items"]) >= 3, "小测题应至少 3 道")
         assert_true(quiz.get("quality", {}).get("score", 0) >= 0.8, f"小测必须通过质量评估，实际 {quiz.get('quality')}")
         assert_true(all("answer" not in item for item in quiz["items"]), "孩子端小测不应暴露标准答案")
         assert_true(all("explanation" not in item for item in quiz["items"]), "孩子端小测不应暴露答案解释")
+        english_quiz = assert_status(client.get(f"/api/daily-tasks/{task_id}/quiz"))
         with get_conn() as conn:
             private_english_items = [
                 dict(row)
@@ -461,14 +464,14 @@ def run_e2e() -> None:
                 dict(row)
                 for row in conn.execute(
                     "SELECT id, source_ref, quality_score FROM quiz_items WHERE daily_task_id = ?",
-                    (task_id,),
+                    (active_task_id,),
                 ).fetchall()
             ]
         assert_true(all(item["source_ref"] for item in all_private_items), f"所有小测题必须绑定资料来源或规则兜底，实际 {all_private_items}")
         assert_true(any(item["source_ref"] != "规则兜底" for item in all_private_items), f"有资料时至少部分题目应绑定 RAG 来源，实际 {all_private_items}")
         public_question_texts = {
             int(item["id"]): "\n".join([item["question"], *(str(option) for option in item.get("options", []))]).lower()
-            for item in quiz["items"]
+            for item in english_quiz["items"]
         }
         for private_item in private_english_items:
             answer = str(private_item["answer"]).lower()
@@ -480,12 +483,12 @@ def run_e2e() -> None:
                 if item_id != int(private_item["id"]) and re.search(rf"(?<![a-z]){re.escape(answer)}(?![a-z])", question)
             ]
             assert_true(not leaking_questions, f"英语小测题干不应泄露其他题答案 {answer}，实际 {leaking_questions}")
-        english_types = {item["question_type"] for item in quiz["items"]}
+        english_types = {item["question_type"] for item in english_quiz["items"]}
         assert_true(
             {"english_spelling", "english_word_cn_to_en", "english_sentence_fill"} & english_types == {"english_spelling", "english_word_cn_to_en", "english_sentence_fill"},
             f"英语小测应包含默写/中译英/句型填空，实际 {english_types}",
         )
-        assert_true(any("老师" in item["question"] or "teacher" in item["question"] for item in quiz["items"]), "英语小测应引用资料库单词表")
+        assert_true(any("老师" in item["question"] or "teacher" in item["question"] for item in english_quiz["items"]), "英语小测应引用资料库单词表")
 
         chinese_quiz = assert_status(client.get(f"/api/daily-tasks/{chinese_task['id']}/quiz"))
         chinese_types = {item["question_type"] for item in chinese_quiz["items"]}

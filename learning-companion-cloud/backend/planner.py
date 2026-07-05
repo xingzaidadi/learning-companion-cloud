@@ -9,6 +9,7 @@ from .db import dumps, loads, utc_now
 from .quiz import ensure_quiz_for_task
 from .review import create_review_tasks
 from .settings import get_settings
+from .study_schedule import arrange_daily_schedule
 
 
 CATEGORY_LABELS = {
@@ -113,6 +114,7 @@ def generate_daily_tasks(
 
     remaining_slots = max(max_daily_tasks - len(tasks), 0)
     if remaining_slots == 0 and not force_all_sources:
+        arrange_daily_schedule(conn, student_id, today)
         return _today_tasks(conn, student_id, today)
 
     block_new_preview = False if force_all_sources else _should_block_new_preview(conn, student_id, today, rules)
@@ -177,12 +179,20 @@ def generate_daily_tasks(
         ensure_quiz_for_task(conn, task)
         tasks.append(task)
 
+    arrange_daily_schedule(conn, student_id, today)
     return _today_tasks(conn, student_id, today)
 
 
 def _today_tasks(conn: Connection, student_id: int, target_date: str) -> list[dict[str, Any]]:
     rows = conn.execute(
-        "SELECT * FROM daily_tasks WHERE student_id = ? AND date = ? ORDER BY priority, id",
+        """
+        SELECT * FROM daily_tasks
+        WHERE student_id = ? AND date = ?
+        ORDER BY
+            CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END,
+            priority,
+            id
+        """,
         (student_id, target_date),
     ).fetchall()
     return [dict(row) for row in rows]

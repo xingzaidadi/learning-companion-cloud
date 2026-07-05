@@ -51,6 +51,7 @@ try:
     from .review import create_review_item, review_book
     from .scheduler import start_scheduler
     from .settings import get_settings, save_settings
+    from .study_schedule import arrange_daily_schedule
 except ImportError:
     from agent import (
         assist_stuck as agent_assist_stuck,
@@ -86,6 +87,7 @@ except ImportError:
     from review import create_review_item, review_book
     from scheduler import start_scheduler
     from settings import get_settings, save_settings
+    from study_schedule import arrange_daily_schedule
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -202,7 +204,10 @@ def _start_blocker(conn, task, current_status: str):
           AND date = ?
           AND id != ?
           AND status IN ('checking', 'needs_revision', 'stuck', 'in_progress', 'paused')
-        ORDER BY priority, id
+        ORDER BY
+          CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END,
+          priority,
+          id
         LIMIT 1
         """,
         (task["student_id"], task["date"], task["id"]),
@@ -217,7 +222,10 @@ def _start_blocker(conn, task, current_status: str):
             WHERE student_id = ?
               AND date = ?
               AND status = 'not_started'
-            ORDER BY priority, id
+            ORDER BY
+              CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END,
+              priority,
+              id
             LIMIT 1
             """,
             (task["student_id"], task["date"]),
@@ -757,7 +765,14 @@ def list_daily_tasks(
     today = target_date or date.today().isoformat()
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT * FROM daily_tasks WHERE student_id = ? AND date = ? ORDER BY priority, id",
+            """
+            SELECT * FROM daily_tasks
+            WHERE student_id = ? AND date = ?
+            ORDER BY
+                CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END,
+                priority,
+                id
+            """,
             (student_id, today),
         ).fetchall()
         if not rows:
@@ -766,6 +781,19 @@ def list_daily_tasks(
             if rows:
                 notify(conn, student_id, "tasks_generated", "今日学习任务已自动生成", f"今天共有 {len(rows)} 个任务。")
                 return _annotate_tasks(conn, [dict(row) for row in rows])
+        elif any(not row["planned_start"] for row in rows):
+            arrange_daily_schedule(conn, student_id, today)
+            rows = conn.execute(
+                """
+                SELECT * FROM daily_tasks
+                WHERE student_id = ? AND date = ?
+                ORDER BY
+                    CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END,
+                    priority,
+                    id
+                """,
+                (student_id, today),
+            ).fetchall()
         return _annotate_tasks(conn, dict_rows(rows))
 
 
@@ -781,6 +809,28 @@ def generate_tasks(
         tasks = _annotate_tasks(conn, [dict(task) for task in result["tasks"]])
         notify(conn, student_id, "tasks_generated", "今日学习任务已生成", f"今天共有 {len(tasks)} 个任务。")
         return {"date": today, "count": len(tasks), "tasks": tasks}
+
+
+@app.post("/api/daily-tasks/schedule")
+async def schedule_tasks(request: Request, _: str = Depends(require_parent_or_admin_auth)) -> dict[str, object]:
+    data = await request.json()
+    student_id = int(data.get("student_id", 1))
+    target_date = data.get("target_date") or date.today().isoformat()
+    order = data.get("order") or []
+    with get_conn() as conn:
+        if isinstance(order, list) and order:
+            now = utc_now()
+            for index, task_id in enumerate(order, start=1):
+                conn.execute(
+                    """
+                    UPDATE daily_tasks
+                    SET sort_order = ?, schedule_reason = ?, updated_at = ?
+                    WHERE id = ? AND student_id = ? AND date = ?
+                    """,
+                    (index * 10, "家长手动调整顺序；系统重新分配时间段。", now, int(task_id), student_id, target_date),
+                )
+        tasks = arrange_daily_schedule(conn, student_id, target_date, respect_existing_order=bool(order))
+        return {"date": target_date, "count": len(tasks), "tasks": _annotate_tasks(conn, tasks)}
 
 
 @app.post("/api/agent/daily-tasks")

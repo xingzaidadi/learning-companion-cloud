@@ -27,7 +27,10 @@
             <p>页面会自动把最该做的一项放到最上面。</p>
           </div>
         </div>
-        <button id="startNext" class="primary big-action">开始下一个任务</button>
+        <div class="actions">
+          <button id="startNext" class="primary big-action">开始下一个任务</button>
+          <button id="rescheduleDay" type="button">重新安排今日时间</button>
+        </div>
       </section>
 
       <section class="child-workbench child-focus-layout">
@@ -185,14 +188,15 @@
       }
 
       function statusHint(task) {
-        if (task.status === "not_started") return "先点开始，系统会开始计时。";
+        const timeText = task.planned_start && task.planned_end ? `建议 ${task.planned_start}-${task.planned_end} 完成。` : "";
+        if (task.status === "not_started") return `${timeText}先点开始，系统会开始计时。`;
         if (task.status === "in_progress") return "正在学习。做完后点检查，卡住就点求助。";
         if (task.status === "paused") return "已暂停。准备好了点继续学习。";
         if (task.status === "stuck") return "先看下方提示。学会了点继续学，做完了点检查。";
         if (task.status === "checking") return "已经进入检查，先完成小测。";
         if (task.status === "needs_revision") return "小测没过线，先订正再重新检查。";
         if (task.status === "completed") return "这项已通过，准备进入下一项。";
-        return "按当前按钮继续。";
+        return `${timeText}按当前按钮继续。`;
       }
 
       function checkMethodText(task) {
@@ -219,6 +223,7 @@
               <div>
                 <div class="task-meta"><span class="subject-badge">${subjectName(task)}</span>${priorityTag(task)}${taskStatusTag(task)}${isCurrent ? '<span class="tag ok">当前</span>' : ""}</div>
                 <h3 class="task-title">${task.title}</h3>
+                <p class="muted">${task.planned_start && task.planned_end ? `${task.schedule_block || "建议时段"} · ${task.planned_start}-${task.planned_end}` : "待安排时间段"}</p>
               </div>
               <div class="task-meta queue-meta">
                 <span class="tag">${task.estimated_minutes} 分钟</span>
@@ -271,6 +276,7 @@
             ${priorityTag(task)}
             ${taskStatusTag(task)}
             <span class="tag">${checkMethodText(task)}</span>
+            ${task.planned_start && task.planned_end ? `<span class="tag ok">${task.planned_start}-${task.planned_end}</span>` : ""}
           </div>
           <div class="task-head">
             <div>
@@ -281,9 +287,11 @@
           <div class="focus-guidance">
             <strong>现在要做</strong>
             <p>${statusHint(task)}</p>
+            ${task.schedule_reason ? `<p class="muted">为什么这样排：${task.schedule_reason}</p>` : ""}
           </div>
           <div class="focus-metrics">
             <div><span>预计</span><strong>${task.estimated_minutes} 分钟</strong></div>
+            <div><span>建议时段</span><strong>${task.schedule_block || "自动安排"}</strong></div>
             <div class="time-metric"><span>学习计时</span><strong class="tag timer-tag" data-elapsed="${Number(task.elapsed_seconds || 0)}" data-rendered-at="${renderedAt}" data-state="${task.timer_state || "stopped"}">已学 ${formatElapsed(task.elapsed_seconds || 0)}</strong></div>
             <div><span>过关方式</span><strong>${checkMethodText(task)}</strong></div>
           </div>
@@ -378,6 +386,17 @@
         updateOneTask(task.id, result);
         focusTask(task.id);
         toast(`${action.label}：${task.title}`);
+      }
+
+      async function rescheduleDay() {
+        const result = await api("/api/daily-tasks/schedule", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ student_id: 1 }),
+        });
+        tasks = result.tasks || tasks;
+        renderTasks();
+        toast("已按注意力节奏重新安排今天时间");
       }
 
       function focusTask(taskId) {
@@ -566,6 +585,7 @@
       }
 
       document.querySelector("#startNext").addEventListener("click", startNext);
+      document.querySelector("#rescheduleDay").addEventListener("click", rescheduleDay);
       async function handleTaskAction(event) {
         const button = event.target.closest("button[data-action]");
         if (!button) return;

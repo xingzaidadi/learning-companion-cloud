@@ -198,8 +198,13 @@ def run_browser_clicks(base_url: str) -> None:
         assert page.locator(".progress-orb").count() == 1, "进度应以醒目的彩色进度块展示"
         assert page.locator(".current-task-card").count() == 1, "孩子端应有当前任务焦点卡"
         assert "当前任务" in page.locator(".current-task-card").inner_text(), "焦点卡标题应清晰"
+        assert page.locator("#rescheduleDay").count() == 1, "孩子端应提供重新安排今日时间按钮"
         assert page.locator("#currentTask .subject-badge").count() == 1, "当前任务应显示语文/数学/英语学科色标"
         assert page.locator("#currentTask .focus-guidance").count() == 1, "当前任务应有“现在要做”的明确提示"
+        assert "建议时段" in page.locator("#currentTask").inner_text(), "当前任务应显示科学安排的建议时段"
+        page.click("#rescheduleDay")
+        page.wait_for_timeout(500)
+        assert "建议时段" in page.locator("#currentTask").inner_text(), "重新排程后仍应显示建议时段"
         assert "后续任务队列" in page.locator(".queue-card").inner_text(), "其他任务应弱化为队列"
         assert page.locator(".workspace-card").count() == 1, "孩子端应有检查/求助工作区"
         assert "做完就检查，卡住就求助" in page.locator(".workspace-card").inner_text(), "工作区标题应清晰"

@@ -391,6 +391,17 @@ def init_db() -> None:
         )
         _ensure_columns(
             conn,
+            "daily_tasks",
+            {
+                "sort_order": "INTEGER NOT NULL DEFAULT 0",
+                "planned_start": "TEXT NOT NULL DEFAULT ''",
+                "planned_end": "TEXT NOT NULL DEFAULT ''",
+                "schedule_block": "TEXT NOT NULL DEFAULT ''",
+                "schedule_reason": "TEXT NOT NULL DEFAULT ''",
+            },
+        )
+        _ensure_columns(
+            conn,
             "agent_runs",
             {
                 "confidence": "REAL NOT NULL DEFAULT 0",

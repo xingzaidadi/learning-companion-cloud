@@ -127,6 +127,10 @@ def assert_plan_to_child_flow(client: Any, get_conn: Any) -> int:
     assert_true(today["count"] >= 3, f"今日任务应覆盖多科：{today}")
     tasks = assert_status(client.get("/api/daily-tasks"))
     assert_true(len(tasks) >= 3, f"孩子端应能看到今日任务：{tasks}")
+    assert_true(all(task.get("planned_start") and task.get("planned_end") for task in tasks), f"每个任务都必须有科学时间段：{tasks}")
+    assert_true(all(task.get("schedule_reason") for task in tasks), f"每个任务都必须说明排程理由：{tasks}")
+    schedule = assert_status(client.post("/api/daily-tasks/schedule", json={"student_id": 1}))
+    assert_true(schedule["count"] == len(tasks), f"重新排程不应丢任务：{schedule}")
 
     task_id = int(tasks[0]["id"])
     started = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "start"}))
