@@ -43,7 +43,37 @@ def _read_pdf(path: Path) -> tuple[str, dict[str, Any]]:
         text = _clean_text(text)
         if text:
             page_texts.append(f"【第{page_number}页】\n{text}")
-    return "\n\n".join(page_texts), {"pages": len(reader.pages), "parser": "pypdf"}
+    extracted = "\n\n".join(page_texts)
+    if len(extracted) >= 80:
+        return extracted, {"pages": len(reader.pages), "parser": "pypdf"}
+    ocr_text, ocr_meta = _read_pdf_by_ocr(path)
+    return ocr_text, {"pages": len(reader.pages), "parser": "pypdf+ocr", **ocr_meta}
+
+
+def _read_pdf_by_ocr(path: Path, max_pages: int = 140) -> tuple[str, dict[str, Any]]:
+    try:
+        import fitz
+        import numpy as np
+        from PIL import Image
+        from rapidocr_onnxruntime import RapidOCR
+    except ImportError as exc:  # pragma: no cover - depends on optional OCR install
+        raise ValueError("PDF 是图片扫描版，当前环境缺少 OCR 组件；请安装 PyMuPDF 和 rapidocr_onnxruntime 后重试。") from exc
+
+    document = fitz.open(str(path))
+    ocr = RapidOCR()
+    page_texts: list[str] = []
+    for page_index in range(min(len(document), max_pages)):
+        page = document[page_index]
+        pix = page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5), alpha=False)
+        image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        result, _elapsed = ocr(np.array(image))
+        lines = [str(item[1]).strip() for item in (result or []) if len(item) > 1 and str(item[1]).strip()]
+        if lines:
+            page_texts.append(f"【第{page_index + 1}页】\n" + "\n".join(lines))
+    text = _clean_text("\n\n".join(page_texts))
+    if len(text) < 80:
+        raise ValueError("OCR 后仍未提取到足够文本，可能图片质量过低或需要人工处理。")
+    return text, {"ocr_pages": len(page_texts), "ocr_engine": "rapidocr_onnxruntime"}
 
 
 def extract_local_file(path_value: str) -> dict[str, Any]:
