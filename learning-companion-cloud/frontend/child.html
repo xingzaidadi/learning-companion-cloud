@@ -20,16 +20,16 @@
 
       <section class="card hero coach-hero">
         <div class="hero-progress">
-          <div class="progress-orb"><span id="doneCount">0</span><small>/<span id="totalCount">0</span></small></div>
           <div>
             <div class="muted">今日进度</div>
-            <h2>先完成当前任务，再看下一项</h2>
-            <p>页面会自动把最该做的一项放到最上面。</p>
+            <h2>先完成当前任务</h2>
+            <p><span id="doneCount">0</span>/<span id="totalCount">0</span> 已完成，页面只突出现在最该做的一项。</p>
+            <div class="thin-progress"><span id="dayProgressBar"></span></div>
           </div>
         </div>
         <div class="actions">
           <button id="startNext" class="primary big-action">开始下一个任务</button>
-          <button id="rescheduleDay" type="button">重新安排今日时间</button>
+          <button id="rescheduleDay" type="button" class="quiet-action">重新排时间</button>
         </div>
       </section>
 
@@ -125,6 +125,7 @@
         const done = tasks.filter((task) => task.status === "completed").length;
         document.querySelector("#doneCount").textContent = done;
         document.querySelector("#totalCount").textContent = tasks.length;
+        document.querySelector("#dayProgressBar").style.width = `${tasks.length ? Math.round((done / tasks.length) * 100) : 0}%`;
         const container = document.querySelector("#tasks");
         const currentContainer = document.querySelector("#currentTask");
         container.innerHTML = "";
@@ -205,6 +206,28 @@
         return "完成后检查";
       }
 
+      function childTaskTitle(task) {
+        let title = String(task.title || "当前任务");
+        title = title.replace(/联调验证[-_：:]?/g, "");
+        title = title.replace(/-\d{4,}$/g, "");
+        title = title.replace(/stuck 标准答案[:：]?\s*/gi, "");
+        title = title.replace(/^D\d+\s*补漏[:：]\s*/g, "补漏：");
+        return title.trim() || "当前任务";
+      }
+
+      function primaryButton(task, doneAction, doneLabel, startDisabled, doneDisabled) {
+        if (["checking", "needs_revision"].includes(task.status)) {
+          return `<button class="primary" data-action="${doneAction}" data-id="${task.id}" ${doneDisabled}>${doneLabel}</button>`;
+        }
+        if (task.status === "stuck") {
+          return `<button class="primary" data-action="resume" data-id="${task.id}" ${startDisabled}>我学会了，继续学</button>`;
+        }
+        if (task.status === "in_progress") {
+          return `<button class="primary" data-action="${doneAction}" data-id="${task.id}" ${doneDisabled}>${doneLabel}</button>`;
+        }
+        return `<button class="primary" data-action="${task.status === "stuck" ? "resume" : "start"}" data-id="${task.id}" ${startDisabled}>${task.status === "paused" ? "继续学习" : task.status === "completed" ? "已完成" : "开始学习"}</button>`;
+      }
+
       function createTaskCard(task, variant = "focus", currentTaskId = null) {
         const card = document.createElement("article");
         card.dataset.taskId = String(task.id);
@@ -222,7 +245,7 @@
             <div class="queue-task-row ${subjectClass(task)}">
               <div>
                 <div class="task-meta"><span class="subject-badge">${subjectName(task)}</span>${priorityTag(task)}${taskStatusTag(task)}${isCurrent ? '<span class="tag ok">当前</span>' : ""}</div>
-                <h3 class="task-title">${task.title}</h3>
+                <h3 class="task-title">${childTaskTitle(task)}</h3>
                 <p class="muted">${task.planned_start && task.planned_end ? `${task.schedule_block || "建议时段"} · ${task.planned_start}-${task.planned_end}` : "待安排时间段"}</p>
               </div>
               <div class="task-meta queue-meta">
@@ -270,6 +293,10 @@
                   : "我做完了，开始检查";
         const doneDisabled = canFinishTask && task.status !== "completed" ? "" : "disabled";
         const stuckDisabled = canAskStuck ? "" : "disabled";
+        const pauseButton = task.status === "in_progress" ? `<button data-action="pause" data-id="${task.id}">暂停</button>` : "";
+        const checkAfterPauseButton = task.status === "paused" ? `<button class="warn" data-action="${doneAction}" data-id="${task.id}" ${doneDisabled}>我做完了，开始检查</button>` : "";
+        const checkAfterStuckButton = task.status === "stuck" ? `<button class="warn" data-action="${doneAction}" data-id="${task.id}" ${doneDisabled}>${doneLabel}</button>` : "";
+        const stuckButton = canAskStuck ? `<button class="danger" data-action="stuck" data-id="${task.id}" ${stuckDisabled}>${task.status === "stuck" ? "还不会，再提示" : "我卡住了"}</button>` : "";
         return `
           <div class="focus-status ${subjectClass(task)}">
             <span class="subject-badge">${subjectName(task)}</span>
@@ -280,30 +307,29 @@
           </div>
           <div class="task-head">
             <div>
-              <h3 class="task-title">${task.title}</h3>
+              <h3 class="task-title">${childTaskTitle(task)}</h3>
               <p class="focus-description">${task.description}</p>
             </div>
           </div>
           <div class="focus-guidance">
             <strong>现在要做</strong>
             <p>${statusHint(task)}</p>
-            ${task.schedule_reason ? `<p class="muted">为什么这样排：${task.schedule_reason}</p>` : ""}
           </div>
-          <div class="focus-metrics">
-            <div><span>预计</span><strong>${task.estimated_minutes} 分钟</strong></div>
-            <div><span>建议时段</span><strong>${task.schedule_block || "自动安排"}</strong></div>
-            <div class="time-metric"><span>学习计时</span><strong class="tag timer-tag" data-elapsed="${Number(task.elapsed_seconds || 0)}" data-rendered-at="${renderedAt}" data-state="${task.timer_state || "stopped"}">已学 ${formatElapsed(task.elapsed_seconds || 0)}</strong></div>
-            <div><span>过关方式</span><strong>${checkMethodText(task)}</strong></div>
+          <div class="focus-quick-meta">
+            <span>预计 ${task.estimated_minutes} 分钟</span>
+            <span>${task.schedule_block || "自动安排"}</span>
+            <strong class="tag timer-tag" data-elapsed="${Number(task.elapsed_seconds || 0)}" data-rendered-at="${renderedAt}" data-state="${task.timer_state || "stopped"}">已学 ${formatElapsed(task.elapsed_seconds || 0)}</strong>
           </div>
           <div class="completion-card">
             <span>做到这样就算完成</span>
             <strong>${task.completion_standard}</strong>
           </div>
           <div class="actions">
-            <button class="primary" data-action="${task.status === "stuck" ? "resume" : "start"}" data-id="${task.id}" ${startDisabled}>${startLabel}</button>
-            <button data-action="pause" data-id="${task.id}" ${pauseDisabled}>暂停</button>
-            <button class="warn" data-action="${doneAction}" data-id="${task.id}" ${doneDisabled}>${doneLabel}</button>
-            <button class="danger" data-action="stuck" data-id="${task.id}" ${stuckDisabled}>我卡住了</button>
+            ${primaryButton(task, doneAction, doneLabel, startDisabled, doneDisabled)}
+            ${pauseButton}
+            ${checkAfterPauseButton}
+            ${checkAfterStuckButton}
+            ${stuckButton}
           </div>
         `;
       }
