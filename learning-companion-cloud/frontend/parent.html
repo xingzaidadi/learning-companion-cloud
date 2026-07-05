@@ -7,11 +7,11 @@
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <main class="shell">
+    <main class="shell parent-shell">
       <header class="topbar">
         <div class="brand">
-          <h1>家长看板</h1>
-          <p>只看关键问题：开始了吗、P0 完成了吗、卡在哪里。</p>
+          <h1>家长端</h1>
+          <p>只回答三个问题：今天稳不稳、哪里要管、下一步做什么。</p>
         </div>
         <nav class="nav">
           <a href="/child">孩子端</a>
@@ -20,69 +20,53 @@
         </nav>
       </header>
 
-      <section class="grid">
-        <div class="card span-4 stat">
-          <span class="muted">今日完成</span>
-          <strong><span id="completed">0</span> / <span id="total">0</span></strong>
-        </div>
-        <div class="card span-4 stat">
-          <span class="muted">卡住任务</span>
-          <strong id="stuckCount">0</strong>
-        </div>
-        <div class="card span-4 stat">
-          <span class="muted">小测次数</span>
-          <strong id="quizCount">0</strong>
-        </div>
-      </section>
+      <section id="parentSummary" class="parent-hero"></section>
 
-      <section class="card" style="margin-top:16px">
-        <h2>孩子今日鼓励</h2>
-        <div id="rewards" class="task-list"></div>
-      </section>
+      <section class="parent-layout">
+        <section class="card parent-action-card">
+          <div class="section-head">
+            <div>
+              <h2>你现在只需要看这里</h2>
+              <p class="muted">需要家长介入才显示为重点；没风险就让孩子自己学。</p>
+            </div>
+            <span id="actionLevel" class="tag ok">正常</span>
+          </div>
+          <div id="parentActions" class="parent-action-list"></div>
+        </section>
 
-      <section class="card" style="margin-top:16px">
-        <h2>95+ 目标达成看板</h2>
-        <div id="target95" class="task-list"></div>
-      </section>
-
-      <section class="card" style="margin-top:16px">
-        <h2>Agent 学习结论</h2>
-        <div id="mastery" class="task-list"></div>
-      </section>
-
-      <section class="grid" style="margin-top:16px">
-        <div class="card span-8">
-          <h2>今日任务状态</h2>
-          <div id="tasks" class="task-list"></div>
-        </div>
-        <aside class="card span-4">
-          <h2>日报</h2>
-          <div id="report" class="muted">今晚 20:30 自动生成，也可手动结束今天。</div>
-          <button id="endDay" class="primary" style="margin-top:12px">生成今天日报</button>
+        <aside class="card parent-side-card">
+          <h2>今日操作</h2>
+          <div id="report" class="muted">晚上会自动生成日报；也可以现在手动生成。</div>
+          <div class="actions">
+            <button id="endDay" class="primary">生成今天日报</button>
+            <button id="weekReport">生成本周周报</button>
+          </div>
         </aside>
       </section>
 
-      <section class="grid" style="margin-top:16px">
-        <div class="card span-6">
-          <h2>小测结果</h2>
-          <div id="quizResults" class="task-list"></div>
-        </div>
-        <div class="card span-6">
-          <h2>明日复习队列</h2>
-          <div id="reviews" class="task-list"></div>
-        </div>
-      </section>
+      <section class="parent-detail-grid">
+        <details class="card" open>
+          <summary>今日任务进度</summary>
+          <div id="tasks" class="task-list compact-list"></div>
+        </details>
 
-      <section class="grid" style="margin-top:16px">
-        <div class="card span-6">
-          <h2>周报</h2>
-          <div id="weeklyReport" class="muted">可手动生成本周周报。</div>
-          <button id="weekReport" class="primary" style="margin-top:12px">生成本周周报</button>
-        </div>
-        <div class="card span-6">
-          <h2>提醒记录</h2>
-          <div id="notifications" class="task-list"></div>
-        </div>
+        <details class="card">
+          <summary>小测与掌握度</summary>
+          <div id="quizResults" class="task-list compact-list"></div>
+          <div id="mastery" class="task-list compact-list"></div>
+        </details>
+
+        <details class="card">
+          <summary>复习队列与提醒记录</summary>
+          <div id="reviews" class="task-list compact-list"></div>
+          <div id="notifications" class="task-list compact-list"></div>
+        </details>
+
+        <details class="card">
+          <summary>95+ 目标与周报</summary>
+          <div id="target95" class="task-list compact-list"></div>
+          <div id="weeklyReport" class="muted">还没有生成周报。</div>
+        </details>
       </section>
     </main>
     <div class="toast"></div>
@@ -90,105 +74,148 @@
     <script>
       const { api, toast, taskStatusTag, priorityTag } = window.LearningApp;
 
-      async function loadDashboard() {
-        const data = await api("/api/parent/dashboard");
-        document.querySelector("#completed").textContent = data.completed;
-        document.querySelector("#total").textContent = data.total;
-        document.querySelector("#stuckCount").textContent = data.stuck_tasks.length;
-        document.querySelector("#quizCount").textContent = data.quiz_results.length;
+      function percent(value) {
+        return `${Math.round((Number(value) || 0) * 100)}%`;
+      }
 
-        const rewards = document.querySelector("#rewards");
-        rewards.innerHTML = data.rewards && data.rewards.items.length ? "" : '<p class="muted">今天还没有奖励，完成小测后会出现。</p>';
-        if (data.rewards) {
-          const summary = document.createElement("article");
-          summary.className = "task-card";
-          summary.innerHTML = `<strong>今日积分：${data.rewards.points}</strong><p class="muted">${data.rewards.badges.join("、") || "继续加油"}</p>`;
-          rewards.append(summary);
-          data.rewards.items.forEach((item) => {
-            const card = document.createElement("article");
-            card.className = "task-card";
-            card.innerHTML = `<strong>+${item.points} ${item.badge}</strong><p class="muted">${item.reason}</p>`;
-            rewards.append(card);
+      function taskVerb(status) {
+        const map = {
+          not_started: "未开始",
+          in_progress: "学习中",
+          paused: "已暂停",
+          stuck: "卡住了",
+          checking: "检查中",
+          needs_revision: "要订正",
+          completed: "已完成",
+        };
+        return map[status] || status;
+      }
+
+      function buildParentActions(data) {
+        const actions = [];
+        const total = Number(data.total || 0);
+        const completed = Number(data.completed || 0);
+        const stuck = data.stuck_tasks || [];
+        const unfinished = data.unfinished_tasks || [];
+        const failedQuiz = (data.quiz_results || []).filter((item) => item.status !== "completed");
+        const weak = (data.target_95?.weak_points || []).slice(0, 2);
+        const adjustment = data.daily_adjustment || {};
+
+        if (!total) {
+          actions.push({
+            level: "warn",
+            title: "今天还没有任务",
+            body: "先去管理端生成今日任务，否则孩子端不会有学习内容。",
+            next: "打开管理端，点击“生成计划并生成今日任务”。",
           });
         }
+        stuck.slice(0, 3).forEach((task) => {
+          actions.push({
+            level: "danger",
+            title: `孩子卡住：${task.title}`,
+            body: task.description || "孩子已经点了“我卡住了”。",
+            next: "先让孩子说清楚卡在哪一步，不要直接讲答案；必要时让他再点一次卡住并写具体问题。",
+          });
+        });
+        failedQuiz.slice(0, 3).forEach((result) => {
+          actions.push({
+            level: "warn",
+            title: `小测未过：${result.title}`,
+            body: `结果 ${result.correct}/${result.total}，不要急着开新课。`,
+            next: result.mastery?.next_action || "先订正错题，再做同类复测。",
+          });
+        });
+        if (adjustment.recommendation) {
+          actions.push({
+            level: adjustment.should_slow_down ? "warn" : "ok",
+            title: adjustment.should_slow_down ? "明天建议放慢" : "节奏正常",
+            body: adjustment.recommendation,
+            next: adjustment.first_step || "按今日计划继续。",
+          });
+        }
+        weak.forEach((item) => {
+          actions.push({
+            level: "warn",
+            title: `薄弱点：${item.subject} · ${item.knowledge_point}`,
+            body: `当前 ${percent(item.mastery_score)}，目标 ${percent(item.target_score)}。`,
+            next: item.next_action || "明天优先安排 10 分钟补漏。",
+          });
+        });
+        if (!actions.length && total && completed === total) {
+          actions.push({
+            level: "ok",
+            title: "今天可以收工",
+            body: "任务已完成，没有明显卡点。",
+            next: "家长只需要表扬过程：按时开始、遇到问题愿意说、完成后愿意检查。",
+          });
+        }
+        if (!actions.length) {
+          actions.push({
+            level: "ok",
+            title: "目前不用介入",
+            body: "孩子端流程正常，先让孩子自己推进。",
+            next: unfinished[0] ? `下一个关注点：${unfinished[0].title}` : "等孩子完成小测后再看结果。",
+          });
+        }
+        return actions;
+      }
 
-        const targetBox = document.querySelector("#target95");
-        const target = data.target_95 || {};
-        const adjustment = data.daily_adjustment || {};
-        targetBox.innerHTML = `
-          <article class="task-card active">
-            <div class="task-head">
-              <div>
-                <strong>${target.headline || "正在建立 95+ 学习画像"}</strong>
-                <p class="muted">目标：${target.exam_target?.goal || "五年级上册语数英稳定 95+"}</p>
-              </div>
-              <span class="tag ok">达成度 ${Math.round((target.readiness_score || 0) * 100)}%</span>
+      function renderSummary(data) {
+        const total = Number(data.total || 0);
+        const completed = Number(data.completed || 0);
+        const stuckCount = (data.stuck_tasks || []).length;
+        const quizResults = data.quiz_results || [];
+        const quizPass = quizResults.filter((item) => item.status === "completed").length;
+        const progress = total ? Math.round((completed / total) * 100) : 0;
+        const risk = stuckCount ? "需要介入" : quizResults.some((item) => item.status !== "completed") ? "需要订正" : total && completed === total ? "今日稳定" : "进行中";
+        const riskClass = stuckCount ? "danger" : risk === "需要订正" ? "warn" : "ok";
+        document.querySelector("#parentSummary").innerHTML = `
+          <article class="parent-status-card ${riskClass}">
+            <span class="tag ${riskClass === "danger" ? "warn" : riskClass}">${risk}</span>
+            <h2>${data.date} 学习结论</h2>
+            <p>${total ? `完成 ${completed}/${total}，进度 ${progress}%；小测 ${quizPass}/${quizResults.length || 0} 通过。` : "今天还没有生成任务。"}</p>
+            <div class="parent-kpis">
+              <span><small>任务进度</small><strong>${completed}/${total}</strong></span>
+              <span><small>卡住</small><strong>${stuckCount}</strong></span>
+              <span><small>待复习</small><strong>${(data.review_items || []).length}</strong></span>
             </div>
-            <p><strong>今日排程建议：</strong>${(adjustment.recommendations || ["按计划推进"]).join("；")}</p>
           </article>
         `;
-        (target.weak_points || []).slice(0, 4).forEach((item) => {
-          const card = document.createElement("article");
-          card.className = "task-card";
-          card.innerHTML = `
-            <div class="task-head">
-              <div>
-                <strong>${item.subject} · ${item.skill}</strong>
-                <p class="muted">${(item.evidence || []).join("；") || "等待小测和卡住记录积累证据"}</p>
-              </div>
-              <span class="tag warn">${Math.round(item.mastery_score * 100)}% / 目标 ${Math.round(item.target_score * 100)}%</span>
-            </div>
-          `;
-          targetBox.append(card);
-        });
+      }
 
-        const mastery = document.querySelector("#mastery");
-        mastery.innerHTML = data.mastery && data.mastery.length ? "" : '<p class="muted">暂无 Agent 掌握度结论，完成小测后会出现。</p>';
-        (data.mastery || []).slice(0, 6).forEach((item) => {
+      function renderActions(data) {
+        const actions = buildParentActions(data);
+        const worst = actions.some((item) => item.level === "danger") ? "danger" : actions.some((item) => item.level === "warn") ? "warn" : "ok";
+        const actionLevel = document.querySelector("#actionLevel");
+        actionLevel.className = `tag ${worst === "danger" ? "warn" : worst}`;
+        actionLevel.textContent = worst === "danger" ? "需要介入" : worst === "warn" ? "需要关注" : "正常";
+        const box = document.querySelector("#parentActions");
+        box.innerHTML = "";
+        actions.slice(0, 5).forEach((item) => {
           const card = document.createElement("article");
-          card.className = "task-card";
+          card.className = `parent-action-item ${item.level}`;
           card.innerHTML = `
-            <div class="task-head">
-              <div>
-                <strong>${item.title}</strong>
-                <p class="muted">${item.diagnosis}</p>
-              </div>
-              <span class="tag ${["A","B"].includes(item.mastery_level) ? "ok" : "warn"}">掌握 ${item.mastery_level}</span>
-            </div>
-            <p><strong>明日动作：</strong>${item.next_action}</p>
+            <strong>${item.title}</strong>
+            <p>${item.body}</p>
+            <p><span>下一步</span>${item.next}</p>
           `;
-          mastery.append(card);
+          box.append(card);
         });
+      }
 
-        const tasks = document.querySelector("#tasks");
-        tasks.innerHTML = data.tasks.length ? "" : '<p class="muted">今天还没有任务。</p>';
-        data.tasks.forEach((task) => {
-          const card = document.createElement("article");
-          card.className = "task-card";
-          card.innerHTML = `
-            <div class="task-head">
-              <div>
-                <h3 class="task-title">${task.title}</h3>
-                <p class="muted">${task.description}</p>
-              </div>
-              <div class="task-meta">${priorityTag(task)}${taskStatusTag(task)}</div>
-            </div>
-            <p><strong>完成标准：</strong>${task.completion_standard}</p>
-          `;
-          tasks.append(card);
-        });
-
+      function renderReport(data) {
         const report = document.querySelector("#report");
         if (data.report) {
           report.classList.remove("muted");
           report.innerHTML = `
             <p>${data.report.summary}</p>
-            <p><strong>问题：</strong>${data.report.problems}</p>
             <p><strong>明天第一步：</strong>${data.report.tomorrow_first_step}</p>
             ${data.report.ten_minute_action ? `<p><strong>家长 10 分钟：</strong>${data.report.ten_minute_action}</p>` : ""}
           `;
+        } else {
+          report.classList.add("muted");
+          report.textContent = "晚上会自动生成日报；也可以现在手动生成。";
         }
-
         const weekly = document.querySelector("#weeklyReport");
         if (data.weekly_report) {
           weekly.classList.remove("muted");
@@ -198,48 +225,89 @@
             <p><strong>下周重点：</strong>${data.weekly_report.next_week_focus}</p>
           `;
         }
+      }
+
+      function renderDetails(data) {
+        const tasks = document.querySelector("#tasks");
+        tasks.innerHTML = data.tasks.length ? "" : '<p class="muted">今天还没有任务。</p>';
+        data.tasks.forEach((task) => {
+          const card = document.createElement("article");
+          card.className = "task-card compact-card";
+          card.innerHTML = `
+            <div class="task-head">
+              <div>
+                <strong>${task.title}</strong>
+                <p class="muted">${taskVerb(task.status)} · ${task.planned_start || "--"}-${task.planned_end || "--"}</p>
+              </div>
+              <div class="task-meta">${priorityTag(task)}${taskStatusTag(task)}</div>
+            </div>
+          `;
+          tasks.append(card);
+        });
 
         const quizBox = document.querySelector("#quizResults");
-        quizBox.innerHTML = data.quiz_results.length ? "" : '<p class="muted">暂无小测。</p>';
+        quizBox.innerHTML = data.quiz_results.length ? "<h3>小测结果</h3>" : '<p class="muted">暂无小测。</p>';
         data.quiz_results.forEach((result) => {
           const card = document.createElement("article");
-          card.className = "task-card";
-          const errorText = result.error_types && Object.keys(result.error_types).length
-            ? Object.entries(result.error_types).map(([key, value]) => `${key}×${value}`).join("、")
-            : "无错因";
+          card.className = "task-card compact-card";
           card.innerHTML = `
             <strong>${result.title}</strong>
             <span class="tag ${result.status === "completed" ? "ok" : "warn"}">${result.correct}/${result.total}</span>
-            <p class="muted">${result.wrong_items.length ? `错因：${errorText}` : "检查通过。"}</p>
-            ${result.mastery?.next_action ? `<p><strong>下一步：</strong>${result.mastery.next_action}</p>` : ""}
+            ${result.mastery?.next_action ? `<p class="muted">${result.mastery.next_action}</p>` : ""}
           `;
           quizBox.append(card);
         });
 
-        const reviews = document.querySelector("#reviews");
-        reviews.innerHTML = data.review_items.length ? "" : '<p class="muted">暂无待复习错题/卡点。</p>';
-        data.review_items.forEach((item) => {
+        const mastery = document.querySelector("#mastery");
+        mastery.innerHTML = data.mastery?.length ? "<h3>掌握度结论</h3>" : "";
+        (data.mastery || []).slice(0, 4).forEach((item) => {
           const card = document.createElement("article");
-          card.className = "task-card";
+          card.className = "task-card compact-card";
+          card.innerHTML = `
+            <strong>${item.subject || "综合"} · ${item.knowledge_point}</strong>
+            <span class="tag ${["A", "B"].includes(item.mastery_level) ? "ok" : "warn"}">掌握 ${item.mastery_level}</span>
+            <p class="muted">${item.next_action}</p>
+          `;
+          mastery.append(card);
+        });
+
+        const reviews = document.querySelector("#reviews");
+        reviews.innerHTML = data.review_items.length ? "<h3>复习队列</h3>" : '<p class="muted">暂无待复习错题/卡点。</p>';
+        data.review_items.slice(0, 8).forEach((item) => {
+          const card = document.createElement("article");
+          card.className = "task-card compact-card";
           card.innerHTML = `
             <strong>${item.question}</strong>
-            <div class="task-meta"><span class="tag">${item.status}</span><span class="tag">${item.review_stage || "D1"}</span><span class="tag">到期 ${item.due_date}</span><span class="tag">${item.reason}</span></div>
-            <p class="muted">${item.explanation || item.answer || "明天会优先生成复习任务。"}</p>
+            <p class="muted">${item.review_stage || "D1"} · 到期 ${item.due_date} · ${item.reason}</p>
           `;
           reviews.append(card);
         });
 
         const logs = document.querySelector("#notifications");
-        logs.innerHTML = data.notifications.length ? "" : '<p class="muted">暂无提醒记录。</p>';
-        data.notifications.forEach((log) => {
+        logs.innerHTML = data.notifications.length ? "<h3>提醒记录</h3>" : "";
+        data.notifications.slice(0, 5).forEach((log) => {
           const card = document.createElement("article");
-          card.className = "task-card";
-          card.innerHTML = `
-            <strong>${log.event_type} · ${log.status}</strong>
-            <p class="muted">${log.message.replaceAll("\n", "<br>")}</p>
-          `;
+          card.className = "task-card compact-card";
+          card.innerHTML = `<strong>${log.event_type} · ${log.status}</strong><p class="muted">${log.message.replaceAll("\n", "<br>")}</p>`;
           logs.append(card);
         });
+
+        const targetBox = document.querySelector("#target95");
+        const target = data.target_95 || {};
+        targetBox.innerHTML = `
+          <article class="task-card compact-card">
+            <strong>${target.headline || "正在建立 95+ 学习画像"}</strong>
+            <p class="muted">准备度：${target.readiness_score ?? "--"}；薄弱点 ${(target.weak_points || []).length} 个。</p>
+          </article>
+        `;
+      }
+
+      async function loadDashboard() {
+        const data = await api("/api/parent/dashboard");
+        renderSummary(data);
+        renderActions(data);
+        renderReport(data);
+        renderDetails(data);
       }
 
       document.querySelector("#endDay").addEventListener("click", async () => {
