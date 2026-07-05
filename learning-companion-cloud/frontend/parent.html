@@ -203,14 +203,31 @@
         });
       }
 
+      function shortReportText(value, max = 72) {
+        return String(value || "")
+          .replace(/联调验证[-_：:]?/g, "")
+          .replace(/-\d{4,}/g, "")
+          .replace(/stuck 标准答案[:：]?\s*/gi, "")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, max);
+      }
+
+      function reportLine(value, fallback) {
+        const text = shortReportText(value, 86);
+        return text || fallback;
+      }
+
       function renderReport(data) {
         const report = document.querySelector("#report");
         if (data.report) {
           report.classList.remove("muted");
           report.innerHTML = `
-            <p>${data.report.summary}</p>
-            <p><strong>明天第一步：</strong>${data.report.tomorrow_first_step}</p>
-            ${data.report.ten_minute_action ? `<p><strong>家长 10 分钟：</strong>${data.report.ten_minute_action}</p>` : ""}
+            <div class="parent-report-mini" data-quality="parent-compact-report">
+              <div><span>今天结论</span><strong>${reportLine(data.report.summary, "今天已生成学习记录。")}</strong></div>
+              <div><span>明天第一步</span><strong>${reportLine(data.report.tomorrow_first_step, "先从第一项任务开始。")}</strong></div>
+              ${data.report.ten_minute_action ? `<div><span>家长 10 分钟</span><strong>${reportLine(data.report.ten_minute_action, "听孩子复述今天学会了什么。")}</strong></div>` : ""}
+            </div>
           `;
         } else {
           report.classList.add("muted");

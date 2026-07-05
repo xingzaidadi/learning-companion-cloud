@@ -18,6 +18,28 @@ DAILY_DIR = REPORTS_DIR / "daily"
 WEEKLY_DIR = REPORTS_DIR / "weekly"
 
 
+def _short_title(value: str, max_len: int = 28) -> str:
+    import re
+
+    text = str(value or "").strip()
+    replacements = (
+        (r"联调验证[-_：:]?", ""),
+        (r"-\d{4,}$", ""),
+        (r"stuck 标准答案[:：]?\s*", ""),
+        (r"^D\d+\s*补漏[:：]\s*", "补漏："),
+    )
+    for pattern, replacement in replacements:
+        text = re.sub(pattern, replacement, text, flags=re.I)
+    text = " ".join(text.split())
+    return text[:max_len] + ("…" if len(text) > max_len else "")
+
+
+def _count_line(total: int, passed: list[str], failed: list[str]) -> str:
+    if not total:
+        return "小测：暂无。"
+    return f"小测：已完成 {len(passed)}/{total}，需补漏 {len(failed)} 项。"
+
+
 def _ensure_review_for_problem(conn: Connection, task: dict[str, Any], reason: str) -> None:
     exists = conn.execute(
         """
@@ -112,21 +134,19 @@ def build_daily_report(conn: Connection, student_id: int = 1, target_date: str |
             failed_titles.append(detail["title"])
         for key, value in detail["error_types"].items():
             error_totals[key] = error_totals.get(key, 0) + int(value)
-    quiz_summary = [f"{row['title']}：{row['correct']}/{row['total']}" for row in quiz_rows]
-
     summary = f"今日完成 {completed}/{total}。"
-    if quiz_summary:
-        summary += " 小测：" + "；".join(quiz_summary[:5]) + "。"
+    if quiz_rows:
+        summary += " " + _count_line(len(quiz_rows), passed_titles, failed_titles)
     weakest_point = max(error_totals.items(), key=lambda item: item[1])[0] if error_totals else "暂无明显薄弱点"
     error_text = "；".join(f"{key}×{value}" for key, value in error_totals.items())
-    problem_parts = [task["title"] for task in problems]
+    problem_parts = [_short_title(task["title"]) for task in problems]
     if error_text:
         problem_parts.append(f"错因：{error_text}")
     problem_text = "；".join(problem_parts) if problem_parts else "暂无明显卡点。"
     if unfinished:
-        tomorrow_first_step = f"先完成或订正：{unfinished[0]['title']}"
+        tomorrow_first_step = f"先完成或订正：{_short_title(unfinished[0]['title'])}"
     elif failed_titles:
-        tomorrow_first_step = f"先补漏：{failed_titles[0]}"
+        tomorrow_first_step = f"先补漏：{_short_title(failed_titles[0])}"
     elif error_totals:
         tomorrow_first_step = f"先做 10 分钟{weakest_point}复盘。"
     else:
@@ -143,7 +163,7 @@ def build_daily_report(conn: Connection, student_id: int = 1, target_date: str |
         parent_attention = "轻度关注"
         ten_minute_action = "只确认是否开始、是否知道第一步，不直接代做。"
     if quiz_details:
-        summary += f" 通过项：{('、'.join(passed_titles[:3]) or '暂无')}；需补漏：{('、'.join(failed_titles[:3]) or '暂无')}。"
+        summary += f" 通过项 {len(passed_titles)} 个，需补漏 {len(failed_titles)} 个。"
 
     now = utc_now()
     conn.execute(

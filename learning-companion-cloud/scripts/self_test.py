@@ -59,7 +59,7 @@ def assert_contains_all(text: str, needles: list[str], context: str) -> None:
 
 
 def run_static_encoding_check() -> None:
-    suspicious = ("锛", "鏈", "浠", "鈥", "�", "????")
+    suspicious = ("锛", "鏈", "浠", "鈥", "�", "?" * 4)
     files = [
         ROOT / "backend" / "app.py",
         ROOT / "backend" / "agent.py",

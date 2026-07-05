@@ -39,15 +39,19 @@ def main() -> None:
     agent_tools = read("backend/agent_tools.py")
     tool_registry = read("backend/agent_tool_registry.py")
     eval_runner = read("eval_harness/runners/eval_runner.py")
+    backend_report = read("backend/report.py")
+    backend_app = read("backend/app.py")
 
+    double_question = "?" * 2
+    four_questions = "?" * 4
     visible_question_mark_noise = [
-        'content: \"??\"',
-        "content: '??'",
-        ">??<",
-        "??</span>",
-        "??</small>",
-        "??</p>",
-        "????",
+        f'content: "{double_question}"',
+        f"content: '{double_question}'",
+        f">{double_question}<",
+        f"{double_question}</span>",
+        f"{double_question}</small>",
+        f"{double_question}</p>",
+        four_questions,
     ]
 
     checks: dict[str, list[tuple[str, bool]]] = {
@@ -58,14 +62,15 @@ def main() -> None:
             ("collapsible_queue", has_quality(child, "child-collapsible-queue")),
             ("progressive_disclosure", has_quality(child, "child-progressive-disclosure") and child.count("<details") >= 2),
             ("reduced_button_noise", "secondaryButtons" in child and "primaryButton" in child),
-            ("test_artifacts_hidden", "135442" not in child and "????" not in child),
+            ("test_artifacts_hidden", "135442" not in child and four_questions not in child),
         ],
         "parent_ui": [
             ("three_question_model", has_quality(parent, "parent-three-questions")),
             ("summary_first", has_quality(parent, "parent-summary-first") and "parentSummary" in parent),
             ("action_focus", has_quality(parent, "parent-action-focus") and "parentActions" in parent),
             ("progressive_details", has_quality(parent, "parent-progressive-details") and parent.count("<details") >= 4),
-            ("not_flat_dump", "??????" not in parent and "Agent ????" not in parent),
+            ("compact_report_cards", has_quality(parent, "parent-compact-report") and "parent-report-mini" in parent and "parent-report-mini" in css),
+            ("not_flat_dump", ("?" * 6) not in parent and f"Agent {four_questions}" not in parent),
         ],
         "admin_ui": [
             ("natural_plan_primary", has_quality(admin, "admin-natural-plan") and "quickPlanForm" in admin),
@@ -81,6 +86,8 @@ def main() -> None:
             ("trajectory_trace", "agent_trace_steps" in agent_tools and "trace_id" in agent_tools),
             ("multi_agent_eval", "LearningAgentAdapter" in eval_runner and "DemoAgentAdapter" in eval_runner),
             ("redteam_cases", count_cases("eval_harness/datasets/learning_agent/golden_set.yaml") >= 65),
+            ("daily_report_compaction", "def _short_title" in backend_report and "def _count_line" in backend_report and "quiz_summary" not in backend_report and four_questions not in backend_report),
+            ("display_sanitizer", all(key in backend_app for key in ("_clean_display_text", "_sanitize_task_for_display", "_sanitize_report_for_display"))),
         ],
         "tests": [
             ("senior_qa_gate", (ROOT / "scripts/senior_qa_gate.py").exists()),
@@ -96,7 +103,7 @@ def main() -> None:
             ("parent_layout", "parent-layout" in css and "parent-detail-grid" in css),
             ("agent_audit_styles", "agent-run-card" in css and "agent-trace-panel" in css),
             ("no_visible_question_mark_noise", not any(noise in child + parent + admin + css for noise in visible_question_mark_noise)),
-            ("css_collapsible_labels_not_garbled", 'content: "??"' not in css and "\\5c55\\5f00" in css and "\\6536\\8d77" in css),
+            ("css_collapsible_labels_not_garbled", f'content: "{double_question}"' not in css and "\\5c55\\5f00" in css and "\\6536\\8d77" in css),
         ],
     }
 

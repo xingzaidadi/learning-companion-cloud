@@ -8,7 +8,7 @@
     "parent_ui": {
       "score": 10.0,
       "failed": [],
-      "total": 5
+      "total": 6
     },
     "admin_ui": {
       "score": 10.0,
@@ -18,7 +18,7 @@
     "agent_design": {
       "score": 10.0,
       "failed": [],
-      "total": 5
+      "total": 7
     },
     "tests": {
       "score": 10.0,

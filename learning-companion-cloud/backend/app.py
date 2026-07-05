@@ -192,8 +192,88 @@ def _task_time_stats(conn, task_id: int, status: str | None = None) -> dict[str,
     }
 
 
+def _clean_display_text(value: object, max_len: int = 140) -> str:
+    text = str(value or "").strip()
+    replacements = (
+        (r"联调验证[-_：:]?", ""),
+        (r"-\d{4,}(?=\D|$)", ""),
+        (r"stuck 标准答案[:：]?\s*", ""),
+        (r"^D\d+\s*补漏[:：]\s*", "补漏："),
+        (r"\n?错因/来源[:：].*", ""),
+        (r"标准答案[:：].*", ""),
+    )
+    for pattern, replacement in replacements:
+        text = re.sub(pattern, replacement, text, flags=re.I)
+    text = re.sub(r"\?{4,}", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:max_len] + ("…" if len(text) > max_len else "")
+
+
+def _sanitize_visible_value(value: object, max_len: int = 180) -> object:
+    if isinstance(value, str):
+        return _clean_display_text(value, max_len)
+    if isinstance(value, list):
+        return [_sanitize_visible_value(item, max_len) for item in value]
+    if isinstance(value, dict):
+        return {key: _sanitize_visible_value(item, max_len) for key, item in value.items()}
+    return value
+
+
+def _sanitize_task_for_display(task: dict) -> dict:
+    sanitized = dict(task)
+    sanitized["title"] = _clean_display_text(sanitized.get("title"), 64)
+    sanitized["description"] = _clean_display_text(sanitized.get("description"), 180)
+    sanitized["completion_standard"] = _clean_display_text(sanitized.get("completion_standard"), 120)
+    return sanitized
+
+
+def _sanitize_report_for_display(report: dict | None) -> dict | None:
+    if not report:
+        return None
+    raw_report = dict(report)
+    sanitized = {key: _sanitize_visible_value(value, 160) for key, value in raw_report.items()}
+    for key, max_len in (
+        ("summary", 120),
+        ("problems", 120),
+        ("tomorrow_first_step", 80),
+        ("ten_minute_action", 120),
+    ):
+        if key in sanitized:
+            sanitized[key] = _clean_display_text(sanitized.get(key), max_len)
+    summary = str(sanitized.get("summary") or "")
+    if "小测：" in summary and (summary.count("；") >= 1 or summary.count("：") >= 3):
+        completed = raw_report.get("completed_count", 0)
+        total = raw_report.get("total_count", 0)
+        sanitized["summary"] = f"今日完成 {completed}/{total}。小测结果已记录，需订正的内容看下方小测区。"
+    return sanitized
+
+
+def _sanitize_review_item_for_display(item: dict) -> dict:
+    sanitized = dict(item)
+    for key, max_len in (
+        ("title", 64),
+        ("question", 120),
+        ("answer", 120),
+        ("description", 160),
+        ("completion_standard", 120),
+        ("explanation", 120),
+        ("reason", 80),
+    ):
+        if key in sanitized:
+            sanitized[key] = _clean_display_text(sanitized.get(key), max_len)
+    return sanitized
+
+
+def _sanitize_notification_for_display(item: dict) -> dict:
+    sanitized = dict(item)
+    for key, max_len in (("title", 64), ("message", 180)):
+        if key in sanitized:
+            sanitized[key] = _clean_display_text(sanitized.get(key), max_len)
+    return sanitized
+
+
 def _annotate_task(conn, task: dict) -> dict:
-    annotated = dict(task)
+    annotated = _sanitize_task_for_display(dict(task))
     latest_quiz = conn.execute(
         """
         SELECT status
@@ -404,7 +484,7 @@ def child_page(_: str = Depends(require_child_auth)) -> HTMLResponse:
         if not rows:
             result = agent_daily_tasks(conn, 1, today)
             rows = result["tasks"]
-        tasks = [dict(row) for row in rows]
+        tasks = _annotate_tasks(conn, [dict(row) for row in rows])
     done_count = sum(1 for task in tasks if task.get("status") == "completed")
     total_count = len(tasks)
     fallback_html = _render_child_task_fallback(tasks)
@@ -960,7 +1040,7 @@ async def task_event(task_id: int, request: Request, _: str = Depends(require_ch
                     "status": current_status,
                     **_task_time_stats(conn, task_id, current_status),
                     "blocked": True,
-                    "blocked_by": {"id": blocker["id"], "title": blocker["title"], "status": blocker["status"]},
+                    "blocked_by": _sanitize_task_for_display({"id": blocker["id"], "title": blocker["title"], "status": blocker["status"]}),
                 }
         if event_type == "pause" and current_status != "in_progress":
             return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "already_applied": True}
@@ -1000,7 +1080,7 @@ def get_quiz(task_id: int, _: str = Depends(require_child_or_admin_auth)) -> dic
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
         result = agent_generate_quiz(conn, task_id)
-        return {"task": dict(task), "items": result["items"], "quality": result.get("quality", {})}
+        return {"task": _sanitize_task_for_display(dict(task)), "items": result["items"], "quality": result.get("quality", {})}
 
 
 @app.get("/api/agent/task-guidance/{task_id}")
@@ -1104,11 +1184,14 @@ def parent_dashboard(
 ) -> dict[str, object]:
     today = target_date or date.today().isoformat()
     with get_conn() as conn:
-        tasks = dict_rows(
-            conn.execute(
-                "SELECT * FROM daily_tasks WHERE student_id = ? AND date = ? ORDER BY priority, id",
-                (student_id, today),
-            ).fetchall()
+        tasks = _annotate_tasks(
+            conn,
+            dict_rows(
+                conn.execute(
+                    "SELECT * FROM daily_tasks WHERE student_id = ? AND date = ? ORDER BY priority, id",
+                    (student_id, today),
+                ).fetchall()
+            ),
         )
         quiz_results = dict_rows(
             conn.execute(
@@ -1123,10 +1206,12 @@ def parent_dashboard(
             ).fetchall()
         )
         for result in quiz_results:
+            result["title"] = _clean_display_text(result.get("title"), 64)
             result["wrong_items"] = loads(result.pop("wrong_items_json"), [])
             result["score"] = loads(result.pop("score_json", None), {})
             result["error_types"] = loads(result.pop("error_types_json", None), {})
             result["mastery"] = loads(result.pop("mastery_json", None), {})
+            result["wrong_items"] = _sanitize_visible_value(result["wrong_items"], 180)
         report = conn.execute(
             "SELECT * FROM daily_reports WHERE student_id = ? AND date = ?",
             (student_id, today),
@@ -1167,13 +1252,13 @@ def parent_dashboard(
             "stuck_tasks": [task for task in tasks if task["status"] == "stuck"],
             "unfinished_tasks": [task for task in tasks if task["status"] != "completed"],
             "quiz_results": quiz_results,
-            "report": dict(report) if report else None,
-            "weekly_report": dict(weekly_report) if weekly_report else None,
-            "review_items": review_rows,
+            "report": _sanitize_report_for_display(dict(report) if report else None),
+            "weekly_report": _sanitize_report_for_display(dict(weekly_report) if weekly_report else None),
+            "review_items": [_sanitize_review_item_for_display(item) for item in review_rows],
             "rewards": today_rewards(conn, student_id, today),
             "mastery": agent_overview_data["mastery"],
             "agent_runs": agent_overview_data["runs"][:10],
-            "notifications": notifications,
+            "notifications": [_sanitize_notification_for_display(item) for item in notifications],
             "target_95": target_insights,
             "daily_adjustment": adjustment,
         }
