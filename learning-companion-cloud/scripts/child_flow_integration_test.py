@@ -195,6 +195,50 @@ def run_child_flow() -> None:
             assert_true(needle in child_html_after, f"刷新页面后状态应恢复，缺少 {needle}")
 
         with get_conn() as conn:
+            from backend.db import utc_now
+
+            review_id = conn.execute(
+                """
+                INSERT INTO review_items (
+                    student_id, source_task_id, question, answer, explanation,
+                    reason, due_date, status, review_stage, created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 'D1', ?, ?)
+                """,
+                (
+                    1,
+                    task1,
+                    "拼写：中译英：错因/来源",
+                    "stuck",
+                    "孩子把卡住来源写错，需要复默 stuck。",
+                    "wrong_english_spelling",
+                    date.today().isoformat(),
+                    utc_now(),
+                    utc_now(),
+                ),
+            ).lastrowid
+        review_tasks = assert_status(client.post("/api/daily-tasks/generate"))["tasks"]
+        review_task = next(task for task in review_tasks if str(task["check_method"]) == "review_quiz")
+        review_task_id = int(review_task["id"])
+        review_quiz = assert_status(client.get(f"/api/daily-tasks/{review_task_id}/quiz"))
+        review_text = "\n".join(item["question"] for item in review_quiz["items"])
+        assert_true("请重新回答或重做这个问题" not in review_text, f"补漏复测不能再用空泛模板题：{review_text}")
+        assert_true("这次你打算怎样避免同类错误" not in review_text, f"补漏复测不能再问空泛反思题：{review_text}")
+        assert_true("标准答案" not in review_task["description"] and "stuck" not in review_task["description"], f"补漏任务卡不应暴露标准答案：{review_task}")
+        assert_true(any(item["question_type"] == "english_spelling" for item in review_quiz["items"]), f"英文错词补漏应生成可判分默写题：{review_quiz}")
+        assert_true(all(item["question_type"] != "english_sentence_make" for item in review_quiz["items"]), f"英文错词补漏不应用造句开放题卡孩子：{review_quiz}")
+        with get_conn() as conn:
+            review_answers = {
+                str(row["id"]): row["answer"]
+                for row in conn.execute("SELECT id, answer FROM quiz_items WHERE daily_task_id = ?", (review_task_id,)).fetchall()
+            }
+        review_pass = assert_status(client.post(f"/api/daily-tasks/{review_task_id}/quiz", json={"answers": review_answers}))
+        assert_true(review_pass["status"] == "completed", f"补漏复测正确答案应能通过：{review_pass}")
+        with get_conn() as conn:
+            review_status = conn.execute("SELECT status FROM review_items WHERE id = ?", (review_id,)).fetchone()[0]
+        assert_true(review_status == "done", f"补漏复测通过后 review_item 应完成，实际 {review_status}")
+
+        with get_conn() as conn:
             conn.execute("DELETE FROM daily_tasks")
             conn.execute("DELETE FROM task_sources")
 

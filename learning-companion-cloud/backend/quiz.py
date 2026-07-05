@@ -9,7 +9,7 @@ from typing import Any
 from .db import dumps, loads, utc_now
 from .ai_provider import call_ai_json_with_meta, generate_ai_questions
 from .curriculum import find_curriculum_context
-from .question_engine import build_content_quiz
+from .question_engine import build_content_quiz, build_variant_questions
 from .review import create_review_item
 from .rewards import add_reward
 from .settings import get_settings
@@ -74,6 +74,24 @@ def _choice(question: str, options: list[str], answer: str, explanation: str) ->
 
 
 def _templates(conn: Connection, task: dict[str, Any]) -> list[dict[str, Any]]:
+    if task.get("check_method") == "review_quiz":
+        review_link = conn.execute(
+            """
+            SELECT note
+            FROM task_progress
+            WHERE daily_task_id = ? AND event_type = 'review_item'
+            ORDER BY id DESC LIMIT 1
+            """,
+            (task["id"],),
+        ).fetchone()
+        review_item = None
+        if review_link and str(review_link["note"]).isdigit():
+            review_item = conn.execute("SELECT * FROM review_items WHERE id = ?", (int(review_link["note"]),)).fetchone()
+        if review_item:
+            variants = build_variant_questions(review_item["question"], review_item["answer"])
+            if variants:
+                return variants[:4]
+
     title = task.get("title", "今天任务")
     standard = task.get("completion_standard", "完成任务")
     context = _source_context(conn, task)
@@ -139,10 +157,9 @@ def _templates(conn: Connection, task: dict[str, Any]) -> list[dict[str, Any]]:
         return content_items
 
     if task.get("check_method") == "review_quiz":
-        return [
-            _short(f"请重新回答或重做这个问题：{title}", "已订正", "复习任务需要把正确过程说出来。"),
-            _short("这次你打算怎样避免同类错误？", "说出避免方法", "能说出一个具体方法即可。"),
-            _choice("订正后还不确定怎么办？", ["先跳过", "标记并请家长协助", "直接完成"], "标记并请家长协助", "复习任务不能糊弄，需要留下线索。"),
+        variants = build_variant_questions(title, standard)
+        return variants[:4] if variants else [
+            _choice("复测时遇到不会，最应该怎么做？", ["空着跳过", "写清卡点并请家长协助", "随便填"], "写清卡点并请家长协助", "补漏复测要留下明确卡点。"),
         ]
 
     if category == "summer_homework":
@@ -369,6 +386,11 @@ def _fallback_open_grade(question_type: str, user_answer: str, expected: str) ->
         hits = sum(1 for word in expected_words if word in user_words)
         return hits >= max(1, min(2, len(expected_words))), "本地检查核心英文词"
     if question_type == "english_sentence_make":
+        required = re.search(r"包含\s+([A-Za-z][A-Za-z'-]{2,})", expected or "")
+        if required:
+            required_word = required.group(1).lower()
+            user_words = {word.lower() for word in re.findall(r"[A-Za-z]+", user_answer)}
+            return required_word in user_words and len(user_words) >= 3, f"本地检查是否包含 {required_word} 并写成句子"
         return bool(re.search(r"[A-Za-z]+", text)) and len(re.findall(r"[A-Za-z]+", text)) >= 3, "本地检查完整英文短句"
     if question_type == "math_step_explain":
         return len(text) >= 6 and any(key in text for key in ("先", "再", "因为", "公式", "小数", "步骤", "×", "÷")), "本地检查是否说出步骤"

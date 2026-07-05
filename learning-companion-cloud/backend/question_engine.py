@@ -416,6 +416,15 @@ def build_content_quiz(
 
 def build_variant_questions(question: str, answer: str = "") -> list[dict[str, Any]]:
     text = question + " " + answer
+    answer_text = str(answer or "").strip()
+    if re.fullmatch(r"[A-Za-z][A-Za-z'-]{2,}", answer_text):
+        first_letter = answer_text[0]
+        length_hint = len(answer_text)
+        return [
+            _exact("补漏默写：请家长读中文或原错词提示，孩子重新写英文单词。", answer_text, "补漏默写重点检查拼写是否完整。", "english_spelling"),
+            _exact(f"首字母补全：这个错词以 {first_letter} 开头，共 {length_hint} 个字母，请写完整单词。", answer_text, "根据首字母和长度回忆完整拼写。", "english_spelling"),
+            _choice("复查英文错词时，最有效的一步是什么？", ["只看一眼", "遮住答案再默写", "直接跳过"], "遮住答案再默写", "错词要遮住答案独立默写，才能确认掌握。", "choice"),
+        ]
     if any(key in text for key in ("听写", "拼音", "生字", "词语")):
         return [
             _exact("变式听写：请家长再读一遍错词，孩子重新输入。", answer or "已订正", "错字需要当天订正，第二天复听写。", "chinese_word_dictation"),
