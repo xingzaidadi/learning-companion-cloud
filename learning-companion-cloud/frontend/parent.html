@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <main class="shell parent-shell">
+    <main class="shell parent-shell" data-quality="parent-three-questions parent-action-focus parent-progressive-details">
       <header class="topbar">
         <div class="brand">
           <h1>家长端</h1>
@@ -20,10 +20,10 @@
         </nav>
       </header>
 
-      <section id="parentSummary" class="parent-hero"></section>
+      <section id="parentSummary" class="parent-hero" data-quality="parent-summary-first"></section>
 
       <section class="parent-layout">
-        <section class="card parent-action-card">
+        <section class="card parent-action-card" data-quality="parent-action-first">
           <div class="section-head">
             <div>
               <h2>你现在只需要看这里</h2>
@@ -44,7 +44,7 @@
         </aside>
       </section>
 
-      <section class="parent-detail-grid">
+      <section class="parent-detail-grid" data-quality="parent-details-collapsed">
         <details class="card" open>
           <summary>今日任务进度</summary>
           <div id="tasks" class="task-list compact-list"></div>

@@ -62,7 +62,7 @@ a {
 
 .brand h1 {
   margin: 0;
-  font-size: clamp(30px, 5vw, 52px);
+  font-size: clamp(28px, 4vw, 44px);
   letter-spacing: -0.03em;
   background: linear-gradient(120deg, #172033 0%, #3867ff 48%, #7c3aed 100%);
   -webkit-background-clip: text;
@@ -134,7 +134,7 @@ button:disabled {
   border: 1px solid rgba(230, 232, 239, 0.86);
   border-radius: var(--radius);
   padding: 20px;
-  box-shadow: 0 14px 34px rgba(36, 48, 85, 0.08);
+  box-shadow: 0 10px 26px rgba(36, 48, 85, 0.07);
 }
 
 .span-4 {
@@ -233,6 +233,57 @@ button:disabled {
   background: #f4f6fb;
 }
 
+
+
+.child-detail-card {
+  padding: 0;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 8px 22px rgba(36, 48, 85, 0.05);
+}
+
+.child-detail-card > summary,
+details.card > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 20px;
+  font-weight: 1000;
+}
+
+.child-detail-card > summary::-webkit-details-marker,
+details.card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.child-detail-card > summary::after,
+details.card > summary::after {
+  content: "??";
+  border-radius: 999px;
+  padding: 6px 12px;
+  color: var(--primary);
+  background: var(--soft-blue);
+  font-size: 12px;
+}
+
+.child-detail-card[open] > summary::after,
+details.card[open] > summary::after {
+  content: "??";
+}
+
+.child-detail-card summary small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.child-detail-card .workspace-layout,
+.child-detail-card .compact-task-list {
+  padding: 0 20px 20px;
+}
+
 .task-list {
   display: flex;
   flex-direction: column;
@@ -264,8 +315,8 @@ button:disabled {
 }
 
 .full-workspace-card {
-  min-height: 560px;
-  background: rgba(255, 255, 255, 0.94);
+  min-height: auto;
+  background: rgba(255, 255, 255, 0.78);
 }
 
 .queue-card {

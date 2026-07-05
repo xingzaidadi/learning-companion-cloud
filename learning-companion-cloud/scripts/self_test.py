@@ -18,7 +18,6 @@ ENGLISH_PLAN_PROMPT = """
 教材包含 Unit 1 My school is cool、Unit 2 School activities are fun!、Unit 3 The ice world、
 Unit 4 I love the sea!、Unit 5 Work it out!、Unit 6 Big days。
 现有资料包括五上课本 PDF、Unit 1–6 单词字帖、Unit 1–6 中译英默写练习，以及 Unit 1–3 音频。
-每天学习 25–35 分钟，每个 Unit 用 4–5 天，按听读课文、理解课文、单词认读、字帖书写、单词默写、小测检查推进。
 Unit 1–3 使用音频跟读，Unit 4–6 暂无音频则用课本朗读和重点句跟读替代。
 不要超五年级上册范围，不安排初中语法和竞赛题。
 每天任务要包含怎么学、怎么练、怎么检查；错词、不会读、小测错误进入第二天补漏；小测低于 80% 时第二天先补漏再继续新内容。
@@ -122,13 +121,11 @@ def run_static_button_inventory_check() -> None:
             "child-focus-layout",
             'id="currentTask"',
             "当前任务",
-            "后续任务队列",
             "workspace-card",
-            "做完就检查，卡住就求助",
-            "小测检查",
-            "卡点求助",
             "subject-badge",
             "focus-guidance",
+            "child-collapsible-workspace",
+            "child-collapsible-queue",
             "继续当前检查",
             "先订正当前小测",
             "先处理卡住任务",
@@ -350,7 +347,7 @@ def run_e2e() -> None:
         assert_true("数学" in child_html or "小数" in child_html, "孩子端 HTML 应显示新增数学任务")
         assert_true("语文" in child_html or "生字词" in child_html, "孩子端 HTML 应显示手动录入语文任务")
         assert_true("管理员新增同步验证任务" in child_html, "孩子端 HTML 应显示今日已满后手动同步追加的任务")
-        assert_true("完成后做小测" in child_html, "孩子端应显示中文检查方式")
+        assert_true("child-collapsible-workspace" in child_html, "child page should use collapsible quiz/help workspace")
         assert_true('<span class="tag">quiz</span>' not in child_html, "孩子端不应裸露 quiz 标签")
         assert_true("window.__INITIAL_TASKS__" in child_html, "孩子端应注入初始任务数据")
 

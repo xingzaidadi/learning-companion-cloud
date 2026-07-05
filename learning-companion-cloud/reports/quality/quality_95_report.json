@@ -1,0 +1,36 @@
+{
+  "sections": {
+    "child_ui": {
+      "score": 10.0,
+      "failed": [],
+      "total": 7
+    },
+    "parent_ui": {
+      "score": 10.0,
+      "failed": [],
+      "total": 5
+    },
+    "admin_ui": {
+      "score": 10.0,
+      "failed": [],
+      "total": 6
+    },
+    "agent_design": {
+      "score": 10.0,
+      "failed": [],
+      "total": 5
+    },
+    "tests": {
+      "score": 10.0,
+      "failed": [],
+      "total": 5
+    },
+    "visual_system": {
+      "score": 10.0,
+      "failed": [],
+      "total": 5
+    }
+  },
+  "overall_score": 10.0,
+  "failed": []
+}

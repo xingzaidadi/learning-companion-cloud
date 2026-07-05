@@ -8,7 +8,7 @@ from typing import Any
 class ToolSpec:
     name: str
     description: str
-    input_schema: dict[str, Any]
+    parameters: dict[str, Any]
     output_schema: dict[str, Any]
     permission: str = "agent"
     side_effect: str = "read"
@@ -20,27 +20,27 @@ TOOLS: dict[str, ToolSpec] = {
     "search_material_chunks": ToolSpec(
         name="search_material_chunks",
         description="检索教材/RAG 切片，用于绑定题目来源和回答依据。",
-        input_schema={"type": "object", "required": ["query"], "properties": {"query": {"type": "string"}, "subject": {"type": "string"}}},
+        parameters={"type": "object", "required": ["query"], "properties": {"query": {"type": "string"}, "subject": {"type": "string"}}},
         output_schema={"type": "array", "items": {"type": "object"}},
     ),
     "generate_daily_tasks": ToolSpec(
         name="generate_daily_tasks",
         description="根据学习计划、掌握度和复习需求生成当天任务。",
-        input_schema={"type": "object", "properties": {"student_id": {"type": "integer"}, "target_date": {"type": "string"}}},
+        parameters={"type": "object", "properties": {"student_id": {"type": "integer"}, "target_date": {"type": "string"}}},
         output_schema={"type": "object"},
         side_effect="write",
     ),
     "generate_quiz": ToolSpec(
         name="generate_quiz",
         description="为每日任务生成带来源、难度、评分规则的小测题。",
-        input_schema={"type": "object", "required": ["task_id"], "properties": {"task_id": {"type": "integer"}}},
+        parameters={"type": "object", "required": ["task_id"], "properties": {"task_id": {"type": "integer"}}},
         output_schema={"type": "object"},
         side_effect="write",
     ),
     "grade_quiz": ToolSpec(
         name="grade_quiz",
         description="批改小测，更新错题、掌握度和复习计划。",
-        input_schema={"type": "object", "required": ["task_id", "answers"], "properties": {"task_id": {"type": "integer"}, "answers": {"type": "object"}}},
+        parameters={"type": "object", "required": ["task_id", "answers"], "properties": {"task_id": {"type": "integer"}, "answers": {"type": "object"}}},
         output_schema={"type": "object"},
         side_effect="write",
         idempotent=False,
@@ -48,14 +48,14 @@ TOOLS: dict[str, ToolSpec] = {
     "assist_stuck": ToolSpec(
         name="assist_stuck",
         description="孩子卡住时给出分步提示和微练习，不直接泄露答案。",
-        input_schema={"type": "object", "required": ["task_id"], "properties": {"task_id": {"type": "integer"}, "note": {"type": "string"}}},
+        parameters={"type": "object", "required": ["task_id"], "properties": {"task_id": {"type": "integer"}, "note": {"type": "string"}}},
         output_schema={"type": "object"},
         side_effect="write",
     ),
     "write_memory": ToolSpec(
         name="write_memory",
         description="写入长期记忆、错题或卡点。",
-        input_schema={"type": "object", "properties": {"subject": {"type": "string"}, "skill": {"type": "string"}, "content": {"type": "string"}}},
+        parameters={"type": "object", "properties": {"subject": {"type": "string"}, "skill": {"type": "string"}, "content": {"type": "string"}}},
         output_schema={"type": "object"},
         side_effect="write",
     ),
