@@ -168,6 +168,56 @@
           <section class="card" style="margin-top:16px">
             <h2>学习资料库</h2>
             <p class="muted">把课本 PDF 摘要、单词表、听写词、音频清单粘贴进来，Agent 出题会优先引用这些资料。</p>
+            <div class="grid" style="margin-bottom:12px">
+              <form id="fileImportForm" class="card span-6">
+                <h3>本地 PDF/TXT 导入</h3>
+                <p class="muted">支持你提供的教材 PDF、听写词 TXT、单词表 MD。扫描版 PDF 需要先 OCR。</p>
+                <div class="form-grid">
+                  <label>科目
+                    <input name="subject" placeholder="语文 / 数学 / 英语" />
+                  </label>
+                  <label>资料类型
+                    <select name="material_type">
+                      <option value="textbook_pdf">课本/PDF</option>
+                      <option value="word_list">单词表</option>
+                      <option value="dictation">听写词</option>
+                      <option value="notes">学习笔记</option>
+                    </select>
+                  </label>
+                  <label class="full">本地文件路径
+                    <input name="file_path" required placeholder="C:\Users\MI\Downloads\26秋人教五上数学电子课本.pdf" />
+                  </label>
+                  <label class="full">自定义标题（可选）
+                    <input name="title" placeholder="例如：人教五上数学电子课本" />
+                  </label>
+                  <button class="primary">导入并建立 RAG</button>
+                </div>
+              </form>
+              <form id="urlImportForm" class="card span-6">
+                <h3>公开 URL 导入</h3>
+                <p class="muted">仅用于国家平台等公开合法资料页；动态页如提取失败，请下载 PDF 或复制正文。</p>
+                <div class="form-grid">
+                  <label>科目
+                    <input name="subject" placeholder="语文 / 数学 / 英语" />
+                  </label>
+                  <label>资料类型
+                    <select name="material_type">
+                      <option value="notes">网页资料</option>
+                      <option value="textbook_pdf">教材线索</option>
+                      <option value="word_list">单词表</option>
+                    </select>
+                  </label>
+                  <label class="full">公开 URL
+                    <input name="url" required placeholder="https://basic.smartedu.cn/..." />
+                  </label>
+                  <label class="full">自定义标题（可选）
+                    <input name="title" />
+                  </label>
+                  <button class="primary">导入公开网页</button>
+                </div>
+              </form>
+            </div>
+            <div id="coverage" class="task-list" style="margin-bottom:12px"></div>
             <form id="materialForm" class="form-grid">
               <label>科目
                 <input name="subject" placeholder="语文 / 数学 / 英语" />
@@ -271,9 +321,28 @@
               </div>
               <span class="tag">${item.content_text ? "已录内容 · 已进 RAG" : "仅文件线索"}</span>
             </div>
+            ${item.config?.source ? `<p class="muted">来源：${item.config.source}；覆盖率：${Math.round((item.coverage?.coverage_ratio || 0) * 100)}%</p>` : ""}
           `;
           box.append(card);
         });
+      }
+
+      async function loadCoverage() {
+        const data = await api("/api/materials/coverage");
+        const box = document.querySelector("#coverage");
+        if (!box) return;
+        box.innerHTML = `
+          <article class="task-card active">
+            <div class="task-head">
+              <strong>RAG 覆盖矩阵：${Math.round((data.overall_ratio || 0) * 100)}%</strong>
+              <span class="tag">目标 95+ 的资料底座</span>
+            </div>
+            ${(data.subjects || []).map((subject) => `
+              <p><strong>${subject.subject}</strong>：已覆盖 ${subject.covered_sections.join("、") || "暂无"}；缺口 ${subject.missing_sections.join("、") || "无"}</p>
+              ${subject.warnings?.length ? `<p class="muted">提醒：${subject.warnings.join("；")}</p>` : ""}
+            `).join("")}
+          </article>
+        `;
       }
 
       async function loadAgentRuns() {
@@ -304,7 +373,7 @@
       }
 
       async function refreshAll() {
-        await Promise.all([loadSources(), loadTodayTasks(), loadMaterials(), loadAgentRuns()]);
+        await Promise.all([loadSources(), loadTodayTasks(), loadMaterials(), loadCoverage(), loadAgentRuns()]);
       }
 
       function renderQuickPlanResult(plan, today) {
@@ -410,6 +479,39 @@
         toast(`资料已保存，RAG 切片 ${result.rag_index?.count || 0} 条，后续出题会引用`);
         event.target.reset();
         await loadMaterials();
+        await loadCoverage();
+      });
+
+      document.querySelector("#fileImportForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const submit = event.submitter;
+        submit.disabled = true;
+        submit.textContent = "导入中...";
+        try {
+          const result = await api("/api/materials/import-file", { method: "POST", body: new FormData(event.target) });
+          toast(`文件已导入，RAG 切片 ${result.rag_index?.count || 0} 条`);
+          event.target.reset();
+          await Promise.all([loadMaterials(), loadCoverage()]);
+        } finally {
+          submit.disabled = false;
+          submit.textContent = "导入并建立 RAG";
+        }
+      });
+
+      document.querySelector("#urlImportForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const submit = event.submitter;
+        submit.disabled = true;
+        submit.textContent = "导入中...";
+        try {
+          const result = await api("/api/materials/import-url", { method: "POST", body: new FormData(event.target) });
+          toast(`网页已导入，RAG 切片 ${result.rag_index?.count || 0} 条`);
+          event.target.reset();
+          await Promise.all([loadMaterials(), loadCoverage()]);
+        } finally {
+          submit.disabled = false;
+          submit.textContent = "导入公开网页";
+        }
       });
 
       document.querySelector("#seedDemo").addEventListener("click", async () => {

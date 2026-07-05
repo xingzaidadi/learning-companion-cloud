@@ -56,6 +56,32 @@ SKILL_MAP = {
 }
 
 
+COVERAGE_REQUIREMENTS = {
+    "语文": [
+        ("课文正文", ["课文", "阅读", "白鹭", "落花生", "桂花雨", "少年中国说"]),
+        ("生字词", ["生字", "词语", "听写", "会写", "会认"]),
+        ("课后题", ["课后", "思考", "练习", "默读", "背诵"]),
+        ("语文园地", ["语文园地", "交流平台", "词句段运用"]),
+        ("日积月累", ["日积月累", "背默", "古诗", "名言"]),
+        ("习作", ["习作", "作文", "写作"]),
+    ],
+    "数学": [
+        ("单元目录", ["目录", "单元", "小数乘法", "位置", "小数除法", "可能性", "多边形"]),
+        ("概念例题", ["例", "例题", "想一想", "说一说"]),
+        ("计算练习", ["算一算", "计算", "竖式", "口算"]),
+        ("应用题", ["解决问题", "应用", "列式"]),
+        ("易错验算", ["验算", "检查", "易错", "改错"]),
+    ],
+    "英语": [
+        ("Unit目录", ["Unit", "unit", "Module", "Lesson"]),
+        ("单词表", ["单词", "word", "Words", "vocabulary"]),
+        ("句型", ["句型", "sentence", "There", "Can", "What", "Where"]),
+        ("课文/对话", ["Story", "Listen", "Read", "Talk", "课文", "对话"]),
+        ("听写/音频", ["听写", "音频", "listen", "dictation", ".mp3"]),
+    ],
+}
+
+
 SUBJECT_KEYWORDS = {
     "语文": ["语文", "课文", "生字", "词语", "白鹭", "日积月累", "语文园地", "习作", "阅读"],
     "数学": ["数学", "小数", "除法", "乘法", "计算", "应用题", "例题", "列式"],
@@ -100,6 +126,15 @@ def infer_skill(subject: str, text: str) -> str:
             return "句型替换"
         return "词义匹配"
     return "任务执行"
+
+
+def infer_section(subject: str, text: str) -> str:
+    for section, keywords in COVERAGE_REQUIREMENTS.get(subject, []):
+        if any(keyword in text for keyword in keywords):
+            return section
+    if "日积月累" in text:
+        return "日积月累"
+    return "正文/资料"
 
 
 def skill_targets() -> dict[str, Any]:
@@ -258,6 +293,52 @@ def _split_material_text(text: str) -> list[str]:
     return chunks[:80]
 
 
+def _infer_unit(text: str) -> str:
+    match = re.search(r"(Unit\s*\d+|第[一二三四五六七八九十\d]+单元|第\s*\d+\s*单元)", text, flags=re.I)
+    return match.group(1).replace(" ", "") if match else ""
+
+
+def _infer_lesson(text: str) -> str:
+    match = re.search(r"(第[一二三四五六七八九十\d]+课|Lesson\s*\d+|课文[：:]\s*[^\n]{1,30})", text, flags=re.I)
+    return match.group(1).strip() if match else ""
+
+
+def analyze_material_coverage(title: str, content: str, subject: str = "") -> dict[str, Any]:
+    resolved_subject = subject or infer_subject(f"{title}\n{content[:1500]}")
+    text = f"{title}\n{content}"
+    requirements = COVERAGE_REQUIREMENTS.get(resolved_subject, [])
+    sections: list[dict[str, Any]] = []
+    matched_count = 0
+    for section, keywords in requirements:
+        hits = [keyword for keyword in keywords if keyword.lower() in text.lower()]
+        matched = bool(hits)
+        matched_count += int(matched)
+        sections.append(
+            {
+                "section": section,
+                "covered": matched,
+                "hits": hits[:6],
+                "importance": "high" if section in {"生字词", "日积月累", "计算练习", "单词表", "听写/音频"} else "medium",
+            }
+        )
+    ratio = round(matched_count / len(requirements), 2) if requirements else 0
+    missing = [item["section"] for item in sections if not item["covered"]]
+    warnings: list[str] = []
+    if resolved_subject == "语文" and "日积月累" in missing:
+        warnings.append("语文资料缺少“日积月累”，背默类考点无法精准覆盖。")
+    if resolved_subject == "英语" and "单词表" in missing:
+        warnings.append("英语资料缺少单词表，听写/拼写题会退化为规则兜底。")
+    if resolved_subject == "数学" and "计算练习" in missing:
+        warnings.append("数学资料缺少计算练习，计算准确率训练不够精准。")
+    return {
+        "subject": resolved_subject,
+        "coverage_ratio": ratio,
+        "sections": sections,
+        "missing": missing,
+        "warnings": warnings,
+    }
+
+
 def index_material(conn: Connection, material_id: int) -> dict[str, Any]:
     material = conn.execute("SELECT * FROM learning_materials WHERE id = ?", (material_id,)).fetchone()
     if not material:
@@ -265,36 +346,43 @@ def index_material(conn: Connection, material_id: int) -> dict[str, Any]:
     conn.execute("DELETE FROM material_chunks WHERE material_id = ?", (material_id,))
     content = material["content_text"] or material["title"]
     subject = material["subject"] or infer_subject(content)
+    coverage = analyze_material_coverage(material["title"], content, subject)
+    conn.execute(
+        "UPDATE learning_materials SET coverage_json = ?, updated_at = ? WHERE id = ?",
+        (dumps(coverage), utc_now(), material_id),
+    )
     chunks = _split_material_text(content)
     now = utc_now()
     for index, chunk in enumerate(chunks, start=1):
         chunk_subject = subject or infer_subject(chunk)
         skill = infer_skill(chunk_subject, chunk)
-        section = "日积月累" if "日积月累" in chunk else "正文/资料"
+        section = infer_section(chunk_subject, chunk)
         source_ref = f"{material['title']}#{index}"
         conn.execute(
             """
             INSERT INTO material_chunks (
-                material_id, student_id, subject, section, knowledge_type, chunk_text,
+                material_id, student_id, subject, unit, lesson, section, knowledge_type, chunk_text,
                 keywords_json, source_ref, exam_weight, must_master, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 material_id,
                 material["student_id"],
                 chunk_subject,
+                _infer_unit(chunk),
+                _infer_lesson(chunk),
                 section,
                 skill,
                 chunk,
                 dumps(_keywords(chunk)),
                 source_ref,
-                "high" if section == "日积月累" or skill in {"生字书写", "计算准确", "单词拼写"} else "medium",
+                "high" if section in {"日积月累", "生字词", "计算练习", "单词表", "听写/音频"} or skill in {"生字书写", "计算准确", "单词拼写"} else "medium",
                 1,
                 now,
             ),
         )
-    return {"material_id": material_id, "count": len(chunks), "status": "indexed"}
+    return {"material_id": material_id, "count": len(chunks), "status": "indexed", "coverage": coverage}
 
 
 def search_material_chunks(conn: Connection, query: str, subject: str = "", student_id: int = 1, limit: int = 8) -> list[dict[str, Any]]:
@@ -321,6 +409,55 @@ def search_material_chunks(conn: Connection, query: str, subject: str = "", stud
             scored.append((score, item))
     scored.sort(key=lambda pair: (pair[0], pair[1]["id"]), reverse=True)
     return [item for _score, item in scored[:limit]]
+
+
+def build_material_coverage(conn: Connection, student_id: int = 1) -> dict[str, Any]:
+    rows = conn.execute(
+        """
+        SELECT subject, title, coverage_json, config_json, created_at
+        FROM learning_materials
+        WHERE student_id = ?
+        ORDER BY id DESC
+        """,
+        (student_id,),
+    ).fetchall()
+    by_subject: dict[str, dict[str, Any]] = {}
+    for subject in COVERAGE_REQUIREMENTS:
+        by_subject[subject] = {
+            "subject": subject,
+            "coverage_ratio": 0,
+            "covered_sections": [],
+            "missing_sections": [section for section, _ in COVERAGE_REQUIREMENTS[subject]],
+            "warnings": [],
+            "materials": [],
+        }
+    for row in rows:
+        coverage = loads(row["coverage_json"], {}) or {}
+        subject = coverage.get("subject") or row["subject"] or "综合"
+        if subject not in by_subject:
+            continue
+        item = by_subject[subject]
+        material_sections = coverage.get("sections", [])
+        covered = [section["section"] for section in material_sections if section.get("covered")]
+        item["covered_sections"] = sorted(set(item["covered_sections"]) | set(covered))
+        required = [section for section, _ in COVERAGE_REQUIREMENTS[subject]]
+        item["missing_sections"] = [section for section in required if section not in item["covered_sections"]]
+        item["coverage_ratio"] = round(len(item["covered_sections"]) / len(required), 2) if required else 0
+        item["warnings"].extend(coverage.get("warnings", []))
+        item["materials"].append(
+            {
+                "title": row["title"],
+                "coverage_ratio": coverage.get("coverage_ratio", 0),
+                "created_at": row["created_at"],
+                "source": (loads(row["config_json"], {}) or {}).get("source", ""),
+            }
+        )
+    for item in by_subject.values():
+        item["warnings"] = list(dict.fromkeys(item["warnings"]))
+        if item["coverage_ratio"] < 0.7:
+            item["warnings"].append("资料覆盖不足 70%，今日计划和小测会有部分规则兜底。")
+    overall = round(sum(item["coverage_ratio"] for item in by_subject.values()) / len(by_subject), 2)
+    return {"overall_ratio": overall, "subjects": list(by_subject.values())}
 
 
 def evaluate_quiz_quality(conn: Connection, daily_task_id: int) -> dict[str, Any]:

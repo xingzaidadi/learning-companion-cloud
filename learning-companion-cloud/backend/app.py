@@ -29,6 +29,7 @@ try:
     )
     from .agent_core import (
         build_target_insights,
+        build_material_coverage,
         index_material,
         list_active_memories,
         list_skill_mastery,
@@ -40,6 +41,7 @@ try:
     from .curriculum import CURRICULUM, WUHAN_DEFAULTS, get_subject_units
     from .db import dict_rows, dumps, get_conn, init_db, loads, utc_now
     from .importer import import_task_sources
+    from .material_importer import create_material_from_import, extract_local_file, extract_public_url
     from .notifier import notify
     from .plan_generator import generate_plan_from_text
     from .planner import generate_daily_tasks, seed_demo_sources
@@ -62,6 +64,7 @@ except ImportError:
     )
     from agent_core import (
         build_target_insights,
+        build_material_coverage,
         index_material,
         list_active_memories,
         list_skill_mastery,
@@ -73,6 +76,7 @@ except ImportError:
     from curriculum import CURRICULUM, WUHAN_DEFAULTS, get_subject_units
     from db import dict_rows, dumps, get_conn, init_db, loads, utc_now
     from importer import import_task_sources
+    from material_importer import create_material_from_import, extract_local_file, extract_public_url
     from notifier import notify
     from plan_generator import generate_plan_from_text
     from planner import generate_daily_tasks, seed_demo_sources
@@ -453,6 +457,7 @@ def list_task_sources(student_id: int = 1, _: str = Depends(require_admin_auth))
         result = dict_rows(rows)
         for item in result:
             item["config"] = loads(item.pop("config_json"), {})
+            item["coverage"] = loads(item.pop("coverage_json", None), {})
         return result
 
 
@@ -518,6 +523,12 @@ def search_materials(
 ) -> list[dict[str, object]]:
     with get_conn() as conn:
         return search_material_chunks(conn, q, subject, student_id)
+
+
+@app.get("/api/materials/coverage")
+def material_coverage(student_id: int = 1, _: str = Depends(require_parent_or_admin_auth)) -> dict[str, object]:
+    with get_conn() as conn:
+        return build_material_coverage(conn, student_id)
 
 
 @app.post("/api/materials/{material_id}/index")
@@ -608,9 +619,9 @@ def create_material(
             """
             INSERT INTO learning_materials (
                 student_id, source_id, subject, material_type, title,
-                content_text, file_path, config_json, created_at, updated_at
+                content_text, file_path, config_json, source_type, trust_level, created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 student_id,
@@ -621,6 +632,8 @@ def create_material(
                 content_text.strip(),
                 file_path.strip(),
                 dumps({"source": "admin"}),
+                "admin_text",
+                "user_provided",
                 now,
                 now,
             ),
@@ -628,6 +641,72 @@ def create_material(
         material_id = int(cursor.lastrowid)
         indexed = index_material(conn, material_id)
         return {"id": material_id, "status": "created", "rag_index": indexed}
+
+
+@app.post("/api/materials/import-file")
+def import_material_file(
+    file_path: Annotated[str, Form()],
+    subject: Annotated[str, Form()] = "",
+    material_type: Annotated[str, Form()] = "textbook_pdf",
+    title: Annotated[str, Form()] = "",
+    source_id: Annotated[int, Form()] = 0,
+    student_id: Annotated[int, Form()] = 1,
+    _: str = Depends(require_admin_auth),
+) -> dict[str, object]:
+    allowed = {"textbook_pdf", "word_list", "dictation", "audio_list", "notes"}
+    if material_type not in allowed:
+        raise HTTPException(status_code=400, detail="material_type 不合法")
+    try:
+        extracted = extract_local_file(file_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    with get_conn() as conn:
+        result = create_material_from_import(
+            conn,
+            student_id=student_id,
+            subject=subject,
+            material_type=material_type,
+            title=title.strip() or extracted["title"],
+            content_text=extracted["content_text"],
+            file_path=extracted["file_path"],
+            source_id=source_id,
+            source_type="local_file",
+            extra_config=extracted["meta"],
+        )
+        return result
+
+
+@app.post("/api/materials/import-url")
+def import_material_url(
+    url: Annotated[str, Form()],
+    subject: Annotated[str, Form()] = "",
+    material_type: Annotated[str, Form()] = "notes",
+    title: Annotated[str, Form()] = "",
+    source_id: Annotated[int, Form()] = 0,
+    student_id: Annotated[int, Form()] = 1,
+    _: str = Depends(require_admin_auth),
+) -> dict[str, object]:
+    allowed = {"textbook_pdf", "word_list", "dictation", "audio_list", "notes"}
+    if material_type not in allowed:
+        raise HTTPException(status_code=400, detail="material_type 不合法")
+    try:
+        extracted = extract_public_url(url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    with get_conn() as conn:
+        result = create_material_from_import(
+            conn,
+            student_id=student_id,
+            subject=subject,
+            material_type=material_type,
+            title=title.strip() or extracted["title"],
+            content_text=extracted["content_text"],
+            file_path=extracted["file_path"],
+            source_id=source_id,
+            source_type="public_url",
+            extra_config=extracted["meta"],
+        )
+        return result
 
 
 @app.post("/api/task-sources/seed")

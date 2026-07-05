@@ -274,6 +274,28 @@ def run_e2e() -> None:
         assert_true(any(row["title"] == "Unit 1 单词表测试资料" for row in materials), "资料库应能查到刚保存的资料")
         material_hits = assert_status(client.get("/api/materials/search?q=library&subject=英语"))
         assert_true(any("library" in row["chunk_text"] for row in material_hits), f"RAG 检索应命中 library 资料，实际 {material_hits}")
+        txt_material_path = TEMP_DIR / "语文五上日积月累资料.txt"
+        txt_material_path.write_text(
+            "语文 五年级上册 第一单元\n课文 白鹭\n生字词：精巧、配合、适宜、白鹤\n语文园地：交流平台\n日积月累：不饱食以终日，不弃功于寸阴。\n习作：我的心爱之物",
+            encoding="utf-8",
+        )
+        imported_file = assert_status(
+            client.post(
+                "/api/materials/import-file",
+                data={
+                    "file_path": str(txt_material_path),
+                    "subject": "语文",
+                    "material_type": "textbook_pdf",
+                    "title": "语文五上日积月累测试资料",
+                    "student_id": "1",
+                },
+            )
+        )
+        assert_true(imported_file["rag_index"]["count"] >= 1, f"本地文件导入应建立 RAG，实际 {imported_file}")
+        coverage = assert_status(client.get("/api/materials/coverage"))
+        chinese = next(item for item in coverage["subjects"] if item["subject"] == "语文")
+        assert_true("日积月累" in chinese["covered_sections"], f"覆盖矩阵应识别日积月累，实际 {chinese}")
+        assert_true(coverage["overall_ratio"] > 0, f"覆盖矩阵整体比例应大于 0，实际 {coverage}")
         targets = assert_status(client.get("/api/learning-targets"))
         assert_true(targets["exam_target"]["pass_score"] == 0.95, "学习目标应明确指向 95+")
         assert_true(any(item["skill"] == "日积月累背默" for item in targets["subjects"]["语文"]), "语文能力点必须覆盖日积月累")
@@ -424,7 +446,7 @@ def run_e2e() -> None:
                 dict(row)
                 for row in conn.execute(
                     """
-                    SELECT id, question_type, answer
+                    SELECT id, question_type, answer, source_ref, quality_score
                     FROM quiz_items
                     WHERE daily_task_id = ?
                       AND question_type IN ('english_word_cn_to_en', 'english_spelling')
@@ -432,6 +454,15 @@ def run_e2e() -> None:
                     (task_id,),
                 ).fetchall()
             ]
+            all_private_items = [
+                dict(row)
+                for row in conn.execute(
+                    "SELECT id, source_ref, quality_score FROM quiz_items WHERE daily_task_id = ?",
+                    (task_id,),
+                ).fetchall()
+            ]
+        assert_true(all(item["source_ref"] for item in all_private_items), f"所有小测题必须绑定资料来源或规则兜底，实际 {all_private_items}")
+        assert_true(any(item["source_ref"] != "规则兜底" for item in all_private_items), f"有资料时至少部分题目应绑定 RAG 来源，实际 {all_private_items}")
         public_question_texts = {
             int(item["id"]): "\n".join([item["question"], *(str(option) for option in item.get("options", []))]).lower()
             for item in quiz["items"]

@@ -15,6 +15,32 @@ from .rewards import add_reward
 from .settings import get_settings
 
 
+def _infer_quiz_skill(subject: str, question: str) -> str:
+    if subject == "语文":
+        if "听写" in question or "生字" in question:
+            return "生字书写"
+        if "日积月累" in question or "背" in question or "默" in question:
+            return "日积月累背默"
+        if "赏析" in question:
+            return "句子赏析"
+        return "课文理解"
+    if subject == "数学":
+        if "计算" in question or "结果" in question or re.search(r"\d", question):
+            return "计算准确"
+        if "应用" in question or "列式" in question:
+            return "应用建模"
+        return "概念理解"
+    if subject == "英语":
+        if "拼写" in question or "英文" in question:
+            return "单词拼写"
+        if "中文" in question or "意思" in question:
+            return "词义匹配"
+        if "句" in question:
+            return "句型替换"
+        return "课文理解"
+    return "任务执行"
+
+
 def _source_context(conn: Connection, task: dict[str, Any]) -> dict[str, Any]:
     source_id = task.get("source_id")
     if not source_id:
@@ -52,6 +78,50 @@ def _materials_context(conn: Connection, task: dict[str, Any], subject: str) -> 
             continue
         parts.append(f"【资料:{row['material_type']}】{row['title']}\n{text}")
     return "\n".join(parts)
+
+
+def _material_chunks_for_task(conn: Connection, task: dict[str, Any], subject: str, limit: int = 8) -> list[dict[str, Any]]:
+    source_id = task.get("source_id") or 0
+    title = task.get("title", "")
+    rows = conn.execute(
+        """
+        SELECT mc.*
+        FROM material_chunks mc
+        JOIN learning_materials lm ON lm.id = mc.material_id
+        WHERE mc.student_id = ?
+          AND (? = '' OR mc.subject = ?)
+          AND (
+            lm.source_id = ?
+            OR lm.source_id IS NULL
+            OR instr(mc.chunk_text, ?) > 0
+            OR instr(mc.source_ref, ?) > 0
+          )
+        ORDER BY CASE WHEN lm.source_id = ? THEN 0 ELSE 1 END,
+                 CASE mc.exam_weight WHEN 'high' THEN 0 ELSE 1 END,
+                 mc.id DESC
+        LIMIT ?
+        """,
+        (task["student_id"], subject, subject, source_id, title[:20], title[:20], source_id, limit),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def _best_source_ref(conn: Connection, task: dict[str, Any], subject: str, question: str) -> tuple[str, str]:
+    chunks = _material_chunks_for_task(conn, task, subject, limit=12)
+    if not chunks:
+        return "规则兜底", ""
+    terms = [term for term in re.findall(r"[A-Za-z]+|[\u4e00-\u9fff]{2,}", question) if term not in {"请写出", "选择", "结果", "今天"}]
+    best = chunks[0]
+    best_score = -1
+    for chunk in chunks:
+        haystack = f"{chunk['chunk_text']} {chunk['source_ref']} {chunk['knowledge_type']} {chunk['section']}"
+        score = sum(2 if term in chunk["chunk_text"] else 1 for term in terms if term in haystack)
+        if chunk["exam_weight"] == "high":
+            score += 1
+        if score > best_score:
+            best = chunk
+            best_score = score
+    return best["source_ref"], best["knowledge_type"]
 
 
 def _short(question: str, answer: str, explanation: str = "回答不为空即可，重点是说清楚思路。") -> dict[str, Any]:
@@ -278,14 +348,19 @@ def ensure_quiz_for_task(conn: Connection, task: dict[str, Any]) -> list[dict[st
 
     now = utc_now()
     items = _remove_cross_answer_leaks(_templates(conn, task))
+    context = _source_context(conn, task)
+    subject = context.get("subject") or ""
     for item in items:
+        source_ref, chunk_skill = _best_source_ref(conn, task, subject, item.get("question", ""))
+        skill = chunk_skill or _infer_quiz_skill(subject, item.get("question", ""))
+        quality_score = 0.92 if source_ref != "规则兜底" else 0.78
         conn.execute(
             """
             INSERT INTO quiz_items (
                 daily_task_id, question_type, question, options_json,
-                answer, explanation, created_at
+                answer, explanation, subject, skill, source_ref, quality_score, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 task["id"],
@@ -294,6 +369,10 @@ def ensure_quiz_for_task(conn: Connection, task: dict[str, Any]) -> list[dict[st
                 item.get("options_json", "[]"),
                 item["answer"],
                 item["explanation"],
+                subject,
+                skill,
+                source_ref,
+                quality_score,
                 now,
             ),
         )

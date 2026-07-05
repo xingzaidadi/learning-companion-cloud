@@ -381,6 +381,16 @@ def init_db() -> None:
         )
         _ensure_columns(
             conn,
+            "learning_materials",
+            {
+                "source_url": "TEXT NOT NULL DEFAULT ''",
+                "source_type": "TEXT NOT NULL DEFAULT ''",
+                "trust_level": "TEXT NOT NULL DEFAULT 'user_provided'",
+                "coverage_json": "TEXT NOT NULL DEFAULT '{}'",
+            },
+        )
+        _ensure_columns(
+            conn,
             "agent_runs",
             {
                 "confidence": "REAL NOT NULL DEFAULT 0",
