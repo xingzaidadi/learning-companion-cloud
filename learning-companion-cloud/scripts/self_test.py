@@ -115,8 +115,12 @@ def run_static_button_inventory_check() -> None:
         "child.html": [
             'id="startNext"',
             "开始下一个任务",
+            "继续当前检查",
+            "先订正当前小测",
+            "先处理卡住任务",
             'data-action="start"',
             "开始",
+            "timer-tag",
             'data-action="pause"',
             "暂停",
             'data-action="${doneAction}"',
@@ -372,6 +376,9 @@ def run_e2e() -> None:
         complete = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "complete"}))
         assert_true(complete["status"] == "checking", "complete 后状态应为 checking")
         assert_true(complete["timer_state"] == "stopped", "complete 后计时器应停止")
+        start_while_checking = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "start"}))
+        assert_true(start_while_checking["blocked"] is True, "检查中不能被开始按钮重新启动")
+        assert_true(start_while_checking["status"] == "checking", "检查中误点开始后仍应保持 checking")
         duplicate_complete = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "complete"}))
         assert_true(duplicate_complete["already_applied"] is True, "complete 连点应返回幂等结果")
         with get_conn() as conn:
@@ -418,6 +425,9 @@ def run_e2e() -> None:
         assert_true("error_types" in grade and grade["error_types"], "批改应返回错因统计")
         assert_true(all("error_type" in item for item in grade["wrong_items"]), "每道错题应有错因")
         assert_true("mastery" in grade and "mastery_level" in grade["mastery"], "批改应返回掌握度")
+        start_while_revision = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "start"}))
+        assert_true(start_while_revision["blocked"] is True, "需订正不能被开始按钮重新启动")
+        assert_true(start_while_revision["status"] == "needs_revision", "需订正误点开始后仍应保持 needs_revision")
         agent_grade_result = assert_status(client.post(f"/api/agent/grade/{task_id}", json={"answers": answers}))
         assert_true(agent_grade_result["total"] == len(quiz["items"]), "Agent 批改接口应可用")
         with get_conn() as conn:

@@ -55,8 +55,8 @@
           tasks = tasks.value || [];
         }
         renderTasks();
-        const checkingTask = tasks.find((task) => task.status === "checking");
-        if (checkingTask) await showQuiz(checkingTask.id);
+        const checkTask = tasks.find((task) => ["checking", "needs_revision"].includes(task.status));
+        if (checkTask) await showQuiz(checkTask.id);
       }
 
       function renderTasks() {
@@ -70,9 +70,32 @@
           document.querySelector("#startNext").disabled = true;
           return;
         }
-        document.querySelector("#startNext").disabled = false;
+        updatePrimaryActionButton();
         tasks.forEach((task) => container.append(createTaskCard(task)));
         updateTimers();
+      }
+
+      function primaryAction() {
+        const checking = tasks.find((task) => task.status === "checking");
+        if (checking) return { task: checking, type: "showQuiz", label: "继续当前检查" };
+        const revision = tasks.find((task) => task.status === "needs_revision");
+        if (revision) return { task: revision, type: "showQuiz", label: "先订正当前小测" };
+        const stuck = tasks.find((task) => task.status === "stuck");
+        if (stuck) return { task: stuck, type: "focus", label: "先处理卡住任务" };
+        const running = tasks.find((task) => task.status === "in_progress");
+        if (running) return { task: running, type: "focus", label: "继续当前任务" };
+        const paused = tasks.find((task) => task.status === "paused");
+        if (paused) return { task: paused, type: "start", label: "继续当前任务" };
+        const next = tasks.find((task) => task.status === "not_started");
+        if (next) return { task: next, type: "start", label: "开始下一个任务" };
+        return { task: null, type: "endDay", label: "生成今日总结" };
+      }
+
+      function updatePrimaryActionButton() {
+        const button = document.querySelector("#startNext");
+        const action = primaryAction();
+        button.disabled = false;
+        button.textContent = action.label;
       }
 
       function createTaskCard(task) {
@@ -85,10 +108,22 @@
       function taskCardHtml(task) {
         const isRunning = task.timer_state === "running";
         const renderedAt = isRunning ? Date.now() : 0;
-        const startLabel = task.status === "stuck" ? "我学会了，继续学" : "开始";
-        const startDisabled = ["in_progress", "checking", "completed"].includes(task.status) ? "disabled" : "";
+        const startLabel = task.status === "stuck"
+          ? "我学会了，继续学"
+          : task.status === "paused"
+            ? "继续学习"
+            : task.status === "in_progress"
+              ? "学习中"
+              : task.status === "checking"
+                ? "正在检查"
+                : task.status === "needs_revision"
+                  ? "先订正小测"
+                  : task.status === "completed"
+                    ? "已完成"
+                    : "开始";
+        const startDisabled = ["in_progress", "checking", "completed", "needs_revision"].includes(task.status) ? "disabled" : "";
         const pauseDisabled = task.status !== "in_progress" ? "disabled" : "";
-        const doneAction = task.status === "checking" ? "showQuiz" : "complete";
+        const doneAction = ["checking", "needs_revision"].includes(task.status) ? "showQuiz" : "complete";
         const doneLabel = task.status === "checking"
           ? "继续检查"
           : task.status === "completed"
@@ -143,6 +178,7 @@
         const card = document.querySelector(`#tasks .task-card[data-task-id="${taskId}"]`);
         if (card) updateTaskCardElement(card, task);
         document.querySelector("#doneCount").textContent = tasks.filter((item) => item.status === "completed").length;
+        updatePrimaryActionButton();
         updateTimers();
       }
 
@@ -164,15 +200,37 @@
       }
 
       async function startNext() {
-        const next = tasks.find((task) => !["completed", "in_progress"].includes(task.status));
-        if (!next) {
+        const action = primaryAction();
+        if (action.type === "endDay") {
           await endDay();
           return;
         }
-        const result = await postEvent(next.id, "start");
-        activeTaskId = next.id;
-        updateOneTask(next.id, result);
-        toast(`已开始计时：${next.title}`);
+        const task = action.task;
+        if (!task) return;
+        focusTask(task.id);
+        if (action.type === "showQuiz") {
+          await showQuiz(task.id);
+          toast(task.status === "needs_revision" ? "先订正小测，达到 80% 就通过" : "继续完成当前检查");
+          return;
+        }
+        if (action.type === "focus") {
+          toast(task.status === "stuck" ? "先把卡住点处理完，再继续" : "当前任务还在进行中");
+          return;
+        }
+        const result = await postEvent(task.id, "start");
+        if (result.blocked) {
+          updateOneTask(task.id, result);
+          toast("当前任务还没完成检查/订正，不能重新开始");
+          return;
+        }
+        activeTaskId = task.id;
+        updateOneTask(task.id, result);
+        focusTask(task.id);
+        toast(`${action.label}：${task.title}`);
+      }
+
+      function focusTask(taskId) {
+        document.querySelector(`#tasks .task-card[data-task-id="${taskId}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
       }
 
       async function showQuiz(taskId) {

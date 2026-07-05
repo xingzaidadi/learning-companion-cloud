@@ -151,6 +151,18 @@ def _task_time_stats(conn, task_id: int, status: str | None = None) -> dict[str,
 
 def _annotate_task(conn, task: dict) -> dict:
     annotated = dict(task)
+    latest_quiz = conn.execute(
+        """
+        SELECT status
+        FROM quiz_results
+        WHERE daily_task_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (int(annotated["id"]),),
+    ).fetchone()
+    if latest_quiz and latest_quiz["status"] in {"needs_revision", "completed"}:
+        annotated["status"] = latest_quiz["status"]
     annotated.update(_task_time_stats(conn, int(annotated["id"]), str(annotated.get("status", ""))))
     return annotated
 
@@ -609,10 +621,26 @@ async def task_event(task_id: int, request: Request, _: str = Depends(require_ch
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
         current_status = task["status"]
+        latest_quiz = conn.execute(
+            """
+            SELECT status
+            FROM quiz_results
+            WHERE daily_task_id = ?
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (task_id,),
+        ).fetchone()
+        if latest_quiz and latest_quiz["status"] in {"needs_revision", "completed"}:
+            current_status = latest_quiz["status"]
         if event_type == "start" and current_status == "in_progress":
             return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "already_applied": True}
+        if event_type == "start" and current_status in {"checking", "completed", "needs_revision"}:
+            return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "blocked": True}
         if event_type == "pause" and current_status != "in_progress":
             return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "already_applied": True}
+        if event_type == "complete" and current_status == "not_started":
+            return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "blocked": True}
         if event_type == "complete" and current_status in {"checking", "completed"}:
             return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "already_applied": True}
         conn.execute(

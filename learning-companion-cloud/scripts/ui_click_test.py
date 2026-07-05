@@ -193,8 +193,13 @@ def run_browser_clicks(base_url: str) -> None:
         page.goto(f"{base_url}/child")
         page.wait_for_selector("#tasks .task-card")
         first_card = page.locator("#tasks .task-card").first
-        assert "先点开始" in first_card.inner_text(), "未开始任务不应直接显示可检查"
-        assert first_card.locator("button.warn").first.is_disabled(), "未开始任务的检查按钮应禁用"
+        if "先处理卡住任务" in page.locator("#startNext").inner_text():
+            assert "我学会了，继续学" in page.locator("#tasks").inner_text(), "有卡住任务时应先处理卡住任务"
+            page.locator("button[data-action='start']").filter(has_text="我学会了，继续学").first.click(force=True)
+            page.wait_for_timeout(500)
+        else:
+            assert "先点开始" in first_card.inner_text(), "未开始任务不应直接显示可检查"
+            assert first_card.locator("button.warn").first.is_disabled(), "未开始任务的检查按钮应禁用"
         page.evaluate(
             """
             () => {
@@ -207,7 +212,10 @@ def run_browser_clicks(base_url: str) -> None:
             }
             """
         )
-        page.click("#startNext")
+        if "继续当前任务" in page.locator("#startNext").inner_text():
+            page.locator("#tasks .task-card.active").first.scroll_into_view_if_needed()
+        else:
+            page.click("#startNext")
         page.wait_for_timeout(500)
         assert page.evaluate("() => window.__taskListChildMutations") == 0, "点击开始不应重绘整个任务列表"
         workflow_card = page.locator("#tasks .task-card.active").first
@@ -261,6 +269,12 @@ def run_browser_clicks(base_url: str) -> None:
                 ) from exc
         workflow_card = page.locator(f"button[data-action='showQuiz'][data-id='{workflow_task_id}']").locator("xpath=ancestor::article[1]")
         assert "继续检查" in workflow_card.inner_text(), "进入检查后应显示继续检查，而不是重复完成"
+        assert "继续当前检查" in page.locator("#startNext").inner_text(), "检查中顶部按钮应提示继续当前检查"
+        page.click("#startNext")
+        page.wait_for_selector("#quizBox form")
+        api_tasks = page.evaluate("async () => await (await fetch('/api/daily-tasks')).json()")
+        workflow_task = next(task for task in api_tasks if task["id"] == int(workflow_task_id))
+        assert workflow_task["status"] == "checking", f"检查中点击顶部按钮不应重新开始任务：{workflow_task}"
         workflow_card.locator("button[data-action='showQuiz']").click(force=True)
         page.wait_for_selector("#quizBox form")
         for index in range(page.locator("#quizBox textarea").count()):
@@ -272,6 +286,12 @@ def run_browser_clicks(base_url: str) -> None:
             page.locator(f"#quizBox input[type='radio'][name='{name}']").first.check()
         page.click("#quizBox form button.primary")
         page.wait_for_timeout(500)
+        page.wait_for_function("() => document.querySelector('#startNext')?.innerText.includes('先订正当前小测')")
+        page.click("#startNext")
+        page.wait_for_selector("#quizBox form")
+        api_tasks = page.evaluate("async () => await (await fetch('/api/daily-tasks')).json()")
+        workflow_task = next(task for task in api_tasks if task["id"] == int(workflow_task_id))
+        assert workflow_task["status"] == "needs_revision", f"需订正点击顶部按钮不应重新开始任务：{workflow_task}"
 
         page.goto(f"{base_url}/parent")
         page.wait_for_selector("#endDay")

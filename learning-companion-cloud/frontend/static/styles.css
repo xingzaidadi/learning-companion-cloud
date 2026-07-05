@@ -226,6 +226,21 @@ button:disabled {
   color: #9a6400;
 }
 
+.timer-tag {
+  background: #111827;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 900;
+  padding: 8px 14px;
+  box-shadow: 0 8px 18px rgba(17, 24, 39, 0.16);
+}
+
+.task-card.active .timer-tag {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(56, 103, 255, 0.32);
+}
+
 .muted {
   color: var(--muted);
 }
