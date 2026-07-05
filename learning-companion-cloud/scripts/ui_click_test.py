@@ -220,6 +220,17 @@ def run_browser_clicks(base_url: str) -> None:
         assert workflow_task_id
         assert "进行中" in workflow_card.inner_text()
         assert "已学 0:00" not in workflow_card.inner_text()
+        stuck_notes.insert(0, "刚才不会读 school，现在会了")
+        workflow_card.locator("button[data-action='stuck']").click(force=True)
+        page.wait_for_timeout(500)
+        workflow_card = page.locator(f"button[data-action='start'][data-id='{workflow_task_id}']").locator("xpath=ancestor::article[1]")
+        assert "我学会了，继续学" in workflow_card.inner_text(), "卡住后应有明确的继续学习按钮"
+        assert "学完了，开始检查" in workflow_card.inner_text(), "卡住后应保留学完检查入口"
+        assert "学会以后" in page.locator("#assistBox").inner_text(), "卡住提示区应说明学会后怎么继续"
+        workflow_card.locator("button[data-action='start']").click(force=True)
+        page.wait_for_timeout(500)
+        workflow_card = page.locator(f"button[data-action='pause'][data-id='{workflow_task_id}']").locator("xpath=ancestor::article[1]")
+        assert "进行中" in workflow_card.inner_text(), "点击我学会了继续学后应回到进行中"
         page.locator(f"button[data-action='pause'][data-id='{workflow_task_id}']").click(force=True)
         page.wait_for_timeout(500)
         api_tasks = page.evaluate("async () => await (await fetch('/api/daily-tasks')).json()")

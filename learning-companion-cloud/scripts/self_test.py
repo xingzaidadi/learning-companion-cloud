@@ -121,6 +121,9 @@ def run_static_button_inventory_check() -> None:
             "暂停",
             'data-action="${doneAction}"',
             'showQuiz',
+            "我学会了，继续学",
+            "学完了，开始检查",
+            "学会以后",
             "继续检查",
             "先点开始",
             "订正后重新检查",
@@ -350,6 +353,9 @@ def run_e2e() -> None:
         current_task_rows = assert_status(client.get("/api/daily-tasks"))
         stuck_rows = [item for item in current_task_rows if item["status"] == "stuck"]
         assert_true([item["id"] for item in stuck_rows] == [task_id], f"只应当前任务卡住，实际 {stuck_rows}")
+        resume_after_stuck = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "start"}))
+        assert_true(resume_after_stuck["status"] == "in_progress", "卡住学会后点继续应回到进行中")
+        assert_true(resume_after_stuck["timer_state"] == "running", "卡住学会后继续应重新计时")
 
         chinese_task = next(item for item in current_task_rows if "白鹭" in item["title"] or "语文" in item["title"])
         chinese_stuck = assert_status(

@@ -85,6 +85,7 @@
       function taskCardHtml(task) {
         const isRunning = task.timer_state === "running";
         const renderedAt = isRunning ? Date.now() : 0;
+        const startLabel = task.status === "stuck" ? "我学会了，继续学" : "开始";
         const startDisabled = ["in_progress", "checking", "completed"].includes(task.status) ? "disabled" : "";
         const pauseDisabled = task.status !== "in_progress" ? "disabled" : "";
         const doneAction = task.status === "checking" ? "showQuiz" : "complete";
@@ -96,7 +97,9 @@
               ? "先点开始"
               : task.status === "needs_revision"
                 ? "订正后重新检查"
-                : "我做完了，开始检查";
+                : task.status === "stuck"
+                  ? "学完了，开始检查"
+                  : "我做完了，开始检查";
         const doneDisabled = ["not_started", "completed"].includes(task.status) ? "disabled" : "";
         const stuckDisabled = ["checking", "completed"].includes(task.status) ? "disabled" : "";
         return `
@@ -114,7 +117,7 @@
           </div>
           <p><strong>完成标准：</strong>${task.completion_standard}</p>
           <div class="actions">
-            <button class="primary" data-action="start" data-id="${task.id}" ${startDisabled}>开始</button>
+            <button class="primary" data-action="start" data-id="${task.id}" ${startDisabled}>${startLabel}</button>
             <button data-action="pause" data-id="${task.id}" ${pauseDisabled}>暂停</button>
             <button class="warn" data-action="${doneAction}" data-id="${task.id}" ${doneDisabled}>${doneLabel}</button>
             <button class="danger" data-action="stuck" data-id="${task.id}" ${stuckDisabled}>我卡住了</button>
@@ -306,6 +309,10 @@
             <strong>如果还不行</strong>
             <p>${escapeHtml(assistance.try_again || assistance.guiding_question || "把具体不会的词、句子或步骤写出来。")}</p>
           </div>
+          <div class="quiz-item">
+            <strong>学会以后</strong>
+            <p>还没学完：点左侧“我学会了，继续学”。已经学完：点“学完了，开始检查”。</p>
+          </div>
           <details>
             <summary>为什么这样做</summary>
             <p>${escapeHtml(assistance.likely_blocker || "任务要求或第一步还没想清楚。")}</p>
@@ -354,7 +361,7 @@
             const result = await postEvent(taskId, action);
             if (action === "start") activeTaskId = taskId;
             updateOneTask(taskId, result);
-            toast(action === "start" ? `已开始计时：${formatElapsed(result.elapsed_seconds || 0)}` : `已暂停，已学 ${formatElapsed(result.elapsed_seconds || 0)}`);
+            toast(action === "start" ? `${originalText}，继续计时：${formatElapsed(result.elapsed_seconds || 0)}` : `已暂停，已学 ${formatElapsed(result.elapsed_seconds || 0)}`);
           }
         } catch (error) {
           button.disabled = false;
