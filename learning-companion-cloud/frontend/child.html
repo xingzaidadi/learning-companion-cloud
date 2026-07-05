@@ -26,15 +26,53 @@
         <button id="startNext" class="primary big-action">开始下一个任务</button>
       </section>
 
-      <section class="grid" style="margin-top:16px">
-        <div class="card span-8">
-          <h2>今日任务</h2>
+      <section class="grid child-workbench">
+        <div class="card span-5 task-column">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Step List</p>
+              <h2>今日任务</h2>
+            </div>
+            <span class="tag">按顺序完成</span>
+          </div>
           <div id="tasks" class="task-list"><p class="muted">正在加载今日任务...</p></div>
         </div>
-        <div class="card span-4">
-          <h2>小测 / 检查</h2>
-          <div id="quizBox" class="muted">完成任务后，这里会出现 3 道检查题。</div>
-          <div id="assistBox" class="muted" style="margin-top:16px">如果卡住了，AI 会先给提示，不会直接报答案。</div>
+        <div class="card span-7 workspace-card">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Focus Zone</p>
+              <h2>检查与求助工作区</h2>
+            </div>
+            <span class="tag ok">大屏作答</span>
+          </div>
+          <div class="workspace-layout">
+            <section class="workspace-panel quiz-panel">
+              <div class="panel-title">
+                <div>
+                  <p class="eyebrow">Quiz</p>
+                  <h3>小测 / 检查</h3>
+                </div>
+                <span class="tag warn">通过线 80%</span>
+              </div>
+              <div id="quizBox" class="empty-state">
+                <strong>完成任务后，在这里正式检查</strong>
+                <p>题目会在这里大面积展示，答完提交后会立即给出订正建议。</p>
+              </div>
+            </section>
+            <section class="workspace-panel assist-panel">
+              <div class="panel-title">
+                <div>
+                  <p class="eyebrow">Help</p>
+                  <h3>卡住了怎么办</h3>
+                </div>
+                <span class="tag">先提示，不报答案</span>
+              </div>
+              <div id="assistBox" class="empty-state compact">
+                <strong>遇到卡点就写一句话</strong>
+                <p>系统会按当前任务给解决步骤，学会后再回到任务继续。</p>
+              </div>
+            </section>
+          </div>
         </div>
       </section>
     </main>
@@ -245,9 +283,18 @@
       async function showQuiz(taskId) {
         const data = await api(`/api/daily-tasks/${taskId}/quiz`);
         const box = document.querySelector("#quizBox");
-        box.classList.remove("muted");
-        box.innerHTML = `<h3>${data.task.title}</h3>`;
+        box.className = "quiz-workspace";
+        box.innerHTML = `
+          <div class="focus-banner">
+            <span class="tag warn">正在检查</span>
+            <div>
+              <strong>${escapeHtml(data.task.title)}</strong>
+              <p>认真做完下面题目，达到通过线后再进入下一个任务。</p>
+            </div>
+          </div>
+        `;
         const form = document.createElement("form");
+        form.className = "quiz-form";
         const typeLabels = {
           chinese_word_dictation: "语文听写",
           chinese_pinyin: "拼音",
@@ -297,13 +344,13 @@
           wrapper.className = "quiz-item";
           const label = typeLabels[item.question_type] || (item.question_type === "choice" ? "选择题" : "小测题");
           if (item.options && item.options.length) {
-            wrapper.innerHTML = `<span class="tag">${label}</span><strong>${item.question}</strong>${item.options
+            wrapper.innerHTML = `<span class="tag">${label}</span><strong>${escapeHtml(item.question)}</strong>${item.options
               .map((option) => `<label><input type="radio" name="${item.id}" value="${option}" /> ${option}</label>`)
               .join("")}`;
           } else if (compactInputTypes.has(item.question_type)) {
-            wrapper.innerHTML = `<label><span class="tag">${label}</span><strong>${item.question}</strong><input name="${item.id}" placeholder="${placeholders[item.question_type] || "输入答案"}" /></label>`;
+            wrapper.innerHTML = `<label><span class="tag">${label}</span><strong>${escapeHtml(item.question)}</strong><input name="${item.id}" placeholder="${placeholders[item.question_type] || "输入答案"}" /></label>`;
           } else {
-            wrapper.innerHTML = `<label><span class="tag">${label}</span><strong>${item.question}</strong><textarea name="${item.id}" placeholder="${placeholders[item.question_type] || "写出思路或完整句子"}"></textarea></label>`;
+            wrapper.innerHTML = `<label><span class="tag">${label}</span><strong>${escapeHtml(item.question)}</strong><textarea name="${item.id}" placeholder="${placeholders[item.question_type] || "写出思路或完整句子"}"></textarea></label>`;
           }
           form.append(wrapper);
         });
@@ -329,7 +376,8 @@
             toast(result.already_checked ? "这次小测已经检查过了" : `小测结果：${result.correct}/${result.total}`);
             await loadTasks();
             if (result.status === "completed") {
-              box.innerHTML = `<p>真棒，检查通过：${result.correct}/${result.total}</p><p class="muted">${result.mastery?.next_action || "继续保持。"}</p>`;
+              box.className = "result-card success";
+              box.innerHTML = `<h3>检查通过：${result.correct}/${result.total}</h3><p>${escapeHtml(result.mastery?.next_action || "继续保持。")}</p>`;
             } else {
               const wrongHtml = (result.wrong_items || []).map((item) => `
                 <div class="quiz-item">
@@ -339,7 +387,8 @@
                   <p class="muted">${escapeHtml(item.next_action || item.explanation)}</p>
                 </div>
               `).join("");
-              box.innerHTML = `<p>需要订正：${result.correct}/${result.total}</p>${wrongHtml}`;
+              box.className = "result-card needs-work";
+              box.innerHTML = `<h3>需要订正：${result.correct}/${result.total}</h3><p>先把下面错题订正，再重新检查。</p>${wrongHtml}`;
             }
           } catch (error) {
             submit.disabled = false;
@@ -363,11 +412,16 @@
         const box = document.querySelector("#assistBox");
         const assistance = result.assistance || {};
         const sourceText = result.assistant_source === "ai" ? "AI 辅导" : "本地辅导";
-        box.classList.remove("muted");
+        box.className = "assist-workspace";
         box.innerHTML = `
-          <h3>当前卡住：${escapeHtml(result.task_title || "这项任务")}</h3>
-          <p class="muted">${escapeHtml(sourceText)} · 你的问题：${escapeHtml(result.child_note || "还没有填写具体问题")}</p>
-          <p>${escapeHtml(assistance.encouragement || "直接按下面步骤做。")}</p>
+          <div class="focus-banner danger">
+            <span class="tag p0">卡住了</span>
+            <div>
+              <strong>当前卡住：${escapeHtml(result.task_title || "这项任务")}</strong>
+              <p>${escapeHtml(sourceText)} · 你的问题：${escapeHtml(result.child_note || "还没有填写具体问题")}</p>
+            </div>
+          </div>
+          <p class="assist-lead">${escapeHtml(assistance.encouragement || "直接按下面步骤做。")}</p>
           <div class="quiz-item">
             <strong>你现在要做</strong>
             <p>${escapeHtml(assistance.hint_1 || "先只做第一步。")}</p>

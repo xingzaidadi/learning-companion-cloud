@@ -193,6 +193,9 @@ def run_browser_clicks(base_url: str) -> None:
 
         page.goto(f"{base_url}/child")
         page.wait_for_selector("#tasks .task-card")
+        assert page.locator(".workspace-card").count() == 1, "孩子端应有大检查/求助工作区"
+        assert "检查与求助工作区" in page.locator(".workspace-card").inner_text(), "工作区标题应清晰"
+        assert page.locator(".quiz-panel").count() == 1 and page.locator(".assist-panel").count() == 1, "小测和卡住应分成两个清晰面板"
         first_card = page.locator("#tasks .task-card").first
         if "先处理卡住任务" in page.locator("#startNext").inner_text():
             assert "我学会了，继续学" in page.locator("#tasks").inner_text(), "有卡住任务时应先处理卡住任务"

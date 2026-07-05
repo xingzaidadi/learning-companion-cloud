@@ -115,6 +115,11 @@ def run_static_button_inventory_check() -> None:
         "child.html": [
             'id="startNext"',
             "开始下一个任务",
+            "child-workbench",
+            "workspace-card",
+            "检查与求助工作区",
+            "Focus Zone",
+            "大屏作答",
             "继续当前检查",
             "先订正当前小测",
             "先处理卡住任务",
