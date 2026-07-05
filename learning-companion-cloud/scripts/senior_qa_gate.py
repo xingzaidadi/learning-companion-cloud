@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -135,14 +136,10 @@ def assert_plan_to_child_flow(client: Any, get_conn: Any) -> int:
     stuck = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "stuck", "note": "我不会这个知识点"}))
     assert_true(stuck["status"] == "stuck", f"卡住状态不正确：{stuck}")
     assistance = stuck.get("assistance", {})
-    has_actionable_help = bool(
-        assistance.get("steps")
-        or assistance.get("hint_1")
-        or assistance.get("try_again")
-        or stuck.get("tutor_session", {}).get("micro_practice", {}).get("prompt")
-    )
-    assert_true(has_actionable_help, f"卡住必须给可执行步骤或微练习：{stuck}")
-    resumed = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "start"}))
+    steps = assistance.get("steps", [])
+    assert_true(isinstance(steps, list) and len(steps) >= 3, f"卡住必须返回统一 steps[]：{stuck}")
+    assert_true(all(step.get("action") and step.get("success_rule") for step in steps), f"每一步必须可执行且有完成标准：{steps}")
+    resumed = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "resume"}))
     assert_true(resumed["status"] == "in_progress", f"继续后状态不正确：{resumed}")
     completed = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "complete"}))
     assert_true(completed["status"] == "checking", f"做完后应进入检查：{completed}")
@@ -194,7 +191,9 @@ def assert_security_hygiene() -> None:
     tracked = os.popen("git ls-files").read().splitlines()
     forbidden = [path for path in tracked if path.endswith(".env") or path.endswith("learning.db") or path.endswith(".db")]
     assert_true(not forbidden, f"禁止提交密钥/数据库文件：{forbidden}")
-    diff_text = os.popen("git diff --cached -- . && git diff -- .").read()
+    cached = subprocess.run(["git", "diff", "--cached", "--", "."], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="ignore", check=False)
+    working = subprocess.run(["git", "diff", "--", "."], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="ignore", check=False)
+    diff_text = f"{cached.stdout}\n{working.stdout}"
     assert_true(not re.search(r"sk-[A-Za-z0-9_-]{20,}", diff_text), "diff 中疑似包含真实 API Key")
 
 

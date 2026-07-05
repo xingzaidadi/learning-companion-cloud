@@ -292,7 +292,7 @@
             <strong>${task.completion_standard}</strong>
           </div>
           <div class="actions">
-            <button class="primary" data-action="start" data-id="${task.id}" ${startDisabled}>${startLabel}</button>
+            <button class="primary" data-action="${task.status === "stuck" ? "resume" : "start"}" data-id="${task.id}" ${startDisabled}>${startLabel}</button>
             <button data-action="pause" data-id="${task.id}" ${pauseDisabled}>暂停</button>
             <button class="warn" data-action="${doneAction}" data-id="${task.id}" ${doneDisabled}>${doneLabel}</button>
             <button class="danger" data-action="stuck" data-id="${task.id}" ${stuckDisabled}>我卡住了</button>
@@ -516,6 +516,13 @@
         const box = document.querySelector("#assistBox");
         const assistance = result.assistance || {};
         const microPractice = result.tutor_session?.micro_practice || {};
+        const steps = Array.isArray(assistance.steps) && assistance.steps.length
+          ? assistance.steps
+          : [
+              { title: "先做第一步", action: assistance.hint_1 || "先只做第一步。", success_rule: "能说清第一步结果。" },
+              { title: "再试一次", action: assistance.try_again || assistance.guiding_question || "把具体不会的词、句子或步骤写出来。", success_rule: "能继续学习，或能写清具体卡点。" },
+              { title: "仍然不会", action: assistance.if_still_stuck || "把卡住的原题/原句补充清楚。", success_rule: "系统能继续给下一步提示。" },
+            ];
         const sourceText = result.assistant_source === "ai" ? "AI 辅导" : "本地辅导";
         box.className = "assist-workspace";
         box.innerHTML = `
@@ -527,14 +534,13 @@
             </div>
           </div>
           <p class="assist-lead">${escapeHtml(assistance.encouragement || "直接按下面步骤做。")}</p>
-          <div class="quiz-item">
-            <strong>你现在要做</strong>
-            <p>${escapeHtml(assistance.hint_1 || "先只做第一步。")}</p>
-          </div>
-          <div class="quiz-item">
-            <strong>如果还不行</strong>
-            <p>${escapeHtml(assistance.try_again || assistance.guiding_question || "把具体不会的词、句子或步骤写出来。")}</p>
-          </div>
+          ${steps.slice(0, 3).map((step, index) => `
+            <div class="quiz-item">
+              <strong>${index + 1}. ${escapeHtml(step.title || `第 ${index + 1} 步`)}</strong>
+              <p>${escapeHtml(step.action || "先只做这一小步。")}</p>
+              <p class="muted">完成标准：${escapeHtml(step.success_rule || "能说清结果。")}</p>
+            </div>
+          `).join("")}
           <div class="quiz-item">
             <strong>微练习确认</strong>
             <p>${escapeHtml(microPractice.prompt || "先做一个最小练习，确认自己真的会了再继续。")}</p>
@@ -590,9 +596,9 @@
             button.textContent = originalText;
           } else {
             const result = await postEvent(taskId, action);
-            if (action === "start") activeTaskId = taskId;
+            if (action === "start" || action === "resume") activeTaskId = taskId;
             updateOneTask(taskId, result);
-            toast(action === "start" ? `${originalText}，继续计时：${formatElapsed(result.elapsed_seconds || 0)}` : `已暂停，已学 ${formatElapsed(result.elapsed_seconds || 0)}`);
+            toast(action === "start" || action === "resume" ? `${originalText}，继续计时：${formatElapsed(result.elapsed_seconds || 0)}` : `已暂停，已学 ${formatElapsed(result.elapsed_seconds || 0)}`);
           }
         } catch (error) {
           button.disabled = false;

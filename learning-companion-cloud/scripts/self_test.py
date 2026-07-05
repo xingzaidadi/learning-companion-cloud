@@ -132,7 +132,7 @@ def run_static_button_inventory_check() -> None:
             "继续当前检查",
             "先订正当前小测",
             "先处理卡住任务",
-            'data-action="start"',
+            'data-action="${task.status === "stuck" ? "resume" : "start"}"',
             "开始",
             "timer-tag",
             'data-action="pause"',
@@ -397,6 +397,9 @@ def run_e2e() -> None:
         assistance = stuck.get("assistance", {})
         for key in ("encouragement", "hint_1", "guiding_question", "try_again", "review_focus"):
             assert_true(bool(assistance.get(key)), f"卡住辅导缺少 {key}")
+        steps = assistance.get("steps", [])
+        assert_true(isinstance(steps, list) and len(steps) >= 3, f"卡住辅导必须返回统一 steps[]，实际 {assistance}")
+        assert_true(all(step.get("action") and step.get("success_rule") for step in steps), f"steps 每一步必须有 action/success_rule，实际 {steps}")
         assert_true("1." in assistance.get("hint_1", "") or "1．" in assistance.get("hint_1", ""), f"卡住辅导应直接给步骤，实际 {assistance}")
         generic_words = ("卡住很正常", "可能卡在", "想一想", "同类小例子")
         assert_true(not any(word in assistance.get("encouragement", "") for word in generic_words), f"卡住辅导不应是统一废话，实际 {assistance}")
@@ -405,7 +408,7 @@ def run_e2e() -> None:
         current_task_rows = assert_status(client.get("/api/daily-tasks"))
         stuck_rows = [item for item in current_task_rows if item["status"] == "stuck"]
         assert_true([item["id"] for item in stuck_rows] == [task_id], f"只应当前任务卡住，实际 {stuck_rows}")
-        resume_after_stuck = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "start"}))
+        resume_after_stuck = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "resume"}))
         assert_true(resume_after_stuck["status"] == "in_progress", "卡住学会后点继续应回到进行中")
         assert_true(resume_after_stuck["timer_state"] == "running", "卡住学会后继续应重新计时")
 

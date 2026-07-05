@@ -458,7 +458,27 @@ def _unknown_char_help(char: str, title: str) -> dict[str, str]:
     }
 
 
-def _normalize_stuck_assistance(result: dict[str, Any], fallback: dict[str, str]) -> dict[str, str]:
+def _stuck_steps(assistance: dict[str, str]) -> list[dict[str, str]]:
+    return [
+        {
+            "title": "先做第一步",
+            "action": assistance["hint_1"],
+            "success_rule": "孩子能独立说出或写出第一步结果，而不是只说“懂了”。",
+        },
+        {
+            "title": "回答引导问题",
+            "action": assistance["guiding_question"],
+            "success_rule": "孩子能把卡点具体化到一个词、句子、算式或步骤。",
+        },
+        {
+            "title": "再试一次",
+            "action": assistance["try_again"],
+            "success_rule": "孩子能继续学习或进入小测；仍不会就补充具体卡点再次求助。",
+        },
+    ]
+
+
+def _normalize_stuck_assistance(result: dict[str, Any], fallback: dict[str, str]) -> dict[str, Any]:
     keys = (
         "encouragement",
         "likely_blocker",
@@ -470,10 +490,29 @@ def _normalize_stuck_assistance(result: dict[str, Any], fallback: dict[str, str]
         "review_focus",
         "parent_note",
     )
-    normalized: dict[str, str] = {}
+    normalized: dict[str, Any] = {}
     for key in keys:
         value = result.get(key) if isinstance(result, dict) else ""
         normalized[key] = str(value).strip() if value else fallback[key]
+    raw_steps = result.get("steps") if isinstance(result, dict) else None
+    if isinstance(raw_steps, list):
+        steps = []
+        for index, step in enumerate(raw_steps[:3], start=1):
+            if not isinstance(step, dict):
+                continue
+            action = str(step.get("action") or step.get("content") or "").strip()
+            if not action:
+                continue
+            steps.append(
+                {
+                    "title": str(step.get("title") or f"第 {index} 步").strip(),
+                    "action": action,
+                    "success_rule": str(step.get("success_rule") or "完成后能说清结果。").strip(),
+                }
+            )
+        normalized["steps"] = steps or _stuck_steps(normalized)
+    else:
+        normalized["steps"] = _stuck_steps(normalized)
     return normalized
 
 

@@ -144,9 +144,12 @@ def run_child_flow() -> None:
         assistance = stuck.get("assistance", {})
         for key in ("encouragement", "hint_1", "try_again", "review_focus"):
             assert_true(bool(assistance.get(key)), f"卡住辅导缺少 {key}：{assistance}")
+        steps = assistance.get("steps", [])
+        assert_true(isinstance(steps, list) and len(steps) >= 3, f"卡住辅导应返回统一 steps[]：{assistance}")
+        assert_true(all(step.get("action") and step.get("success_rule") for step in steps), f"steps 每一步都应可执行：{steps}")
         start_task2_while_stuck = assert_status(client.post(f"/api/daily-tasks/{task2}/event", json={"event_type": "start"}))
         assert_true(start_task2_while_stuck.get("blocked") is True, "第一任务卡住时不能启动第二任务")
-        learned = assert_status(client.post(f"/api/daily-tasks/{task1}/event", json={"event_type": "start"}))
+        learned = assert_status(client.post(f"/api/daily-tasks/{task1}/event", json={"event_type": "resume"}))
         assert_true(learned["status"] == "in_progress", f"卡住后学会继续失败：{learned}")
 
         complete = assert_status(client.post(f"/api/daily-tasks/{task1}/event", json={"event_type": "complete"}))

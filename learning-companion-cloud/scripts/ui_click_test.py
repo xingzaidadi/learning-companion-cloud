@@ -123,11 +123,11 @@ def run_browser_clicks(base_url: str) -> None:
         page.locator("#currentTask .task-card.active").locator("button[data-action='stuck']").click()
         page.wait_for_function(
             "() => document.querySelector('#assistBox')?.innerText.includes('当前卡住')"
-            " && document.querySelector('#assistBox')?.innerText.includes('你现在要做')",
+            " && document.querySelector('#assistBox')?.innerText.includes('完成标准')",
             timeout=20_000,
         )
         assist_text = page.locator("#assistBox").inner_text()
-        assert "你现在要做" in assist_text
+        assert "完成标准" in assist_text
         assert "1." in assist_text or "1．" in assist_text
         assert "可能卡在" not in assist_text and "想一想" not in assist_text and "同类小例子" not in assist_text
         api_tasks = page.evaluate("async () => await (await fetch('/api/daily-tasks')).json()")
@@ -207,7 +207,7 @@ def run_browser_clicks(base_url: str) -> None:
         current_card = page.locator("#currentTask .task-card").first
         if "先处理卡住任务" in page.locator("#startNext").inner_text():
             assert "我学会了，继续学" in current_card.inner_text(), "有卡住任务时应先处理卡住任务"
-            page.locator("button[data-action='start']").filter(has_text="我学会了，继续学").first.click(force=True)
+            page.locator("button[data-action='resume']").filter(has_text="我学会了，继续学").first.click(force=True)
             page.wait_for_timeout(500)
         else:
             assert "先点开始" in current_card.inner_text(), "未开始任务不应直接显示可检查"
@@ -259,7 +259,7 @@ def run_browser_clicks(base_url: str) -> None:
         assert "我学会了，继续学" in workflow_card.inner_text(), "卡住后应有明确的继续学习按钮"
         assert "学完了，开始检查" in workflow_card.inner_text(), "卡住后应保留学完检查入口"
         assert "学会以后" in page.locator("#assistBox").inner_text(), "卡住提示区应说明学会后怎么继续"
-        workflow_card.locator("button[data-action='start']").click(force=True)
+        workflow_card.locator("button[data-action='resume']").click(force=True)
         page.wait_for_function("() => document.querySelector('#currentTask')?.innerText.includes('进行中')")
         workflow_card = page.locator("#currentTask .task-card").first
         assert "进行中" in workflow_card.inner_text(), "点击我学会了继续学后应回到进行中"

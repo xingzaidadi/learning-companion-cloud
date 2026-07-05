@@ -147,7 +147,7 @@ def _task_time_stats(conn, task_id: int, status: str | None = None) -> dict[str,
         event_time = _parse_utc(row["created_at"])
         if not event_time:
             continue
-        if row["event_type"] == "start":
+        if row["event_type"] in {"start", "resume"}:
             if running_since is None:
                 running_since = event_time
                 last_started_at = row["created_at"]
@@ -802,6 +802,7 @@ async def task_event(task_id: int, request: Request, _: str = Depends(require_ch
     note = data.get("note", "")
     status_map = {
         "start": "in_progress",
+        "resume": "in_progress",
         "pause": "paused",
         "stuck": "stuck",
         "complete": "checking",
@@ -827,11 +828,11 @@ async def task_event(task_id: int, request: Request, _: str = Depends(require_ch
         ).fetchone()
         if latest_quiz and latest_quiz["status"] in {"needs_revision", "completed"}:
             current_status = latest_quiz["status"]
-        if event_type == "start" and current_status == "in_progress":
+        if event_type in {"start", "resume"} and current_status == "in_progress":
             return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "already_applied": True}
-        if event_type == "start" and current_status in {"checking", "completed", "needs_revision"}:
+        if event_type in {"start", "resume"} and current_status in {"checking", "completed", "needs_revision"}:
             return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "blocked": True}
-        if event_type == "start":
+        if event_type in {"start", "resume"}:
             blocker = _start_blocker(conn, task, current_status)
             if blocker:
                 return {
