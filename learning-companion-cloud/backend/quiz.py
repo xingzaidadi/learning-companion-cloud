@@ -429,6 +429,16 @@ def _mastery_level(ratio: float) -> str:
     return "D"
 
 
+def _quiz_pass_ratio(conn: Connection) -> float:
+    settings = get_settings(conn)
+    raw_value = settings.get("path_rules", {}).get("quiz_pass_score", 0.8)
+    try:
+        ratio = float(raw_value)
+    except (TypeError, ValueError):
+        ratio = 0.8
+    return min(max(ratio, 0.5), 1.0)
+
+
 def _latest_quiz_result(conn: Connection, task_id: int) -> dict[str, Any] | None:
     row = conn.execute(
         """
@@ -530,7 +540,8 @@ def grade_quiz(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[
 
     total = len(items)
     ratio = correct / total if total else 0
-    status = "completed" if ratio >= 0.8 else "needs_revision"
+    pass_ratio = _quiz_pass_ratio(conn)
+    status = "completed" if ratio >= pass_ratio else "needs_revision"
     mastery = {
         "mastery_level": _mastery_level(ratio),
         "next_action": "继续新课" if status == "completed" else "先完成错因补漏，再推进新课",
@@ -538,7 +549,7 @@ def grade_quiz(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[
     }
     score_json = {
         "score": round(ratio * 100, 1),
-        "pass_score": 80,
+        "pass_score": round(pass_ratio * 100, 1),
         "correct_rate": ratio,
     }
     now = utc_now()

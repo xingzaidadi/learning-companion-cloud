@@ -421,6 +421,7 @@ def run_e2e() -> None:
         answers = {str(item["id"]): "" for item in quiz["items"]}
         grade = assert_status(client.post(f"/api/daily-tasks/{task_id}/quiz", json={"answers": answers}))
         assert_true(grade["total"] == len(quiz["items"]), "批改总题数应等于小测题数")
+        assert_true(grade["score_json"]["pass_score"] == 80, f"小测通过线应读取管理端 80% 配置，实际 {grade['score_json']}")
         assert_true("diagnosis" in grade, "批改应返回诊断")
         assert_true("error_types" in grade and grade["error_types"], "批改应返回错因统计")
         assert_true(all("error_type" in item for item in grade["wrong_items"]), "每道错题应有错因")
