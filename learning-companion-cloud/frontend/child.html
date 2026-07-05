@@ -108,7 +108,14 @@
       function taskCardHtml(task) {
         const isRunning = task.timer_state === "running";
         const renderedAt = isRunning ? Date.now() : 0;
-        const startLabel = task.status === "stuck"
+        const primary = primaryAction();
+        const isPrimaryTask = primary.task?.id === task.id;
+        const canStartTask = isPrimaryTask && (primary.type === "start" || task.status === "stuck");
+        const canFinishTask = isPrimaryTask && ["in_progress", "paused", "stuck", "checking", "needs_revision"].includes(task.status);
+        const canAskStuck = isPrimaryTask && ["in_progress", "paused", "stuck"].includes(task.status);
+        const startLabel = !isPrimaryTask && task.status !== "completed"
+          ? "先完成当前"
+          : task.status === "stuck"
           ? "我学会了，继续学"
           : task.status === "paused"
             ? "继续学习"
@@ -121,7 +128,7 @@
                   : task.status === "completed"
                     ? "已完成"
                     : "开始";
-        const startDisabled = ["in_progress", "checking", "completed", "needs_revision"].includes(task.status) ? "disabled" : "";
+        const startDisabled = canStartTask ? "" : "disabled";
         const pauseDisabled = task.status !== "in_progress" ? "disabled" : "";
         const doneAction = ["checking", "needs_revision"].includes(task.status) ? "showQuiz" : "complete";
         const doneLabel = task.status === "checking"
@@ -134,9 +141,11 @@
                 ? "订正后重新检查"
                 : task.status === "stuck"
                   ? "学完了，开始检查"
+                  : !isPrimaryTask
+                    ? "先完成当前"
                   : "我做完了，开始检查";
-        const doneDisabled = ["not_started", "completed"].includes(task.status) ? "disabled" : "";
-        const stuckDisabled = ["checking", "completed"].includes(task.status) ? "disabled" : "";
+        const doneDisabled = canFinishTask && task.status !== "completed" ? "" : "disabled";
+        const stuckDisabled = canAskStuck ? "" : "disabled";
         return `
           <div class="task-head">
             <div>

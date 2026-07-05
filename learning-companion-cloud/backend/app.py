@@ -171,6 +171,40 @@ def _annotate_tasks(conn, tasks: list[dict]) -> list[dict]:
     return [_annotate_task(conn, dict(task)) for task in tasks]
 
 
+def _start_blocker(conn, task, current_status: str):
+    blocker = conn.execute(
+        """
+        SELECT id, title, status
+        FROM daily_tasks
+        WHERE student_id = ?
+          AND date = ?
+          AND id != ?
+          AND status IN ('checking', 'needs_revision', 'stuck', 'in_progress', 'paused')
+        ORDER BY priority, id
+        LIMIT 1
+        """,
+        (task["student_id"], task["date"], task["id"]),
+    ).fetchone()
+    if blocker:
+        return blocker
+    if current_status == "not_started":
+        first_not_started = conn.execute(
+            """
+            SELECT id, title, status
+            FROM daily_tasks
+            WHERE student_id = ?
+              AND date = ?
+              AND status = 'not_started'
+            ORDER BY priority, id
+            LIMIT 1
+            """,
+            (task["student_id"], task["date"]),
+        ).fetchone()
+        if first_not_started and int(first_not_started["id"]) != int(task["id"]):
+            return first_not_started
+    return None
+
+
 def _render_child_task_fallback(tasks: list[dict]) -> str:
     if not tasks:
         return '<p class="muted">今天还没有任务，请让家长在管理端生成。</p>'
@@ -637,6 +671,16 @@ async def task_event(task_id: int, request: Request, _: str = Depends(require_ch
             return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "already_applied": True}
         if event_type == "start" and current_status in {"checking", "completed", "needs_revision"}:
             return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "blocked": True}
+        if event_type == "start":
+            blocker = _start_blocker(conn, task, current_status)
+            if blocker:
+                return {
+                    "task_id": task_id,
+                    "status": current_status,
+                    **_task_time_stats(conn, task_id, current_status),
+                    "blocked": True,
+                    "blocked_by": {"id": blocker["id"], "title": blocker["title"], "status": blocker["status"]},
+                }
         if event_type == "pause" and current_status != "in_progress":
             return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "already_applied": True}
         if event_type == "complete" and current_status == "not_started":

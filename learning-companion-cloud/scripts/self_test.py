@@ -308,9 +308,14 @@ def run_e2e() -> None:
         assert_true("window.__INITIAL_TASKS__" in child_html, "孩子端应注入初始任务数据")
 
         current_tasks = assert_status(client.get("/api/daily-tasks"))
+        with get_conn() as conn:
+            conn.execute("UPDATE daily_tasks SET priority = 'P3' WHERE id != ?", (task_id,))
+            conn.execute("UPDATE daily_tasks SET priority = 'P0' WHERE id = ?", (task_id,))
+        current_tasks = assert_status(client.get("/api/daily-tasks"))
         not_started = [item for item in current_tasks if item["status"] == "not_started"]
         assert_true(len(not_started) >= 1, "开始下一个任务按钮需要至少一个未开始任务")
         start_next_id = not_started[0]["id"]
+        assert_true(start_next_id == task_id, "孩子端只能按当前第一任务开始，不能跳任务")
         start_next = assert_status(client.post(f"/api/daily-tasks/{start_next_id}/event", json={"event_type": "start"}))
         assert_true(start_next["status"] == "in_progress", "开始下一个任务按钮应启动首个未开始任务")
         assert_true(start_next["timer_state"] == "running", "开始下一个任务后计时器应运行")

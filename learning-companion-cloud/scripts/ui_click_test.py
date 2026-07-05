@@ -118,11 +118,12 @@ def run_browser_clicks(base_url: str) -> None:
         page.wait_for_selector("#tasks .task-card")
         child_body = page.locator("body").inner_text()
         assert "寒假作业本" in child_body and ("白鹭" in child_body or "语文" in child_body)
-        page.locator("#tasks .task-card").filter(has_text="白鹭").locator("button[data-action='stuck']").click()
+        page.click("#startNext")
+        page.wait_for_selector("#tasks .task-card.active")
+        page.locator("#tasks .task-card.active").locator("button[data-action='stuck']").click()
         page.wait_for_function(
             "() => document.querySelector('#assistBox')?.innerText.includes('当前卡住')"
-            " && document.querySelector('#assistBox')?.innerText.includes('鹭')"
-            " && document.querySelector('#assistBox')?.innerText.includes('lù')",
+            " && document.querySelector('#assistBox')?.innerText.includes('你现在要做')",
             timeout=20_000,
         )
         assist_text = page.locator("#assistBox").inner_text()
