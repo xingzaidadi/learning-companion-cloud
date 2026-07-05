@@ -682,7 +682,7 @@ def grade_quiz(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[
                     "grading_source": grading_source,
                 }
             )
-            for days_later in (1, 3, 7):
+            for days_later in (1, 3, 7, 14):
                 create_review_item(
                     conn,
                     int(task["student_id"]),

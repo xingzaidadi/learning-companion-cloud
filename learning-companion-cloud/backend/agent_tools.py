@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from sqlite3 import Connection
 from typing import Any
+import uuid
 
 from .db import dumps, loads, utc_now
 
@@ -16,14 +17,38 @@ def log_agent_run(
     status: str = "ok",
     error: str = "",
 ) -> int:
+    trace_id = uuid.uuid4().hex
     cursor = conn.execute(
         """
-        INSERT INTO agent_runs (student_id, run_type, input_json, output_json, model, status, error, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO agent_runs (
+            student_id, run_type, input_json, output_json, model, status, error,
+            confidence, evidence_json, warnings_json, latency_ms, quality_score, trace_id, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0.8, '[]', '[]', 0, 0.8, ?, ?)
         """,
-        (student_id, run_type, dumps(input_data), dumps(output_data), model, status, error, utc_now()),
+        (student_id, run_type, dumps(input_data), dumps(output_data), model, status, error, trace_id, utc_now()),
     )
-    return int(cursor.lastrowid)
+    run_id = int(cursor.lastrowid)
+    conn.execute(
+        """
+        INSERT INTO agent_trace_steps (
+            run_id, trace_id, step_index, step_type, tool_name,
+            args_json, observation_json, validation_json, latency_ms, status, created_at
+        )
+        VALUES (?, ?, 1, 'execute', ?, ?, ?, ?, 0, ?, ?)
+        """,
+        (
+            run_id,
+            trace_id,
+            run_type,
+            dumps(input_data),
+            dumps({"output_preview": output_data if isinstance(output_data, dict) else {"items": len(output_data)}}),
+            dumps({"status": status, "error": error}),
+            status,
+            utc_now(),
+        ),
+    )
+    return run_id
 
 
 def save_learning_plan(conn: Connection, student_id: int, raw_goal: str, parsed: dict[str, Any]) -> int:

@@ -364,6 +364,41 @@ def init_db() -> None:
                 issues_json TEXT NOT NULL DEFAULT '[]',
                 checked_at TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS knowledge_points (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+                subject TEXT NOT NULL DEFAULT '',
+                unit TEXT NOT NULL DEFAULT '',
+                lesson TEXT NOT NULL DEFAULT '',
+                section TEXT NOT NULL DEFAULT '',
+                knowledge_point TEXT NOT NULL,
+                skill TEXT NOT NULL DEFAULT '',
+                source_ref TEXT NOT NULL DEFAULT '',
+                difficulty TEXT NOT NULL DEFAULT 'basic',
+                exam_weight TEXT NOT NULL DEFAULT 'medium',
+                must_master INTEGER NOT NULL DEFAULT 1,
+                mastery_score REAL NOT NULL DEFAULT 0.5,
+                confidence REAL NOT NULL DEFAULT 0.5,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE(student_id, subject, unit, lesson, knowledge_point)
+            );
+
+            CREATE TABLE IF NOT EXISTS agent_trace_steps (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id INTEGER REFERENCES agent_runs(id) ON DELETE CASCADE,
+                trace_id TEXT NOT NULL DEFAULT '',
+                step_index INTEGER NOT NULL DEFAULT 0,
+                step_type TEXT NOT NULL DEFAULT '',
+                tool_name TEXT NOT NULL DEFAULT '',
+                args_json TEXT NOT NULL DEFAULT '{}',
+                observation_json TEXT NOT NULL DEFAULT '{}',
+                validation_json TEXT NOT NULL DEFAULT '{}',
+                latency_ms INTEGER NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'ok',
+                created_at TEXT NOT NULL
+            );
             """
         )
         _ensure_columns(

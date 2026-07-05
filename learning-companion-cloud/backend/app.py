@@ -4,6 +4,7 @@ from datetime import date, datetime
 import html
 import json
 from pathlib import Path
+import re
 from typing import Annotated
 
 import os
@@ -38,9 +39,12 @@ try:
         skill_targets,
     )
     from .ai_provider import check_ai_connection
+    from .agent_tool_registry import list_tool_specs
     from .curriculum import CURRICULUM, WUHAN_DEFAULTS, get_subject_units
     from .db import dict_rows, dumps, get_conn, init_db, loads, utc_now
     from .importer import import_task_sources
+    from .knowledge_graph import rebuild_knowledge_points, weakest_knowledge_points
+    from .learning_strategy import build_dynamic_strategy
     from .material_importer import create_material_from_import, extract_local_file, extract_public_url
     from .notifier import notify
     from .plan_generator import generate_plan_from_text
@@ -74,9 +78,12 @@ except ImportError:
         skill_targets,
     )
     from ai_provider import check_ai_connection
+    from agent_tool_registry import list_tool_specs
     from curriculum import CURRICULUM, WUHAN_DEFAULTS, get_subject_units
     from db import dict_rows, dumps, get_conn, init_db, loads, utc_now
     from importer import import_task_sources
+    from knowledge_graph import rebuild_knowledge_points, weakest_knowledge_points
+    from learning_strategy import build_dynamic_strategy
     from material_importer import create_material_from_import, extract_local_file, extract_public_url
     from notifier import notify
     from plan_generator import generate_plan_from_text
@@ -95,6 +102,18 @@ FRONTEND_DIR = BASE_DIR / "frontend"
 load_dotenv(BASE_DIR / ".env")
 
 app = FastAPI(title="11岁孩子暑假自主学习陪跑系统", version="1.0.0")
+
+SECRET_PATTERNS = (
+    re.compile(r"sk-[A-Za-z0-9_\-]{8,}"),
+    re.compile(r"(?i)(OPENAI_API_KEY|API_KEY|ADMIN_PASSWORD|PARENT_PASSWORD)\s*[:=]\s*['\"]?[^\s'\"，。；;]+"),
+)
+
+
+def sanitize_material_text(text: str) -> str:
+    clean = text or ""
+    for pattern in SECRET_PATTERNS:
+        clean = pattern.sub("[REDACTED_SECRET]", clean)
+    return clean
 security = HTTPBasic(auto_error=False)
 app.add_middleware(
     CORSMiddleware,
@@ -542,12 +561,60 @@ def material_coverage(student_id: int = 1, _: str = Depends(require_parent_or_ad
 @app.post("/api/materials/{material_id}/index")
 def reindex_material(material_id: int, _: str = Depends(require_admin_auth)) -> dict[str, object]:
     with get_conn() as conn:
-        return index_material(conn, material_id)
+        result = index_material(conn, material_id)
+        result["knowledge_graph"] = rebuild_knowledge_points(conn, int(result.get("student_id", 1)) if "student_id" in result else 1)
+        return result
 
 
 @app.get("/api/learning-targets")
 def learning_targets(_: str = Depends(require_parent_or_admin_auth)) -> dict[str, object]:
     return skill_targets()
+
+
+@app.post("/api/knowledge/rebuild")
+def rebuild_knowledge(student_id: int = 1, _: str = Depends(require_admin_auth)) -> dict[str, object]:
+    with get_conn() as conn:
+        return rebuild_knowledge_points(conn, student_id)
+
+
+@app.get("/api/knowledge/weak-points")
+def knowledge_weak_points(student_id: int = 1, _: str = Depends(require_parent_or_admin_auth)) -> list[dict[str, object]]:
+    with get_conn() as conn:
+        return weakest_knowledge_points(conn, student_id)
+
+
+@app.get("/api/agent/strategy")
+def agent_strategy(
+    student_id: int = 1,
+    target_date: str | None = None,
+    _: str = Depends(require_parent_or_admin_auth),
+) -> dict[str, object]:
+    with get_conn() as conn:
+        return build_dynamic_strategy(conn, student_id, target_date or date.today().isoformat())
+
+
+@app.get("/api/agent/tools")
+def agent_tools(_: str = Depends(require_parent_or_admin_auth)) -> list[dict[str, object]]:
+    return list_tool_specs()
+
+
+@app.get("/api/agent/traces/{trace_id}")
+def agent_trace(trace_id: str, _: str = Depends(require_parent_or_admin_auth)) -> list[dict[str, object]]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM agent_trace_steps
+            WHERE trace_id = ?
+            ORDER BY step_index, id
+            """,
+            (trace_id,),
+        ).fetchall()
+        result = dict_rows(rows)
+        for item in result:
+            item["args"] = loads(item.pop("args_json"), {})
+            item["observation"] = loads(item.pop("observation_json"), {})
+            item["validation"] = loads(item.pop("validation_json"), {})
+        return result
 
 
 @app.get("/api/student/mastery")
@@ -637,7 +704,7 @@ def create_material(
                 subject.strip(),
                 material_type,
                 title.strip(),
-                content_text.strip(),
+                sanitize_material_text(content_text).strip(),
                 file_path.strip(),
                 dumps({"source": "admin"}),
                 "admin_text",
@@ -648,7 +715,8 @@ def create_material(
         )
         material_id = int(cursor.lastrowid)
         indexed = index_material(conn, material_id)
-        return {"id": material_id, "status": "created", "rag_index": indexed}
+        knowledge = rebuild_knowledge_points(conn, student_id)
+        return {"id": material_id, "status": "created", "rag_index": indexed, "knowledge_graph": knowledge}
 
 
 @app.post("/api/materials/import-file")
@@ -675,12 +743,13 @@ def import_material_file(
             subject=subject,
             material_type=material_type,
             title=title.strip() or extracted["title"],
-            content_text=extracted["content_text"],
+            content_text=sanitize_material_text(extracted["content_text"]),
             file_path=extracted["file_path"],
             source_id=source_id,
             source_type="local_file",
             extra_config=extracted["meta"],
         )
+        result["knowledge_graph"] = rebuild_knowledge_points(conn, student_id)
         return result
 
 
@@ -708,12 +777,13 @@ def import_material_url(
             subject=subject,
             material_type=material_type,
             title=title.strip() or extracted["title"],
-            content_text=extracted["content_text"],
+            content_text=sanitize_material_text(extracted["content_text"]),
             file_path=extracted["file_path"],
             source_id=source_id,
             source_type="public_url",
             extra_config=extracted["meta"],
         )
+        result["knowledge_graph"] = rebuild_knowledge_points(conn, student_id)
         return result
 
 

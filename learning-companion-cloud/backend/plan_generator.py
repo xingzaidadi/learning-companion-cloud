@@ -33,10 +33,18 @@ def _detect_total_units(text: str, default: int) -> int:
 
 def _homework_source(text: str) -> dict[str, Any]:
     subject = ""
+    lowered = text.lower()
     for candidate in ("语文", "数学", "英语"):
         if candidate in text:
             subject = candidate
             break
+    if not subject:
+        if "math" in lowered:
+            subject = "数学"
+        elif "english" in lowered:
+            subject = "英语"
+        elif "chinese" in lowered or "reading" in lowered:
+            subject = "语文"
     title = "寒假作业本" if "寒假" in text else "暑假作业本" if "暑假" in text else "作业本"
     return {
         "category": "summer_homework",
@@ -244,15 +252,20 @@ def generate_plan_from_text(conn: Connection, raw_text: str, student_id: int = 1
 
 
 def _source_from_chunk(chunk: str, settings: dict[str, Any]) -> dict[str, Any] | None:
-    if "作业" in chunk or "作业本" in chunk:
+    lowered = chunk.lower()
+    if "作业" in chunk or "作业本" in chunk or "homework" in lowered or "workbook" in lowered:
         return _homework_source(chunk)
-    if _looks_like_subject_request(chunk, "语文", extra_keywords=("课文", "语文书")):
+    if _looks_like_subject_request(chunk, "语文", extra_keywords=("课文", "语文书")) or _looks_like_english_alias_request(lowered, ("chinese", "reading"), ("book", "textbook", "daily", "preview", "lesson")):
         return _book_source("语文", chunk, settings)
-    if _looks_like_subject_request(chunk, "数学", extra_keywords=("一节", "数学书", "例题")):
+    if _looks_like_subject_request(chunk, "数学", extra_keywords=("一节", "数学书", "例题")) or _looks_like_english_alias_request(lowered, ("math", "mathematics"), ("book", "textbook", "daily", "preview", "lesson", "decimal")):
         return _book_source("数学", chunk, settings)
     if _looks_like_english_request(chunk):
         return _book_source("英语", chunk, settings)
     return None
+
+
+def _looks_like_english_alias_request(lowered: str, subjects: tuple[str, ...], intent_words: tuple[str, ...]) -> bool:
+    return any(subject in lowered for subject in subjects) and any(word in lowered for word in intent_words)
 
 
 def _looks_like_subject_request(text: str, subject: str, extra_keywords: tuple[str, ...]) -> bool:
