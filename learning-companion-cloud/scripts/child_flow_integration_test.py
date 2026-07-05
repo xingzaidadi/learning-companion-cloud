@@ -117,7 +117,7 @@ def run_child_flow() -> None:
             item_ids = seed_quiz(conn, task1)
 
         child_html = assert_status(client.get("/child"))
-        for needle in ("今天进度", "开始下一个任务", "今日任务", "小测 / 检查", "timer-tag", "window.__INITIAL_TASKS__"):
+        for needle in ("学习驾驶舱", "今日进度", "开始下一个任务", "当前任务", "做完就检查，卡住就求助", "timer-tag", "window.__INITIAL_TASKS__"):
             assert_true(needle in child_html, f"孩子端页面缺少 {needle}")
 
         tasks = assert_status(client.get("/api/daily-tasks"))

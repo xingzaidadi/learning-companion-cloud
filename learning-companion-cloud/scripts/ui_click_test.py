@@ -194,11 +194,15 @@ def run_browser_clicks(base_url: str) -> None:
         page.goto(f"{base_url}/child")
         page.wait_for_selector("#currentTask .task-card")
         page.wait_for_selector("#tasks .task-card")
+        assert "学习驾驶舱" in page.locator("body").inner_text(), "孩子端应使用中文学习驾驶舱标题"
+        assert page.locator(".progress-orb").count() == 1, "进度应以醒目的彩色进度块展示"
         assert page.locator(".current-task-card").count() == 1, "孩子端应有当前任务焦点卡"
         assert "当前任务" in page.locator(".current-task-card").inner_text(), "焦点卡标题应清晰"
+        assert page.locator("#currentTask .subject-badge").count() == 1, "当前任务应显示语文/数学/英语学科色标"
+        assert page.locator("#currentTask .focus-guidance").count() == 1, "当前任务应有“现在要做”的明确提示"
         assert "后续任务队列" in page.locator(".queue-card").inner_text(), "其他任务应弱化为队列"
-        assert page.locator(".workspace-card").count() == 1, "孩子端应有全宽检查/求助工作区"
-        assert "全宽检查与求助工作区" in page.locator(".workspace-card").inner_text(), "工作区标题应清晰"
+        assert page.locator(".workspace-card").count() == 1, "孩子端应有检查/求助工作区"
+        assert "做完就检查，卡住就求助" in page.locator(".workspace-card").inner_text(), "工作区标题应清晰"
         assert page.locator(".quiz-panel").count() == 1 and page.locator(".assist-panel").count() == 1, "小测和卡住应分成两个清晰面板"
         current_card = page.locator("#currentTask .task-card").first
         if "先处理卡住任务" in page.locator("#startNext").inner_text():

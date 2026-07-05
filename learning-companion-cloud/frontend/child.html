@@ -10,18 +10,22 @@
     <main class="shell">
       <header class="topbar">
         <div class="brand">
-          <h1>今天只做下一步</h1>
-          <p>不用想太多，点开始，然后完成一张任务卡。</p>
+          <h1>学习驾驶舱</h1>
+          <p>只盯住当前一件事：开始学习、遇到卡点、完成检查。</p>
         </div>
         <nav class="nav">
           <a href="/child">孩子端</a>
         </nav>
       </header>
 
-      <section class="card hero">
-        <div>
-          <div class="muted">今天进度</div>
-          <div class="progress-number"><span id="doneCount">0</span><small> / <span id="totalCount">0</span></small></div>
+      <section class="card hero coach-hero">
+        <div class="hero-progress">
+          <div class="progress-orb"><span id="doneCount">0</span><small>/<span id="totalCount">0</span></small></div>
+          <div>
+            <div class="muted">今日进度</div>
+            <h2>先完成当前任务，再看下一项</h2>
+            <p>页面会自动把最该做的一项放到最上面。</p>
+          </div>
         </div>
         <button id="startNext" class="primary big-action">开始下一个任务</button>
       </section>
@@ -30,7 +34,7 @@
         <section class="card current-task-card">
           <div class="section-head">
             <div>
-              <p class="eyebrow">Current Step</p>
+              <p class="eyebrow">当前一步</p>
               <h2>当前任务</h2>
             </div>
             <span class="tag ok">只看这一张</span>
@@ -46,17 +50,17 @@
         <section class="card workspace-card full-workspace-card">
           <div class="section-head">
             <div>
-              <p class="eyebrow">Focus Zone</p>
-              <h2>全宽检查与求助工作区</h2>
+              <p class="eyebrow">检查与求助</p>
+              <h2>做完就检查，卡住就求助</h2>
             </div>
-            <span class="tag ok">大屏作答 · 不挤在侧栏</span>
+            <span class="tag ok">大屏展示</span>
           </div>
           <div class="workspace-layout">
             <section class="workspace-panel quiz-panel">
               <div class="panel-title">
                 <div>
-                  <p class="eyebrow">Quiz</p>
-                  <h3>小测 / 检查</h3>
+                  <p class="eyebrow">小测检查</p>
+                  <h3>完成后在这里过关</h3>
                 </div>
                 <span class="tag warn">通过线 80%</span>
               </div>
@@ -68,8 +72,8 @@
             <section class="workspace-panel assist-panel">
               <div class="panel-title">
                 <div>
-                  <p class="eyebrow">Help</p>
-                  <h3>卡住了怎么办</h3>
+                  <p class="eyebrow">卡点求助</p>
+                  <h3>不会时先拿提示</h3>
                 </div>
                 <span class="tag">先提示，不报答案</span>
               </div>
@@ -84,7 +88,7 @@
         <section class="card task-column queue-card">
           <div class="section-head">
             <div>
-              <p class="eyebrow">Up Next</p>
+              <p class="eyebrow">后面再看</p>
               <h2>后续任务队列</h2>
             </div>
             <span class="tag">只展示，不抢焦点</span>
@@ -164,6 +168,39 @@
         button.textContent = action.label;
       }
 
+      function subjectName(task) {
+        const text = `${task.title || ""} ${task.description || ""}`;
+        if (/英语|Unit|school|classroom|library|teacher/i.test(text)) return "英语";
+        if (/数学|小数|计算|除法|乘法|应用题/.test(text)) return "数学";
+        if (/语文|课文|生字|白鹭|阅读|作文/.test(text)) return "语文";
+        return "综合";
+      }
+
+      function subjectClass(task) {
+        const subject = subjectName(task);
+        if (subject === "英语") return "subject-english";
+        if (subject === "数学") return "subject-math";
+        if (subject === "语文") return "subject-chinese";
+        return "subject-general";
+      }
+
+      function statusHint(task) {
+        if (task.status === "not_started") return "先点开始，系统会开始计时。";
+        if (task.status === "in_progress") return "正在学习。做完后点检查，卡住就点求助。";
+        if (task.status === "paused") return "已暂停。准备好了点继续学习。";
+        if (task.status === "stuck") return "先看下方提示。学会了点继续学，做完了点检查。";
+        if (task.status === "checking") return "已经进入检查，先完成小测。";
+        if (task.status === "needs_revision") return "小测没过线，先订正再重新检查。";
+        if (task.status === "completed") return "这项已通过，准备进入下一项。";
+        return "按当前按钮继续。";
+      }
+
+      function checkMethodText(task) {
+        if (task.check_method === "quiz") return "小测过关";
+        if (task.check_method === "review_quiz") return "补漏复测";
+        return "完成后检查";
+      }
+
       function createTaskCard(task, variant = "focus", currentTaskId = null) {
         const card = document.createElement("article");
         card.dataset.taskId = String(task.id);
@@ -178,11 +215,10 @@
         if (variant === "queue") {
           const isCurrent = currentTaskId === task.id;
           return `
-            <div class="queue-task-row">
+            <div class="queue-task-row ${subjectClass(task)}">
               <div>
-                <div class="task-meta">${priorityTag(task)}${taskStatusTag(task)}${isCurrent ? '<span class="tag ok">当前</span>' : ""}</div>
+                <div class="task-meta"><span class="subject-badge">${subjectName(task)}</span>${priorityTag(task)}${taskStatusTag(task)}${isCurrent ? '<span class="tag ok">当前</span>' : ""}</div>
                 <h3 class="task-title">${task.title}</h3>
-                <p class="muted">${task.description}</p>
               </div>
               <div class="task-meta queue-meta">
                 <span class="tag">${task.estimated_minutes} 分钟</span>
@@ -230,19 +266,31 @@
         const doneDisabled = canFinishTask && task.status !== "completed" ? "" : "disabled";
         const stuckDisabled = canAskStuck ? "" : "disabled";
         return `
+          <div class="focus-status ${subjectClass(task)}">
+            <span class="subject-badge">${subjectName(task)}</span>
+            ${priorityTag(task)}
+            ${taskStatusTag(task)}
+            <span class="tag">${checkMethodText(task)}</span>
+          </div>
           <div class="task-head">
             <div>
               <h3 class="task-title">${task.title}</h3>
-              <p class="muted">${task.description}</p>
+              <p class="focus-description">${task.description}</p>
             </div>
-            <div class="task-meta">${priorityTag(task)}${taskStatusTag(task)}</div>
           </div>
-          <div class="task-meta">
-            <span class="tag">${task.estimated_minutes} 分钟</span>
-            <span class="tag timer-tag" data-elapsed="${Number(task.elapsed_seconds || 0)}" data-rendered-at="${renderedAt}" data-state="${task.timer_state || "stopped"}">已学 ${formatElapsed(task.elapsed_seconds || 0)}</span>
-            ${checkMethodTag(task)}
+          <div class="focus-guidance">
+            <strong>现在要做</strong>
+            <p>${statusHint(task)}</p>
           </div>
-          <p><strong>完成标准：</strong>${task.completion_standard}</p>
+          <div class="focus-metrics">
+            <div><span>预计</span><strong>${task.estimated_minutes} 分钟</strong></div>
+            <div class="time-metric"><span>学习计时</span><strong class="tag timer-tag" data-elapsed="${Number(task.elapsed_seconds || 0)}" data-rendered-at="${renderedAt}" data-state="${task.timer_state || "stopped"}">已学 ${formatElapsed(task.elapsed_seconds || 0)}</strong></div>
+            <div><span>过关方式</span><strong>${checkMethodText(task)}</strong></div>
+          </div>
+          <div class="completion-card">
+            <span>做到这样就算完成</span>
+            <strong>${task.completion_standard}</strong>
+          </div>
           <div class="actions">
             <button class="primary" data-action="start" data-id="${task.id}" ${startDisabled}>${startLabel}</button>
             <button data-action="pause" data-id="${task.id}" ${pauseDisabled}>暂停</button>
@@ -255,7 +303,7 @@
       function updateTaskCardElement(card, task, variant = card.dataset.variant || "focus", currentTaskId = null) {
         const isCurrent = variant === "focus" || currentTaskId === task.id;
         const activeClass = isCurrent || task.id === activeTaskId || task.status === "in_progress" ? "active" : "";
-        card.className = `task-card ${variant === "queue" ? "queue-task-card" : "focus-task-card"} ${activeClass}`;
+        card.className = `task-card ${variant === "queue" ? "queue-task-card" : "focus-task-card"} ${subjectClass(task)} ${activeClass}`;
         card.innerHTML = taskCardHtml(task, variant, currentTaskId);
       }
 
