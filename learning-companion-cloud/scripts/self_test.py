@@ -437,6 +437,23 @@ def run_e2e() -> None:
             {"chinese_word_dictation", "chinese_pinyin", "chinese_char_group"}.issubset(chinese_types),
             f"语文小测应包含听写/拼音/组词，实际 {chinese_types}",
         )
+        with get_conn() as conn:
+            chinese_private = [
+                dict(row)
+                for row in conn.execute(
+                    "SELECT id, question_type, question, answer FROM quiz_items WHERE daily_task_id = ?",
+                    (chinese_task["id"],),
+                ).fetchall()
+            ]
+        dictation_items = [item for item in chinese_private if item["question_type"] == "chinese_word_dictation"]
+        assert_true(dictation_items, "语文应有听写题")
+        for item in dictation_items:
+            assert_true(str(item["answer"]) not in str(item["question"]), f"语文听写题干不应直接显示听写答案：{item}")
+        word_explain_items = [item for item in chinese_private if item["question_type"] == "chinese_word_explain"]
+        assert_true(
+            all(str(item["answer"]) not in {"说清意思", "写出完整句子"} for item in word_explain_items),
+            f"语文词义题答案不应是空泛模板：{word_explain_items}",
+        )
         math_task = next(item for item in current_task_rows if "数学" in item["title"] or "小数" in item["title"])
         math_quiz = assert_status(client.get(f"/api/daily-tasks/{math_task['id']}/quiz"))
         math_types = {item["question_type"] for item in math_quiz["items"]}
@@ -444,6 +461,23 @@ def run_e2e() -> None:
             {"math_exact", "math_concept_choice", "math_step_explain"}.issubset(math_types),
             f"数学小测应包含计算/概念/步骤，实际 {math_types}",
         )
+        with get_conn() as conn:
+            math_private = [
+                dict(row)
+                for row in conn.execute(
+                    """
+                    SELECT question_type, question, answer
+                    FROM quiz_items
+                    WHERE daily_task_id = ?
+                      AND question_type IN ('math_exact', 'math_word_problem', 'math_variant')
+                    """,
+                    (math_task["id"],),
+                ).fetchall()
+            ]
+        math_answers = [str(item["answer"]) for item in math_private]
+        assert_true(len(math_answers) == len(set(math_answers)), f"数学计算/应用/变式题答案不应重复套娃：{math_private}")
+        for item in math_private:
+            assert_true(str(item["answer"]) not in str(item["question"]), f"数学题干不应直接包含标准答案：{item}")
 
         regenerated = assert_status(client.post(f"/api/daily-tasks/{task_id}/quiz/regenerate"))
         assert_true(len(regenerated["items"]) >= 3, "重生成小测按钮应返回至少 3 道题")

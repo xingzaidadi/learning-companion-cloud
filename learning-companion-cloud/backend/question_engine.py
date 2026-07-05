@@ -44,6 +44,20 @@ CHINESE_WORD_BANK: dict[str, dict[str, Any]] = {
 }
 
 
+CHINESE_WORD_MEANINGS: dict[str, str] = {
+    "精巧": "精致巧妙，形容白鹭外形匀称好看。",
+    "适宜": "合适、恰当。",
+    "寻常": "平常、普通。",
+    "美中不足": "很好里面还有一点不够完美。",
+    "吩咐": "口头指派或嘱咐别人做事。",
+    "爱慕": "喜爱羡慕。",
+    "体面": "外表或身份上好看、有面子。",
+    "沉浸": "完全处在某种情境或感受里。",
+    "缠着": "围着不放，反复要求或依附。",
+    "信赖": "相信并依靠。",
+}
+
+
 ENGLISH_WORD_BANK: dict[str, list[tuple[str, str]]] = {
     "school": [("school", "学校"), ("library", "图书馆"), ("classroom", "教室"), ("playground", "操场"), ("cool", "酷的/很棒的")],
     "activities": [("activity", "活动"), ("festival", "节日"), ("fun", "有趣的"), ("game", "游戏"), ("club", "社团")],
@@ -171,9 +185,11 @@ def _build_chinese_quiz(topic: str, content: str, config: dict[str, Any], versio
         chars.update({str(key): str(value) for key, value in config["new_chars"].items()})
     first_word = words[0]
     first_char, first_pinyin = next(iter(chars.items()))
+    explain_word = words[1] if len(words) > 1 else first_word
+    explain_answer = CHINESE_WORD_MEANINGS.get(explain_word, "能结合课文语境说出词语大意")
     return [
         _exact(
-            f"听写：请家长读「{first_word}」，孩子输入听到的词语。",
+            "听写：请家长读第 1 个听写词，孩子输入听到的词语。（题目不显示答案）",
             first_word,
             "听写题重点检查字形，必须写成课本词语。",
             "chinese_word_dictation",
@@ -191,8 +207,8 @@ def _build_chinese_quiz(topic: str, content: str, config: dict[str, Any], versio
             "chinese_char_group",
         ),
         _short(
-            f"词义：请解释「{words[1] if len(words) > 1 else first_word}」的大概意思。",
-            "说清意思",
+            f"词义：请解释「{explain_word}」的大概意思。",
+            explain_answer,
             "能用自己的话解释词语意思，并放回课文语境即可。",
             "chinese_word_explain",
         ),
@@ -210,7 +226,7 @@ def _build_chinese_quiz(topic: str, content: str, config: dict[str, Any], versio
         ),
         _short(
             str(bank["expression"]),
-            "写出完整句子",
+            "能围绕题目要求写出一句内容完整、意思清楚的句子",
             "表达题看是否围绕观察点写完整句子，不要求华丽。",
             "chinese_expression",
         ),
@@ -298,11 +314,11 @@ def _math_decimal_items(content: str, topic: str) -> list[dict[str, Any]]:
         return []
     if wants_div and not wants_mul:
         exact_q = ("计算：6.4 ÷ 4 = ?", _decimal_div("6.4", "4"), "64÷4=16，6.4 比 64 少一位小数，结果是 1.6。")
-        word_problem = ("应用题：6.4 米彩带平均分成 4 段，每段多少米？", "1.6", "总量÷份数=每份长度，6.4÷4=1.6 米。")
+        word_problem = ("应用题：8.4 米彩带平均分成 4 段，每段多少米？", "2.1", "总量÷份数=每份长度，8.4÷4=2.1 米。")
         concept = _choice("小数除以整数时，不够除通常怎么办？", ["直接丢掉余数", "在末尾添 0 继续除", "把小数点去掉不管"], "在末尾添 0 继续除", "小数末尾添 0 大小不变，可以继续除。", "math_concept_choice")
     else:
         exact_q = ("计算：2.4 × 3 = ?", _decimal_mul("2.4", "3"), "先按 24×3=72 算，再看 2.4 有一位小数，结果是 7.2。")
-        word_problem = ("应用题：每支笔 2.4 元，买 3 支多少钱？", "7.2", "单价×数量=总价，2.4×3=7.2 元。")
+        word_problem = ("应用题：每支笔 2.4 元，买 4 支多少钱？", "9.6", "单价×数量=总价，2.4×4=9.6 元。")
         concept = _choice("小数乘整数时，积的小数位数主要由什么决定？", ["整数有几位", "小数因数的小数位数", "数字写得长不长"], "小数因数的小数位数", "先按整数乘，再根据小数因数的小数位数点小数点。", "math_concept_choice")
     return [
         _exact(exact_q[0], exact_q[1], exact_q[2], "math_exact"),
@@ -349,7 +365,7 @@ def _generic_math_items(topic: str, content: str) -> list[dict[str, Any]]:
         _exact("精确计算：3.6 × 10 = ?", "36", "小数乘 10，小数点向右移动一位。", "math_exact"),
         _choice("概念选择：数学预习后最重要的是？", ["只看例题", "能说清方法并做一道同类题", "直接看答案"], "能说清方法并做一道同类题", "会讲、会算、会用才算掌握。", "math_concept_choice"),
         _short(f"步骤说明：请说出「{unit}」今天学到的核心方法。", "说清方法", "用自己的话说出步骤即可。", "math_step_explain"),
-        _exact("应用题：每本本子 3.6 元，买 10 本多少钱？", "36", "单价×数量=总价，3.6×10=36 元。", "math_word_problem"),
+        _exact("应用题：每本本子 3.6 元，买 8 本多少钱？", "28.8", "单价×数量=总价，3.6×8=28.8 元。", "math_word_problem"),
         _choice("错因判断：应用题没有写单位，主要属于哪类问题？", ["计算错", "单位错", "概念错"], "单位错", "应用题答案需要带合适单位。", "math_error_reason"),
         _exact("同类变式：4.8 ÷ 10 = ?", "0.48", "小数除以 10，小数点向左移动一位。", "math_variant"),
     ]
