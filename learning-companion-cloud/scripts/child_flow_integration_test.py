@@ -191,6 +191,84 @@ def run_child_flow() -> None:
         for needle in ("继续当前任务", "已完成", "window.__INITIAL_TASKS__"):
             assert_true(needle in child_html_after, f"刷新页面后状态应恢复，缺少 {needle}")
 
+        with get_conn() as conn:
+            conn.execute("DELETE FROM daily_tasks")
+            conn.execute("DELETE FROM task_sources")
+
+        published = assert_status(
+            client.post(
+                "/api/task-sources",
+                data={
+                    "category": "preview",
+                    "title": "后端发布联调：英语 Unit 1 预习",
+                    "subject": "英语",
+                    "total_units": "1",
+                    "completed_units": "0",
+                    "estimated_minutes": "20",
+                    "deadline": "2026-08-31",
+                    "topic": "Unit 1 My school is cool",
+                    "lesson_content": "听音频跟读，认读 teacher/library/classroom，理解 There is 句型。",
+                    "knowledge_points": "单词拼写、中译英、There is 句型填空",
+                    "student_id": "1",
+                },
+            )
+        )
+        assert_true(published["status"] == "created", f"后端发布任务源失败：{published}")
+        generated = assert_status(client.post("/api/daily-tasks/generate"))
+        assert_true(generated["count"] >= 1, f"发布后应能生成今日任务：{generated}")
+        published_task = next(task for task in generated["tasks"] if "后端发布联调" in task["title"] or "Unit 1" in task["title"])
+        published_task_id = int(published_task["id"])
+
+        child_after_publish = assert_status(client.get("/child"))
+        assert_true("后端发布联调" in child_after_publish or "Unit 1" in child_after_publish, "孩子端应看到后端发布的今日任务")
+        published_tasks = assert_status(client.get("/api/daily-tasks"))
+        assert_true(task_by_id(published_tasks, published_task_id)["status"] == "not_started", f"发布后的任务应未开始：{published_tasks}")
+
+        published_start = assert_status(client.post(f"/api/daily-tasks/{published_task_id}/event", json={"event_type": "start"}))
+        assert_true(published_start["status"] == "in_progress" and published_start["timer_state"] == "running", f"孩子开始后端发布任务失败：{published_start}")
+        published_stuck = assert_status(
+            client.post(
+                f"/api/daily-tasks/{published_task_id}/event",
+                json={"event_type": "stuck", "note": "不会拼 library"},
+            )
+        )
+        assert_true(published_stuck["status"] == "stuck" and published_stuck.get("assistance"), f"后端发布任务卡住辅导失败：{published_stuck}")
+        published_resume = assert_status(client.post(f"/api/daily-tasks/{published_task_id}/event", json={"event_type": "start"}))
+        assert_true(published_resume["status"] == "in_progress", f"后端发布任务卡住后继续失败：{published_resume}")
+        published_complete = assert_status(client.post(f"/api/daily-tasks/{published_task_id}/event", json={"event_type": "complete"}))
+        assert_true(published_complete["status"] == "checking", f"后端发布任务完成后应进入检查：{published_complete}")
+
+        published_quiz = assert_status(client.get(f"/api/daily-tasks/{published_task_id}/quiz"))
+        assert_true(len(published_quiz["items"]) >= 3, f"后端发布任务应生成小测：{published_quiz}")
+        assert_true(all("answer" not in item for item in published_quiz["items"]), "后端发布任务的小测不能向孩子暴露答案")
+        wrong_published_answers = {str(item["id"]): "" for item in published_quiz["items"]}
+        published_revision = assert_status(client.post(f"/api/daily-tasks/{published_task_id}/quiz", json={"answers": wrong_published_answers}))
+        assert_true(published_revision["status"] == "needs_revision", f"后端发布任务答错应进入订正：{published_revision}")
+
+        with get_conn() as conn:
+            correct_published_answers = {
+                str(row["id"]): row["answer"]
+                for row in conn.execute(
+                    "SELECT id, answer FROM quiz_items WHERE daily_task_id = ?",
+                    (published_task_id,),
+                ).fetchall()
+            }
+            source_units_before = conn.execute(
+                "SELECT completed_units FROM task_sources WHERE id = ?",
+                (published_task["source_id"],),
+            ).fetchone()[0]
+        published_pass = assert_status(client.post(f"/api/daily-tasks/{published_task_id}/quiz", json={"answers": correct_published_answers}))
+        assert_true(published_pass["status"] == "completed", f"后端发布任务订正后应完成：{published_pass}")
+        with get_conn() as conn:
+            source_units_after = conn.execute(
+                "SELECT completed_units FROM task_sources WHERE id = ?",
+                (published_task["source_id"],),
+            ).fetchone()[0]
+        assert_true(source_units_after == source_units_before + 1, "完成后应推进后端发布任务源进度")
+
+        final_tasks = assert_status(client.get("/api/daily-tasks"))
+        assert_true(task_by_id(final_tasks, published_task_id)["status"] == "completed", f"后端发布任务最终应完成：{final_tasks}")
+
 
 def main() -> None:
     try:
