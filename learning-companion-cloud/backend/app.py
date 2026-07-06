@@ -692,6 +692,7 @@ def agent_trace(trace_id: str, _: str = Depends(require_parent_or_admin_auth)) -
         result = dict_rows(rows)
         for item in result:
             item["args"] = loads(item.pop("args_json"), {})
+            item["decision"] = loads(item.pop("decision_json", "{}"), {})
             item["observation"] = loads(item.pop("observation_json"), {})
             item["validation"] = loads(item.pop("validation_json"), {})
         return result

@@ -16,5 +16,4 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
-      - run: python eval_harness/runners/eval_runner.py --agent learning_agent
-      - run: python eval_harness/runners/eval_runner.py --agent demo_agent
+      - run: python eval_harness/runners/eval_runner.py

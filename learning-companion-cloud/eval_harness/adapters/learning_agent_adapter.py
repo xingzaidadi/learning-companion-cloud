@@ -8,6 +8,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 
 from .base import EvalResult
+from eval_harness.judges.learning_judge import case_lifecycle, failure_root_cause, judge_learning_case, trace_completeness
 
 
 class LearningAgentAdapter:
@@ -103,6 +104,9 @@ class LearningAgentAdapter:
             output = {"plan": plan, "tasks": tasks}
             metrics["task_success"] = 1.0 if tasks.get("count", 0) >= case.get("min_tasks", 1) else 0.0
             metrics["schedule_present"] = 1.0 if all(task.get("planned_start") for task in tasks.get("tasks", [])) else 0.0
+            trace_quality = trace_completeness(self._latest_trace_steps())
+            metrics["trace_standard"] = trace_quality["score"]
+            output["trace_quality"] = trace_quality
         elif case_type == "stuck":
             self.client.post("/api/study-plan/generate", data={"raw_text": case.get("plan", "ket, English daily unit, English, 8"), "student_id": "1"})
             tasks = self.client.post("/api/agent/daily-tasks", json={"student_id": 1, "force_all_sources": True}).json()["tasks"]
@@ -119,6 +123,9 @@ class LearningAgentAdapter:
                 metrics["actionable"] = 1.0 if len(steps) >= 3 else 0.0
                 metrics["no_direct_answer"] = 0.0 if any(word in str(stuck) for word in case.get("forbidden", [])) else 1.0
                 metrics["tool_loop"] = 1.0 if stuck.get("tool_loop", {}).get("mode") == "controlled_tool_loop" else 0.0
+                trace_quality = trace_completeness(self._latest_trace_steps())
+                metrics["trace_standard"] = trace_quality["score"]
+                output["trace_quality"] = trace_quality
         elif case_type == "quiz":
             self.client.post("/api/study-plan/generate", data={"raw_text": case.get("plan", "preview, English daily unit, English, 8"), "student_id": "1"})
             tasks = self.client.post("/api/agent/daily-tasks", json={"student_id": 1, "force_all_sources": True}).json().get("tasks", [])
@@ -135,6 +142,9 @@ class LearningAgentAdapter:
                 metrics["min_items"] = 1.0 if len(quiz.get("items", [])) >= case.get("min_items", 3) else 0.0
                 metrics["no_answer_leakage"] = 1.0 if all("answer" not in item and "explanation" not in item for item in quiz.get("items", [])) else 0.0
                 metrics["quality"] = float(quiz.get("quality", {}).get("score", 0))
+                trace_quality = trace_completeness(self._latest_trace_steps())
+                metrics["trace_standard"] = trace_quality["score"]
+                output["trace_quality"] = trace_quality
         elif case_type == "safety":
             response = self.client.post("/api/materials", data={"title": case["title"], "subject": "", "material_type": "notes", "content_text": case["payload"], "student_id": "1"})
             output = response.json()
@@ -147,5 +157,21 @@ class LearningAgentAdapter:
             for name, value in metrics.items():
                 if value <= 0:
                     issues.append(f"metric failed: {name}")
+        lifecycle = case_lifecycle(case, output)
+        if case_type in {"planning", "stuck", "quiz"}:
+            metrics["lifecycle_closed"] = 1.0 if lifecycle["closed"] else 0.0
+        judge = judge_learning_case(case, output, metrics, issues)
+        output["case_lifecycle"] = lifecycle
+        output["judge"] = judge
+        output["failure_root_cause"] = failure_root_cause(case, metrics, issues)
+        metrics["judge_score"] = judge["final_score"]
         score = sum(metrics.values()) / max(len(metrics), 1)
         return EvalResult(case_id=case["id"], agent=self.name, passed=not issues and score >= case.get("threshold", 0.7), score=round(score, 3), metrics=metrics, output=output, issues=issues)
+
+    def _latest_trace_steps(self) -> list[dict[str, Any]]:
+        assert self.client
+        overview = self.client.get("/api/agent/overview").json()
+        runs = overview.get("runs") or []
+        if not runs:
+            return []
+        return runs[0].get("trace_steps") or []

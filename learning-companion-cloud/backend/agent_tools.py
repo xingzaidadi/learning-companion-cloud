@@ -17,6 +17,13 @@ def log_agent_run(
     model: str = "rule",
     status: str = "ok",
     error: str = "",
+    *,
+    trace_steps: list[dict[str, Any]] | None = None,
+    confidence: float = 0.8,
+    quality_score: float = 0.8,
+    evidence: list[Any] | None = None,
+    warnings: list[str] | None = None,
+    latency_ms: int = 0,
 ) -> int:
     trace_id = uuid.uuid4().hex
     cursor = conn.execute(
@@ -25,31 +32,143 @@ def log_agent_run(
             student_id, run_type, input_json, output_json, model, status, error,
             confidence, evidence_json, warnings_json, latency_ms, quality_score, trace_id, created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, 0.8, '[]', '[]', 0, 0.8, ?, ?)
-        """,
-        (student_id, run_type, dumps(input_data), dumps(output_data), model, status, error, trace_id, utc_now()),
-    )
-    run_id = int(cursor.lastrowid)
-    conn.execute(
-        """
-        INSERT INTO agent_trace_steps (
-            run_id, trace_id, step_index, step_type, tool_name,
-            args_json, observation_json, validation_json, latency_ms, status, created_at
-        )
-        VALUES (?, ?, 1, 'execute', ?, ?, ?, ?, 0, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
-            run_id,
-            trace_id,
+            student_id,
             run_type,
             dumps(input_data),
-            dumps({"output_preview": output_data if isinstance(output_data, dict) else {"items": len(output_data)}}),
-            dumps({"status": status, "error": error}),
+            dumps(output_data),
+            model,
             status,
+            error,
+            confidence,
+            dumps(evidence or []),
+            dumps(warnings or []),
+            latency_ms,
+            quality_score,
+            trace_id,
             utc_now(),
         ),
     )
+    run_id = int(cursor.lastrowid)
+    steps = trace_steps or default_trace_steps(run_type, input_data, output_data, status, error, quality_score)
+    save_agent_trace_steps(conn, run_id, trace_id, steps)
     return run_id
+
+
+def default_trace_steps(
+    run_type: str,
+    input_data: dict[str, Any],
+    output_data: dict[str, Any] | list[Any],
+    status: str = "ok",
+    error: str = "",
+    quality_score: float = 0.8,
+) -> list[dict[str, Any]]:
+    output_preview: Any = output_data if isinstance(output_data, dict) else {"items": len(output_data)}
+    return [
+        {
+            "step_type": "goal",
+            "thought": f"确认本次 Agent 目标：{run_type}",
+            "decision": {"run_type": run_type, "input_keys": sorted(input_data.keys())},
+            "observation": {"input": input_data},
+            "status": "ok",
+            "score": 1.0,
+        },
+        {
+            "step_type": "tool_call",
+            "thought": "选择受控工具执行，不允许越权或隐式副作用。",
+            "tool_name": run_type,
+            "args": input_data,
+            "validation": {"status": status, "error": error},
+            "status": status,
+            "score": 1.0 if status in {"ok", "rule_fallback", "disabled_or_missing_key"} and not error else 0.5,
+        },
+        {
+            "step_type": "observation",
+            "thought": "读取执行结果并压缩为可审计观察。",
+            "tool_name": run_type,
+            "observation": {"output_preview": output_preview},
+            "status": status,
+            "score": quality_score,
+        },
+        {
+            "step_type": "evaluate",
+            "thought": "按规则检查输出是否可用于下一步学习闭环。",
+            "decision": {"quality_score": quality_score, "has_error": bool(error)},
+            "status": "ok" if not error else "warn",
+            "score": quality_score,
+        },
+        {
+            "step_type": "final",
+            "thought": "形成最终结果，并把证据交给后续任务、复习或家长端。",
+            "observation": {"status": status, "error": error},
+            "status": status,
+            "score": quality_score,
+        },
+    ]
+
+
+def save_agent_trace_steps(conn: Connection, run_id: int, trace_id: str, steps: list[dict[str, Any]]) -> None:
+    now = utc_now()
+    for index, step in enumerate(steps, 1):
+        step_index = int(step.get("step_index") or index)
+        status = str(step.get("status") or "ok")
+        error = str(step.get("error") or "")
+        validation = step.get("validation")
+        if validation is None:
+            validation = {"status": status, "error": error}
+        score = float(step.get("score", 0) or 0)
+        retry_count = int(step.get("retry_count", 0) or 0)
+        args = step.get("args", step.get("arguments", {}))
+        observation = step.get("observation", step.get("observation_preview", {}))
+        decision = step.get("decision", {})
+        decision_tool = decision.get("tool") if isinstance(decision, dict) else ""
+        tool_name = str(step.get("tool_name") or step.get("tool") or decision_tool or "agent_runtime")
+        conn.execute(
+            """
+            INSERT INTO agent_trace_steps (
+                run_id, trace_id, step_index, step_type, thought, tool_name,
+                args_json, decision_json, observation_json, validation_json,
+                latency_ms, status, error, retry_count, score, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                run_id,
+                trace_id,
+                step_index,
+                str(step.get("step_type") or ""),
+                str(step.get("thought") or step.get("reason") or ""),
+                tool_name,
+                dumps(args if isinstance(args, (dict, list)) else {"value": args}),
+                dumps(decision if isinstance(decision, (dict, list)) else {"value": decision}),
+                dumps(observation if isinstance(observation, (dict, list)) else {"value": observation}),
+                dumps(validation if isinstance(validation, (dict, list)) else {"value": validation}),
+                int(step.get("latency_ms", 0) or 0),
+                status,
+                error,
+                retry_count,
+                score,
+                now,
+            ),
+        )
+
+
+def agent_trace_steps(conn: Connection, trace_id: str) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT * FROM agent_trace_steps WHERE trace_id = ? ORDER BY step_index, id",
+        (trace_id,),
+    ).fetchall()
+    steps: list[dict[str, Any]] = []
+    for row in rows:
+        data = dict(row)
+        data["args"] = loads(data.pop("args_json"), {})
+        data["decision"] = loads(data.pop("decision_json"), {})
+        data["observation"] = loads(data.pop("observation_json"), {})
+        data["validation"] = loads(data.pop("validation_json"), {})
+        steps.append(data)
+    return steps
 
 
 def save_learning_plan(conn: Connection, student_id: int, raw_goal: str, parsed: dict[str, Any]) -> int:
@@ -190,6 +309,9 @@ def agent_runs(conn: Connection, student_id: int, limit: int = 50) -> list[dict[
         data = dict(row)
         data["input"] = loads(data.pop("input_json"), {})
         data["output"] = loads(data.pop("output_json"), {})
+        data["evidence"] = loads(data.pop("evidence_json", "[]"), [])
+        data["warnings"] = loads(data.pop("warnings_json", "[]"), [])
+        data["trace_steps"] = agent_trace_steps(conn, str(data.get("trace_id") or ""))
         data["display"] = explain_agent_run(data)
         result.append(data)
     return result

@@ -409,12 +409,17 @@ def init_db() -> None:
                 trace_id TEXT NOT NULL DEFAULT '',
                 step_index INTEGER NOT NULL DEFAULT 0,
                 step_type TEXT NOT NULL DEFAULT '',
+                thought TEXT NOT NULL DEFAULT '',
                 tool_name TEXT NOT NULL DEFAULT '',
                 args_json TEXT NOT NULL DEFAULT '{}',
+                decision_json TEXT NOT NULL DEFAULT '{}',
                 observation_json TEXT NOT NULL DEFAULT '{}',
                 validation_json TEXT NOT NULL DEFAULT '{}',
                 latency_ms INTEGER NOT NULL DEFAULT 0,
                 status TEXT NOT NULL DEFAULT 'ok',
+                error TEXT NOT NULL DEFAULT '',
+                retry_count INTEGER NOT NULL DEFAULT 0,
+                score REAL NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL
             );
             """
@@ -463,6 +468,17 @@ def init_db() -> None:
                 "latency_ms": "INTEGER NOT NULL DEFAULT 0",
                 "quality_score": "REAL NOT NULL DEFAULT 0",
                 "trace_id": "TEXT NOT NULL DEFAULT ''",
+            },
+        )
+        _ensure_columns(
+            conn,
+            "agent_trace_steps",
+            {
+                "thought": "TEXT NOT NULL DEFAULT ''",
+                "decision_json": "TEXT NOT NULL DEFAULT '{}'",
+                "error": "TEXT NOT NULL DEFAULT ''",
+                "retry_count": "INTEGER NOT NULL DEFAULT 0",
+                "score": "REAL NOT NULL DEFAULT 0",
             },
         )
         _ensure_columns(

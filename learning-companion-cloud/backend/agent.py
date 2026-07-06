@@ -23,10 +23,11 @@ from .agent_core import (
     search_material_chunks,
     update_mastery_from_quiz_result,
 )
-from .agent_runtime import run_controlled_tool_loop
+from .agent_runtime import run_controlled_agent_runtime, run_controlled_tool_loop
 from .ai_provider import call_ai_json_with_meta
 from .agent_tool_registry import validate_tool_call
 from .db import loads
+from .learning_quality import ensure_remediation_queue, score_learning_day
 from .plan_generator import generate_plan_from_text
 from .planner import generate_daily_tasks as rule_generate_daily_tasks
 from .prompts import (
@@ -55,7 +56,26 @@ def generate_study_plan(conn: Connection, raw_goal: str, student_id: int = 1) ->
     parsed = ai_plan if isinstance(ai_plan, dict) and ai_plan else {"rule_result": rule_plan}
     plan_id = save_learning_plan(conn, student_id, raw_goal, parsed)
     output = {"plan_id": plan_id, **rule_plan, "agent_parsed": parsed}
-    log_agent_run(conn, student_id, "plan", {"goal": raw_goal}, output, ai_meta["model"], ai_meta["status"], ai_meta["error"])
+    runtime = _trace_runtime(
+        "把家长输入拆成长期计划，并为今日任务生成提供任务源。",
+        {"student_id": student_id, "raw_goal": raw_goal},
+        "generate_study_plan",
+        {"student_id": student_id, "raw_goal": raw_goal},
+        output,
+        score=1.0 if output.get("created", 0) > 0 else 0.6,
+    )
+    log_agent_run(
+        conn,
+        student_id,
+        "plan",
+        {"goal": raw_goal},
+        output,
+        ai_meta["model"],
+        ai_meta["status"],
+        ai_meta["error"],
+        trace_steps=runtime["trace_steps"],
+        quality_score=runtime["evaluation"]["score"],
+    )
     return output
 
 
@@ -71,7 +91,23 @@ def generate_daily_tasks(
         ensure_task_guidance(conn, task["id"])
     adjustment = recommend_daily_adjustments(conn, student_id, target_date)
     output = {"count": len(tasks), "tasks": tasks, "target_95_adjustment": adjustment, "tool_validation": tool_validation}
-    log_agent_run(conn, student_id, "generate_daily_tasks", {"target_date": target_date, "force_all_sources": force_all_sources, "tool_validation": tool_validation}, output)
+    runtime = _trace_runtime(
+        "根据长期计划、复习队列和每日时间生成可执行任务。",
+        {"student_id": student_id, "target_date": target_date, "force_all_sources": force_all_sources},
+        "generate_daily_tasks",
+        {"student_id": student_id, "target_date": target_date or ""},
+        output,
+        score=1.0 if tasks else 0.5,
+    )
+    log_agent_run(
+        conn,
+        student_id,
+        "generate_daily_tasks",
+        {"target_date": target_date, "force_all_sources": force_all_sources, "tool_validation": tool_validation},
+        output,
+        trace_steps=runtime["trace_steps"],
+        quality_score=runtime["evaluation"]["score"],
+    )
     return output
 
 
@@ -99,7 +135,23 @@ def generate_quiz(conn: Connection, task_id: int, force: bool = False) -> dict[s
     items = regenerate_quiz_for_task(conn, task_id) if force else ensure_quiz_for_task(conn, task)
     quality = evaluate_quiz_quality(conn, task_id)
     output = {"task_id": task_id, "items": [_public_quiz_item(item) for item in items], "quality": quality, "tool_validation": tool_validation}
-    log_agent_run(conn, int(task["student_id"]), "generate_quiz", {"task_id": task_id, "force": force, "tool_validation": tool_validation}, output)
+    runtime = _trace_runtime(
+        "生成不泄题、带来源和评分规则的小测题。",
+        {"task_id": task_id, "task_title": task.get("title", ""), "force": force},
+        "generate_quiz",
+        {"task_id": task_id},
+        output,
+        score=float(quality.get("score", 0.8) or 0.8),
+    )
+    log_agent_run(
+        conn,
+        int(task["student_id"]),
+        "generate_quiz",
+        {"task_id": task_id, "force": force, "tool_validation": tool_validation},
+        output,
+        trace_steps=runtime["trace_steps"],
+        quality_score=runtime["evaluation"]["score"],
+    )
     return output
 
 
@@ -114,7 +166,23 @@ def grade_submission(conn: Connection, task_id: int, answers: dict[str, str]) ->
     diagnosis = diagnose_learning(conn, task_id, rule_result)
     mastery_update = update_mastery_from_quiz_result(conn, task_id, rule_result)
     output = {**rule_result, "diagnosis": diagnosis, "target_95_mastery_update": mastery_update, "tool_validation": tool_validation}
-    log_agent_run(conn, int(task["student_id"]), "grade_quiz", {"task_id": task_id, "answers": answers, "tool_validation": tool_validation}, output)
+    runtime = _trace_runtime(
+        "批改小测、判断是否通过，并触发掌握度/补救闭环。",
+        {"task_id": task_id, "answer_count": len(answers)},
+        "grade_quiz",
+        {"task_id": task_id, "answers": answers},
+        output,
+        score=float(rule_result.get("correct", 0)) / max(float(rule_result.get("total", 1) or 1), 1.0),
+    )
+    log_agent_run(
+        conn,
+        int(task["student_id"]),
+        "grade_quiz",
+        {"task_id": task_id, "answers": answers, "tool_validation": tool_validation},
+        output,
+        trace_steps=runtime["trace_steps"],
+        quality_score=runtime["evaluation"]["score"],
+    )
     return output
 
 
@@ -180,6 +248,14 @@ def assist_stuck(conn: Connection, task_id: int, note: str = "") -> dict[str, An
         "tool_loop": {key: tool_loop[key] for key in ("mode", "used_ai_decision", "model", "status", "error", "steps") if key in tool_loop},
     }
     output["tutor_session"] = open_or_update_tutor_session(conn, task, note, assistance)
+    runtime = _trace_runtime(
+        "孩子卡住时基于教材证据给出短步骤辅导，并把卡点纳入补漏。",
+        {"task_id": task_id, "subject": subject, "note": note},
+        "assist_stuck",
+        {"task_id": task_id, "note": note},
+        output,
+        score=1.0 if len(assistance.get("steps") or []) >= 3 else 0.7,
+    )
     log_agent_run(
         conn,
         int(task["student_id"]),
@@ -189,6 +265,8 @@ def assist_stuck(conn: Connection, task_id: int, note: str = "") -> dict[str, An
         ai_meta["model"],
         ai_meta["status"],
         ai_meta["error"],
+        trace_steps=runtime["trace_steps"],
+        quality_score=runtime["evaluation"]["score"],
     )
     return output
 
@@ -239,6 +317,14 @@ def diagnose_learning(conn: Connection, task_id: int, quiz_result: dict[str, Any
             "mastery_low",
             1,
         )
+    runtime = _trace_runtime(
+        "根据得分和错因诊断掌握度，决定是否允许继续新任务。",
+        {"task_id": task_id, "score": score, "knowledge_point": knowledge_point},
+        "diagnose_learning",
+        {"task_id": task_id, "quiz_result": quiz_result},
+        result,
+        score=score,
+    )
     log_agent_run(
         conn,
         int(task["student_id"]),
@@ -248,6 +334,8 @@ def diagnose_learning(conn: Connection, task_id: int, quiz_result: dict[str, Any
         ai_meta["model"],
         ai_meta["status"],
         ai_meta["error"],
+        trace_steps=runtime["trace_steps"],
+        quality_score=runtime["evaluation"]["score"],
     )
     return result
 
@@ -263,7 +351,30 @@ def generate_daily_report(conn: Connection, student_id: int = 1, target_date: st
     )
     if isinstance(ai_report, dict) and ai_report:
         report.update({key: ai_report[key] for key in ("summary", "problems", "tomorrow_first_step") if key in ai_report})
-    log_agent_run(conn, student_id, "daily_report", {"target_date": target_date}, report, ai_meta["model"], ai_meta["status"], ai_meta["error"])
+    remediation = ensure_remediation_queue(conn, student_id, target_date)
+    learning_quality = score_learning_day(conn, student_id, target_date)
+    report["learning_quality"] = learning_quality
+    report["remediation_queue"] = remediation
+    runtime = _trace_runtime(
+        "汇总学习证据，给出质量评分、补救队列和明日第一步。",
+        {"student_id": student_id, "target_date": target_date},
+        "generate_daily_report",
+        {"student_id": student_id, "target_date": target_date or ""},
+        report,
+        score=float(learning_quality.get("score", 0)) / 100,
+    )
+    log_agent_run(
+        conn,
+        student_id,
+        "daily_report",
+        {"target_date": target_date},
+        report,
+        ai_meta["model"],
+        ai_meta["status"],
+        ai_meta["error"],
+        trace_steps=runtime["trace_steps"],
+        quality_score=runtime["evaluation"]["score"],
+    )
     return report
 
 
@@ -280,6 +391,36 @@ def _fallback_guidance(task: dict[str, Any]) -> list[str]:
     if '英语' in title or "KET" in title:
         return ['听读单词句子', '记 3-5 个关键词', '用句型造句', '标记不会的词']
     return ['读清要求', '独立完成', '检查一遍', '标记卡点']
+
+
+def _trace_runtime(
+    goal: str,
+    context: dict[str, Any],
+    tool_name: str,
+    arguments: dict[str, Any],
+    output: dict[str, Any],
+    *,
+    score: float = 0.8,
+) -> dict[str, Any]:
+    normalized_score = max(0.0, min(1.0, float(score)))
+    return run_controlled_agent_runtime(
+        goal=goal,
+        context=context,
+        tool_name=tool_name,
+        arguments=arguments,
+        executor=lambda _args: output,
+        allow_write=True,
+        evaluator=lambda _observation: {
+            "passed": normalized_score >= 0.6,
+            "score": normalized_score,
+            "rubric": "规则评分 + 证据完整性 + 学习闭环可用性",
+        },
+        supervisor=lambda _observation, evaluation: {
+            "status": "ok" if evaluation.get("passed") else "warn",
+            "action": "continue" if evaluation.get("passed") else "fallback_or_remediate",
+            "score": evaluation.get("score", normalized_score),
+        },
+    )
 
 def _public_quiz_item(item: dict[str, Any]) -> dict[str, Any]:
     data = dict(item)

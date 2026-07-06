@@ -2,7 +2,7 @@
 
 - Status: `SIMULATE_7_DAY_OK`
 - Review items: `3`
-- Trace steps: `70`
+- Trace steps: `467`
 - Mastery records: `22`
 - Knowledge points: `314`
 

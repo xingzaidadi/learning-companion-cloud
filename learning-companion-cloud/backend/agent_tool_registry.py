@@ -17,6 +17,13 @@ class ToolSpec:
 
 
 TOOLS: dict[str, ToolSpec] = {
+    "generate_study_plan": ToolSpec(
+        name="generate_study_plan",
+        description="把家长自然语言目标拆成长期学习计划和任务源。",
+        parameters={"type": "object", "required": ["student_id", "raw_goal"], "properties": {"student_id": {"type": "integer"}, "raw_goal": {"type": "string"}}},
+        output_schema={"type": "object"},
+        side_effect="write",
+    ),
     "search_material_chunks": ToolSpec(
         name="search_material_chunks",
         description="检索教材/RAG 切片，用于绑定题目来源和回答依据。",
@@ -54,6 +61,14 @@ TOOLS: dict[str, ToolSpec] = {
         side_effect="write",
         idempotent=False,
     ),
+    "diagnose_learning": ToolSpec(
+        name="diagnose_learning",
+        description="根据小测结果诊断掌握度，必要时生成补救复习项。",
+        parameters={"type": "object", "required": ["task_id", "quiz_result"], "properties": {"task_id": {"type": "integer"}, "quiz_result": {"type": "object"}}},
+        output_schema={"type": "object"},
+        side_effect="write",
+        idempotent=False,
+    ),
     "assist_stuck": ToolSpec(
         name="assist_stuck",
         description="孩子卡住时给出分步提示和微练习，不直接泄露答案。",
@@ -65,6 +80,13 @@ TOOLS: dict[str, ToolSpec] = {
         name="write_memory",
         description="写入长期记忆、错题或卡点。",
         parameters={"type": "object", "properties": {"subject": {"type": "string"}, "skill": {"type": "string"}, "content": {"type": "string"}}},
+        output_schema={"type": "object"},
+        side_effect="write",
+    ),
+    "generate_daily_report": ToolSpec(
+        name="generate_daily_report",
+        description="汇总当天任务、小测、卡点、补救队列和明日建议。",
+        parameters={"type": "object", "properties": {"student_id": {"type": "integer"}, "target_date": {"type": "string"}}},
         output_schema={"type": "object"},
         side_effect="write",
     ),
