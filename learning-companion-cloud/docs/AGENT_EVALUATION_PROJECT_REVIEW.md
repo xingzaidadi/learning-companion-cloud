@@ -78,10 +78,10 @@
 
 ```text
 tests/evals/
-  rag_golden_set.yaml
-  agent_task_golden_set.yaml
-  stuck_assist_golden_set.yaml
-  quiz_quality_golden_set.yaml
+  rag_golden_set.json
+  agent_task_golden_set.json
+  stuck_assist_golden_set.json
+  quiz_quality_golden_set.json
   safety_redteam_set.yaml
 ```
 
@@ -298,10 +298,10 @@ Agent 测评重点包括工具失败后是否编造。
 
 新增：
 
-- `tests/evals/rag_golden_set.yaml`
-- `tests/evals/agent_task_golden_set.yaml`
-- `tests/evals/stuck_assist_golden_set.yaml`
-- `tests/evals/quiz_quality_golden_set.yaml`
+- `tests/evals/rag_golden_set.json`
+- `tests/evals/agent_task_golden_set.json`
+- `tests/evals/stuck_assist_golden_set.json`
+- `tests/evals/quiz_quality_golden_set.json`
 - `tests/evals/safety_redteam_set.yaml`
 
 目标：至少 80 条 case：

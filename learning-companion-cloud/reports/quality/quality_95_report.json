@@ -3,7 +3,7 @@
     "child_ui": {
       "score": 10.0,
       "failed": [],
-      "total": 7
+      "total": 8
     },
     "parent_ui": {
       "score": 10.0,
@@ -18,12 +18,12 @@
     "agent_design": {
       "score": 10.0,
       "failed": [],
-      "total": 7
+      "total": 9
     },
     "tests": {
       "score": 10.0,
       "failed": [],
-      "total": 6
+      "total": 7
     },
     "visual_system": {
       "score": 10.0,

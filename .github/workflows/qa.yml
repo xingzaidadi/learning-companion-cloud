@@ -18,4 +18,5 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python scripts/senior_qa_gate.py
       - run: python scripts/self_test.py
+      - run: python scripts/db_concurrency_test.py
       - run: python scripts/child_flow_integration_test.py

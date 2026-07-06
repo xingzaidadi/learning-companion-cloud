@@ -5,7 +5,7 @@ import html
 import json
 from pathlib import Path
 import re
-from typing import Annotated
+from typing import Annotated, Any
 
 import os
 import secrets
@@ -898,8 +898,7 @@ def generate_study_plan(
 
 
 @app.post("/api/agent/plan")
-async def agent_plan(request: Request, _: str = Depends(require_admin_auth)) -> dict[str, object]:
-    data = await request.json()
+def agent_plan(data: dict[str, Any], _: str = Depends(require_admin_auth)) -> dict[str, object]:
     goal = data.get("goal") or data.get("raw_text") or ""
     student_id = int(data.get("student_id", 1))
     with get_conn() as conn:
@@ -962,8 +961,7 @@ def generate_tasks(
 
 
 @app.post("/api/daily-tasks/schedule")
-async def schedule_tasks(request: Request, _: str = Depends(require_parent_or_admin_auth)) -> dict[str, object]:
-    data = await request.json()
+def schedule_tasks(data: dict[str, Any], _: str = Depends(require_parent_or_admin_auth)) -> dict[str, object]:
     student_id = int(data.get("student_id", 1))
     target_date = data.get("target_date") or date.today().isoformat()
     order = data.get("order") or []
@@ -984,8 +982,7 @@ async def schedule_tasks(request: Request, _: str = Depends(require_parent_or_ad
 
 
 @app.post("/api/agent/daily-tasks")
-async def agent_daily_tasks_endpoint(request: Request, _: str = Depends(require_admin_auth)) -> dict[str, object]:
-    data = await request.json()
+def agent_daily_tasks_endpoint(data: dict[str, Any], _: str = Depends(require_admin_auth)) -> dict[str, object]:
     student_id = int(data.get("student_id", 1))
     target_date = data.get("target_date") or date.today().isoformat()
     with get_conn() as conn:
@@ -996,8 +993,7 @@ async def agent_daily_tasks_endpoint(request: Request, _: str = Depends(require_
 
 
 @app.post("/api/daily-tasks/{task_id}/event")
-async def task_event(task_id: int, request: Request, _: str = Depends(require_child_or_admin_auth)) -> dict[str, object]:
-    data = await request.json()
+def task_event(task_id: int, data: dict[str, Any], _: str = Depends(require_child_or_admin_auth)) -> dict[str, object]:
     event_type = data.get("event_type", "")
     note = data.get("note", "")
     status_map = {
@@ -1096,8 +1092,7 @@ def regenerate_quiz(task_id: int, _: str = Depends(require_admin_auth)) -> dict[
 
 
 @app.post("/api/daily-tasks/{task_id}/quiz")
-async def submit_quiz(task_id: int, request: Request, _: str = Depends(require_child_or_admin_auth)) -> dict[str, object]:
-    data = await request.json()
+def submit_quiz(task_id: int, data: dict[str, Any], _: str = Depends(require_child_or_admin_auth)) -> dict[str, object]:
     answers = data.get("answers", {})
     with get_conn() as conn:
         task = conn.execute("SELECT * FROM daily_tasks WHERE id = ?", (task_id,)).fetchone()
@@ -1107,8 +1102,7 @@ async def submit_quiz(task_id: int, request: Request, _: str = Depends(require_c
 
 
 @app.post("/api/agent/grade/{task_id}")
-async def agent_grade(task_id: int, request: Request, _: str = Depends(require_child_or_admin_auth)) -> dict[str, object]:
-    data = await request.json()
+def agent_grade(task_id: int, data: dict[str, Any], _: str = Depends(require_child_or_admin_auth)) -> dict[str, object]:
     with get_conn() as conn:
         return grade_submission(conn, task_id, data.get("answers", {}))
 
@@ -1124,8 +1118,7 @@ def end_day(
 
 
 @app.post("/api/agent/daily-report")
-async def agent_report(request: Request, _: str = Depends(require_parent_or_admin_auth)) -> dict[str, object]:
-    data = await request.json()
+def agent_report(data: dict[str, Any], _: str = Depends(require_parent_or_admin_auth)) -> dict[str, object]:
     with get_conn() as conn:
         return agent_daily_report(conn, int(data.get("student_id", 1)), data.get("target_date") or date.today().isoformat())
 

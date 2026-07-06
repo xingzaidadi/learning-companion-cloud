@@ -8,134 +8,93 @@ from typing import Any
 from .db import dumps, loads, utc_now
 
 
-EXAM_TARGET = {
-    "goal": "五年级上册语文、数学、英语阶段性考试稳定 95+",
-    "pass_score": 0.95,
-    "daily_max_minutes": 90,
-    "principles": [
-        "不以做完为目标，以能力点达标为目标",
-        "所有任务必须能被小测或微练习验证",
-        "错题和卡点必须进入补漏复习",
-        "新课推进必须服从薄弱点补齐",
-        "内容必须限制在当前小学五年级上册范围内",
-    ],
-}
+EXAM_TARGET = {'goal': '五年级上册语文、数学、英语阶段性考试稳定 95+',
+ 'pass_score': 0.95,
+ 'daily_max_minutes': 90,
+ 'principles': ['不以做完为目标，以能力点达标为目标', '所有任务必须能被小测或微练习验证', '错题和卡点必须进入补漏复习', '新课推进必须服从薄弱点补齐', '内容必须限制在当前小学五年级上册范围内']}
 
 
-SKILL_MAP = {
-    "语文": [
-        ("生字认读", 0.98),
-        ("生字书写", 0.98),
-        ("词义理解", 0.96),
-        ("课文理解", 0.95),
-        ("句子赏析", 0.92),
-        ("日积月累背默", 0.98),
-        ("习作表达", 0.9),
-    ],
-    "数学": [
-        ("概念理解", 0.95),
-        ("计算准确", 0.98),
-        ("步骤表达", 0.92),
-        ("应用建模", 0.9),
-        ("易错辨析", 0.95),
-        ("检查验算", 0.95),
-    ],
-    "英语": [
-        ("听音辨词", 0.95),
-        ("朗读跟读", 0.95),
-        ("单词拼写", 0.95),
-        ("词义匹配", 0.96),
-        ("中译英", 0.9),
-        ("句型替换", 0.9),
-        ("课文理解", 0.9),
-    ],
-    "综合": [
-        ("任务执行", 0.95),
-        ("错题订正", 1.0),
-    ],
-}
+SKILL_MAP = {'语文': [('生字认读', 0.98),
+        ('生字书写', 0.98),
+        ('词义理解', 0.96),
+        ('课文理解', 0.95),
+        ('句子赏析', 0.92),
+        ('日积月累背默', 0.98),
+        ('习作表达', 0.9)],
+ '数学': [('概念理解', 0.95), ('计算准确', 0.98), ('步骤表达', 0.92), ('应用建模', 0.9), ('易错辨析', 0.95), ('检查验算', 0.95)],
+ '英语': [('听音辨词', 0.95), ('朗读跟读', 0.95), ('单词拼写', 0.95), ('词义匹配', 0.96), ('中译英', 0.9), ('句型替换', 0.9), ('课文理解', 0.9)],
+ '综合': [('任务执行', 0.95), ('错题订正', 1.0)]}
 
 
-COVERAGE_REQUIREMENTS = {
-    "语文": [
-        ("课文正文", ["课文", "阅读", "白鹭", "落花生", "桂花雨", "少年中国说"]),
-        ("生字词", ["生字", "词语", "听写", "会写", "会认"]),
-        ("课后题", ["课后", "思考", "练习", "默读", "背诵"]),
-        ("语文园地", ["语文园地", "交流平台", "词句段运用"]),
-        ("日积月累", ["日积月累", "背默", "古诗", "名言"]),
-        ("习作", ["习作", "作文", "写作"]),
-    ],
-    "数学": [
-        ("单元目录", ["目录", "单元", "小数乘法", "位置", "小数除法", "可能性", "多边形"]),
-        ("概念例题", ["例", "例题", "想一想", "说一说"]),
-        ("计算练习", ["算一算", "计算", "竖式", "口算"]),
-        ("应用题", ["解决问题", "应用", "列式"]),
-        ("易错验算", ["验算", "检查", "易错", "改错"]),
-    ],
-    "英语": [
-        ("Unit目录", ["Unit", "unit", "Module", "Lesson"]),
-        ("单词表", ["单词", "word", "Words", "vocabulary"]),
-        ("句型", ["句型", "sentence", "There", "Can", "What", "Where"]),
-        ("课文/对话", ["Story", "Listen", "Read", "Talk", "课文", "对话"]),
-        ("听写/音频", ["听写", "音频", "listen", "dictation", ".mp3"]),
-    ],
-}
+COVERAGE_REQUIREMENTS = {'语文': [('课文正文', ['课文', '阅读', '白鹭', '落花生', '桂花雨', '少年中国说']),
+        ('生字词', ['生字', '词语', '听写', '会写', '会认']),
+        ('课后题', ['课后', '思考', '练习', '默读', '背诵']),
+        ('语文园地', ['语文园地', '交流平台', '词句段运用']),
+        ('日积月累', ['日积月累', '背默', '古诗', '名言']),
+        ('习作', ['习作', '作文', '写作'])],
+ '数学': [('单元目录', ['目录', '单元', '小数乘法', '位置', '小数除法', '可能性', '多边形']),
+        ('概念例题', ['例', '例题', '想一想', '说一说']),
+        ('计算练习', ['算一算', '计算', '竖式', '口算']),
+        ('应用题', ['解决问题', '应用', '列式']),
+        ('易错验算', ['验算', '检查', '易错', '改错'])],
+ '英语': [('Unit目录', ['Unit', 'unit', 'Module', 'Lesson']),
+        ('单词表', ['单词', 'word', 'Words', 'vocabulary']),
+        ('句型', ['句型', 'sentence', 'There', 'Can', 'What', 'Where']),
+        ('课文/对话', ['Story', 'Listen', 'Read', 'Talk', '课文', '对话']),
+        ('听写/音频', ['听写', '音频', 'listen', 'dictation', '.mp3'])]}
 
 
-SUBJECT_KEYWORDS = {
-    "语文": ["语文", "课文", "生字", "词语", "白鹭", "日积月累", "语文园地", "习作", "阅读"],
-    "数学": ["数学", "小数", "除法", "乘法", "计算", "应用题", "例题", "列式"],
-    "英语": ["英语", "Unit", "unit", "school", "library", "classroom", "teacher", "单词", "默写", "听读"],
-}
+SUBJECT_KEYWORDS = {'语文': ['语文', '课文', '生字', '词语', '白鹭', '日积月累', '语文园地', '习作', '阅读'],
+ '数学': ['数学', '小数', '除法', '乘法', '计算', '应用题', '例题', '列式'],
+ '英语': ['英语', 'Unit', 'unit', 'school', 'library', 'classroom', 'teacher', '单词', '默写', '听读']}
 
 
 def infer_subject(text: str) -> str:
     for subject, keywords in SUBJECT_KEYWORDS.items():
         if any(keyword in text for keyword in keywords):
             return subject
-    return "综合"
+    return '综合'
 
 
 def infer_skill(subject: str, text: str) -> str:
-    if subject == "语文":
-        if "日积月累" in text:
-            return "日积月累背默"
-        if "生字" in text or "听写" in text:
-            return "生字书写"
-        if "词" in text:
-            return "词义理解"
-        if "仿写" in text or "习作" in text:
-            return "习作表达"
-        return "课文理解"
-    if subject == "数学":
-        if "应用" in text or "列式" in text:
-            return "应用建模"
-        if "步骤" in text or "为什么" in text:
-            return "步骤表达"
-        if "计算" in text or "小数" in text:
-            return "计算准确"
-        return "概念理解"
-    if subject == "英语":
-        if "拼" in text or "默写" in text:
-            return "单词拼写"
-        if "读" in text or "听" in text:
-            return "朗读跟读"
-        if "中文" in text or "意思" in text:
-            return "词义匹配"
-        if "句" in text:
-            return "句型替换"
-        return "词义匹配"
-    return "任务执行"
+    if subject == '语文':
+        if '日积月累' in text:
+            return '日积月累背默'
+        if '生字' in text or '听写' in text:
+            return '生字书写'
+        if '词' in text:
+            return '词义理解'
+        if '仿写' in text or '习作' in text:
+            return '习作表达'
+        return '课文理解'
+    if subject == '数学':
+        if '应用' in text or '列式' in text:
+            return '应用建模'
+        if '步骤' in text or '为什么' in text:
+            return '步骤表达'
+        if '计算' in text or '小数' in text or '验算' in text:
+            return '计算准确'
+        return '概念理解'
+    if subject == '英语':
+        if '拼' in text or '默写' in text or "dictation" in text:
+            return '单词拼写'
+        if '读' in text or '听' in text or "listen" in text:
+            return '朗读跟读'
+        if '中文' in text or '意思' in text:
+            return '词义匹配'
+        if '句' in text or "sentence" in text:
+            return '句型替换'
+        return '词义匹配'
+    return '任务执行'
 
 
 def infer_section(subject: str, text: str) -> str:
     for section, keywords in COVERAGE_REQUIREMENTS.get(subject, []):
         if any(keyword in text for keyword in keywords):
             return section
-    if "日积月累" in text:
-        return "日积月累"
-    return "正文/资料"
-
+    if '日积月累' in text:
+        return '日积月累'
+    return '正文/资料'
 
 def skill_targets() -> dict[str, Any]:
     return {

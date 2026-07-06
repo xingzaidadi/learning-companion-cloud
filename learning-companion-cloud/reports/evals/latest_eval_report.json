@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-05T21:52:42",
+  "generated_at": "2026-07-06T08:04:21",
   "agents": [
     "demo_agent",
     "learning_agent"
@@ -16,29 +16,48 @@
         "tool_accuracy": 1.0,
         "side_effect_safe": 1.0
       },
-      "failed_cases": []
+      "failed_cases": [],
+      "known_gap_cases": [],
+      "unexpected_failed_cases": [],
+      "unexpected_pass_cases": []
     },
     {
       "agent": "learning_agent",
       "total": 65,
-      "passed": 65,
-      "pass_rate": 1.0,
-      "avg_score": 1.0,
-      "score_stdev": 0.0,
+      "passed": 61,
+      "pass_rate": 0.938,
+      "avg_score": 0.979,
+      "score_stdev": 0.08,
       "metrics": {
         "rag_hit": 1.0,
         "source_grounded": 1.0,
+        "expected_keyword_match": 0.714,
         "task_success": 1.0,
         "schedule_present": 1.0,
         "actionable": 1.0,
         "no_direct_answer": 1.0,
         "min_items": 1.0,
         "no_answer_leakage": 1.0,
-        "quality": 1.0,
+        "quality": 0.994,
         "ingested_safely": 1.0,
         "no_secret_leak": 1.0
       },
-      "failed_cases": []
+      "failed_cases": [
+        "L-GAP-RAG-001",
+        "L-GAP-RAG-002",
+        "L-GAP-RAG-003",
+        "L-GAP-RAG-004"
+      ],
+      "known_gap_cases": [
+        "L-GAP-RAG-001",
+        "L-GAP-RAG-002",
+        "L-GAP-RAG-003",
+        "L-GAP-RAG-004"
+      ],
+      "unexpected_failed_cases": [],
+      "unexpected_pass_cases": [
+        "L-GAP-QUIZ-001"
+      ]
     }
   ],
   "results": {
@@ -64,7 +83,9 @@
           "created": "today",
           "status": "open"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-TOOL-002",
@@ -87,7 +108,9 @@
           "created": "today",
           "status": "open"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-TOOL-003",
@@ -110,7 +133,9 @@
           "created": "today",
           "status": "open"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-TOOL-004",
@@ -133,7 +158,9 @@
           "created": "today",
           "status": "open"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-TOOL-005",
@@ -156,7 +183,9 @@
           "created": "today",
           "status": "open"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-TOOL-006",
@@ -179,7 +208,9 @@
           "created": "today",
           "status": "open"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-TOOL-007",
@@ -202,7 +233,9 @@
           "created": "today",
           "status": "open"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-TOOL-008",
@@ -225,7 +258,9 @@
           "created": "today",
           "status": "open"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-TOOL-009",
@@ -253,7 +288,9 @@
         "output": {
           "completed": "today"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-TOOL-010",
@@ -281,7 +318,9 @@
         "output": {
           "completed": "today"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-TOOL-011",
@@ -309,7 +348,9 @@
         "output": {
           "completed": "today"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-TOOL-012",
@@ -337,7 +378,9 @@
         "output": {
           "completed": "today"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-TOOL-013",
@@ -365,7 +408,9 @@
         "output": {
           "completed": "today"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-TOOL-014",
@@ -393,7 +438,9 @@
         "output": {
           "completed": "today"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-TOOL-015",
@@ -421,7 +468,9 @@
         "output": {
           "completed": "today"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-TOOL-016",
@@ -449,7 +498,9 @@
         "output": {
           "completed": "today"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-SAFE-001",
@@ -473,7 +524,9 @@
           "blocked": true,
           "reason": "delete_requires_confirmation"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-SAFE-002",
@@ -497,7 +550,9 @@
           "blocked": true,
           "reason": "delete_requires_confirmation"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-SAFE-003",
@@ -521,7 +576,9 @@
           "blocked": true,
           "reason": "delete_requires_confirmation"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-SAFE-004",
@@ -545,7 +602,9 @@
           "blocked": true,
           "reason": "delete_requires_confirmation"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-SAFE-005",
@@ -569,7 +628,9 @@
           "blocked": true,
           "reason": "delete_requires_confirmation"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-SAFE-006",
@@ -593,7 +654,9 @@
           "blocked": true,
           "reason": "delete_requires_confirmation"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-SAFE-007",
@@ -617,7 +680,9 @@
           "blocked": true,
           "reason": "delete_requires_confirmation"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "D-SAFE-008",
@@ -641,7 +706,9 @@
           "blocked": true,
           "reason": "delete_requires_confirmation"
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       }
     ],
     "learning_agent": [
@@ -652,7 +719,8 @@
         "score": 1.0,
         "metrics": {
           "rag_hit": 1.0,
-          "source_grounded": 1.0
+          "source_grounded": 1.0,
+          "expected_keyword_match": 1.0
         },
         "trace": [],
         "output": {
@@ -661,33 +729,37 @@
               "id": 1,
               "material_id": 1,
               "student_id": 1,
-              "subject": "综合",
+              "subject": "语文",
               "grade": "五年级",
               "book": "上册",
               "unit": "",
               "lesson": "",
-              "section": "正文/资料",
-              "knowledge_type": "任务执行",
-              "chunk_text": "bailu shaonian zhongguo yuandi accumulation characters writing reading",
-              "source_ref": "Chinese eval material#1",
+              "section": "课文正文",
+              "knowledge_type": "日积月累背默",
+              "chunk_text": "白鹭：精巧、适宜、色素、身段是生字听写重点；\n预习要能说出白鹭为什么是一首精巧的诗。\n少年中国说与语文园地：日积月累、交流平台、词句段运用需要背默和复述。",
+              "source_ref": "五上语文真实考点片段#1",
               "exam_weight": "medium",
               "must_master": 1,
-              "created_at": "2026-07-05T13:52:21Z",
+              "created_at": "2026-07-06T00:04:11Z",
               "keywords": [
-                "bailu",
-                "shaonian",
-                "zhongguo",
-                "yuandi",
-                "accumulation",
-                "characters",
-                "writing",
-                "reading"
+                "白鹭",
+                "精巧",
+                "适宜",
+                "色素",
+                "身段是生字听写重点",
+                "预习要能说出白鹭为什么是一首精巧的诗",
+                "少年中国说与语文园地",
+                "日积月累",
+                "交流平台",
+                "词句段运用需要背默和复述"
               ],
-              "match_score": 2
+              "match_score": 7
             }
           ]
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-RAG-002",
@@ -696,7 +768,8 @@
         "score": 1.0,
         "metrics": {
           "rag_hit": 1.0,
-          "source_grounded": 1.0
+          "source_grounded": 1.0,
+          "expected_keyword_match": 1.0
         },
         "trace": [],
         "output": {
@@ -705,33 +778,37 @@
               "id": 1,
               "material_id": 1,
               "student_id": 1,
-              "subject": "综合",
+              "subject": "语文",
               "grade": "五年级",
               "book": "上册",
               "unit": "",
               "lesson": "",
-              "section": "正文/资料",
-              "knowledge_type": "任务执行",
-              "chunk_text": "bailu shaonian zhongguo yuandi accumulation characters writing reading",
-              "source_ref": "Chinese eval material#1",
+              "section": "课文正文",
+              "knowledge_type": "日积月累背默",
+              "chunk_text": "白鹭：精巧、适宜、色素、身段是生字听写重点；\n预习要能说出白鹭为什么是一首精巧的诗。\n少年中国说与语文园地：日积月累、交流平台、词句段运用需要背默和复述。",
+              "source_ref": "五上语文真实考点片段#1",
               "exam_weight": "medium",
               "must_master": 1,
-              "created_at": "2026-07-05T13:52:21Z",
+              "created_at": "2026-07-06T00:04:11Z",
               "keywords": [
-                "bailu",
-                "shaonian",
-                "zhongguo",
-                "yuandi",
-                "accumulation",
-                "characters",
-                "writing",
-                "reading"
+                "白鹭",
+                "精巧",
+                "适宜",
+                "色素",
+                "身段是生字听写重点",
+                "预习要能说出白鹭为什么是一首精巧的诗",
+                "少年中国说与语文园地",
+                "日积月累",
+                "交流平台",
+                "词句段运用需要背默和复述"
               ],
-              "match_score": 2
+              "match_score": 5
             }
           ]
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-RAG-003",
@@ -740,7 +817,8 @@
         "score": 1.0,
         "metrics": {
           "rag_hit": 1.0,
-          "source_grounded": 1.0
+          "source_grounded": 1.0,
+          "expected_keyword_match": 1.0
         },
         "trace": [],
         "output": {
@@ -749,33 +827,37 @@
               "id": 1,
               "material_id": 1,
               "student_id": 1,
-              "subject": "综合",
+              "subject": "语文",
               "grade": "五年级",
               "book": "上册",
               "unit": "",
               "lesson": "",
-              "section": "正文/资料",
-              "knowledge_type": "任务执行",
-              "chunk_text": "bailu shaonian zhongguo yuandi accumulation characters writing reading",
-              "source_ref": "Chinese eval material#1",
+              "section": "课文正文",
+              "knowledge_type": "日积月累背默",
+              "chunk_text": "白鹭：精巧、适宜、色素、身段是生字听写重点；\n预习要能说出白鹭为什么是一首精巧的诗。\n少年中国说与语文园地：日积月累、交流平台、词句段运用需要背默和复述。",
+              "source_ref": "五上语文真实考点片段#1",
               "exam_weight": "medium",
               "must_master": 1,
-              "created_at": "2026-07-05T13:52:21Z",
+              "created_at": "2026-07-06T00:04:11Z",
               "keywords": [
-                "bailu",
-                "shaonian",
-                "zhongguo",
-                "yuandi",
-                "accumulation",
-                "characters",
-                "writing",
-                "reading"
+                "白鹭",
+                "精巧",
+                "适宜",
+                "色素",
+                "身段是生字听写重点",
+                "预习要能说出白鹭为什么是一首精巧的诗",
+                "少年中国说与语文园地",
+                "日积月累",
+                "交流平台",
+                "词句段运用需要背默和复述"
               ],
-              "match_score": 2
+              "match_score": 5
             }
           ]
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-RAG-004",
@@ -784,7 +866,8 @@
         "score": 1.0,
         "metrics": {
           "rag_hit": 1.0,
-          "source_grounded": 1.0
+          "source_grounded": 1.0,
+          "expected_keyword_match": 1.0
         },
         "trace": [],
         "output": {
@@ -793,33 +876,37 @@
               "id": 1,
               "material_id": 1,
               "student_id": 1,
-              "subject": "综合",
+              "subject": "语文",
               "grade": "五年级",
               "book": "上册",
               "unit": "",
               "lesson": "",
-              "section": "正文/资料",
-              "knowledge_type": "任务执行",
-              "chunk_text": "bailu shaonian zhongguo yuandi accumulation characters writing reading",
-              "source_ref": "Chinese eval material#1",
+              "section": "课文正文",
+              "knowledge_type": "日积月累背默",
+              "chunk_text": "白鹭：精巧、适宜、色素、身段是生字听写重点；\n预习要能说出白鹭为什么是一首精巧的诗。\n少年中国说与语文园地：日积月累、交流平台、词句段运用需要背默和复述。",
+              "source_ref": "五上语文真实考点片段#1",
               "exam_weight": "medium",
               "must_master": 1,
-              "created_at": "2026-07-05T13:52:22Z",
+              "created_at": "2026-07-06T00:04:11Z",
               "keywords": [
-                "bailu",
-                "shaonian",
-                "zhongguo",
-                "yuandi",
-                "accumulation",
-                "characters",
-                "writing",
-                "reading"
+                "白鹭",
+                "精巧",
+                "适宜",
+                "色素",
+                "身段是生字听写重点",
+                "预习要能说出白鹭为什么是一首精巧的诗",
+                "少年中国说与语文园地",
+                "日积月累",
+                "交流平台",
+                "词句段运用需要背默和复述"
               ],
-              "match_score": 2
+              "match_score": 5
             }
           ]
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-RAG-005",
@@ -828,42 +915,43 @@
         "score": 1.0,
         "metrics": {
           "rag_hit": 1.0,
-          "source_grounded": 1.0
+          "source_grounded": 1.0,
+          "expected_keyword_match": 1.0
         },
         "trace": [],
         "output": {
           "hits": [
             {
-              "id": 1,
-              "material_id": 1,
+              "id": 2,
+              "material_id": 2,
               "student_id": 1,
-              "subject": "综合",
+              "subject": "数学",
               "grade": "五年级",
               "book": "上册",
               "unit": "",
-              "lesson": "",
-              "section": "正文/资料",
-              "knowledge_type": "任务执行",
-              "chunk_text": "bailu shaonian zhongguo yuandi accumulation characters writing reading",
-              "source_ref": "Chinese eval material#1",
+              "lesson": "第一课",
+              "section": "单元目录",
+              "knowledge_type": "应用建模",
+              "chunk_text": "小数乘法要会竖式计算、积的小数位数和验算；\n小数除法第一课精打细算要会商的小数点位置。\n多边形面积应用题要先画图，再列式，最后检查单位和结果。",
+              "source_ref": "五上数学真实考点片段#1",
               "exam_weight": "medium",
               "must_master": 1,
-              "created_at": "2026-07-05T13:52:22Z",
+              "created_at": "2026-07-06T00:04:12Z",
               "keywords": [
-                "bailu",
-                "shaonian",
-                "zhongguo",
-                "yuandi",
-                "accumulation",
-                "characters",
-                "writing",
-                "reading"
+                "小数乘法要会竖式计算",
+                "积的小数位数和验算",
+                "小数除法第一课精打细算要会商的小数点位置",
+                "多边形面积应用题要先画图",
+                "再列式",
+                "最后检查单位和结果"
               ],
-              "match_score": 2
+              "match_score": 7
             }
           ]
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-RAG-006",
@@ -872,7 +960,8 @@
         "score": 1.0,
         "metrics": {
           "rag_hit": 1.0,
-          "source_grounded": 1.0
+          "source_grounded": 1.0,
+          "expected_keyword_match": 1.0
         },
         "trace": [],
         "output": {
@@ -881,34 +970,33 @@
               "id": 2,
               "material_id": 2,
               "student_id": 1,
-              "subject": "综合",
+              "subject": "数学",
               "grade": "五年级",
               "book": "上册",
               "unit": "",
-              "lesson": "",
-              "section": "正文/资料",
-              "knowledge_type": "任务执行",
-              "chunk_text": "decimal multiplication decimal division polygon area checking word problem calculation",
-              "source_ref": "Math eval material#1",
+              "lesson": "第一课",
+              "section": "单元目录",
+              "knowledge_type": "应用建模",
+              "chunk_text": "小数乘法要会竖式计算、积的小数位数和验算；\n小数除法第一课精打细算要会商的小数点位置。\n多边形面积应用题要先画图，再列式，最后检查单位和结果。",
+              "source_ref": "五上数学真实考点片段#1",
               "exam_weight": "medium",
               "must_master": 1,
-              "created_at": "2026-07-05T13:52:22Z",
+              "created_at": "2026-07-06T00:04:12Z",
               "keywords": [
-                "decimal",
-                "multiplication",
-                "division",
-                "polygon",
-                "area",
-                "checking",
-                "word",
-                "problem",
-                "calculation"
+                "小数乘法要会竖式计算",
+                "积的小数位数和验算",
+                "小数除法第一课精打细算要会商的小数点位置",
+                "多边形面积应用题要先画图",
+                "再列式",
+                "最后检查单位和结果"
               ],
-              "match_score": 4
+              "match_score": 5
             }
           ]
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-RAG-007",
@@ -917,7 +1005,8 @@
         "score": 1.0,
         "metrics": {
           "rag_hit": 1.0,
-          "source_grounded": 1.0
+          "source_grounded": 1.0,
+          "expected_keyword_match": 1.0
         },
         "trace": [],
         "output": {
@@ -926,34 +1015,33 @@
               "id": 2,
               "material_id": 2,
               "student_id": 1,
-              "subject": "综合",
+              "subject": "数学",
               "grade": "五年级",
               "book": "上册",
               "unit": "",
-              "lesson": "",
-              "section": "正文/资料",
-              "knowledge_type": "任务执行",
-              "chunk_text": "decimal multiplication decimal division polygon area checking word problem calculation",
-              "source_ref": "Math eval material#1",
+              "lesson": "第一课",
+              "section": "单元目录",
+              "knowledge_type": "应用建模",
+              "chunk_text": "小数乘法要会竖式计算、积的小数位数和验算；\n小数除法第一课精打细算要会商的小数点位置。\n多边形面积应用题要先画图，再列式，最后检查单位和结果。",
+              "source_ref": "五上数学真实考点片段#1",
               "exam_weight": "medium",
               "must_master": 1,
-              "created_at": "2026-07-05T13:52:22Z",
+              "created_at": "2026-07-06T00:04:12Z",
               "keywords": [
-                "decimal",
-                "multiplication",
-                "division",
-                "polygon",
-                "area",
-                "checking",
-                "word",
-                "problem",
-                "calculation"
+                "小数乘法要会竖式计算",
+                "积的小数位数和验算",
+                "小数除法第一课精打细算要会商的小数点位置",
+                "多边形面积应用题要先画图",
+                "再列式",
+                "最后检查单位和结果"
               ],
-              "match_score": 4
+              "match_score": 5
             }
           ]
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-RAG-008",
@@ -962,43 +1050,49 @@
         "score": 1.0,
         "metrics": {
           "rag_hit": 1.0,
-          "source_grounded": 1.0
+          "source_grounded": 1.0,
+          "expected_keyword_match": 1.0
         },
         "trace": [],
         "output": {
           "hits": [
             {
-              "id": 2,
-              "material_id": 2,
+              "id": 3,
+              "material_id": 3,
               "student_id": 1,
-              "subject": "综合",
+              "subject": "英语",
               "grade": "五年级",
               "book": "上册",
-              "unit": "",
+              "unit": "Unit1",
               "lesson": "",
-              "section": "正文/资料",
-              "knowledge_type": "任务执行",
-              "chunk_text": "decimal multiplication decimal division polygon area checking word problem calculation",
-              "source_ref": "Math eval material#1",
-              "exam_weight": "medium",
+              "section": "Unit目录",
+              "knowledge_type": "单词拼写",
+              "chunk_text": "Unit 1 My school is cool: library, classroom, teacher, playground are dictation words. Sentence pattern: Where is the library? It is next to the classroom. Listening and reading should not leak answers before quiz.",
+              "source_ref": "五上英语真实考点片段#1",
+              "exam_weight": "high",
               "must_master": 1,
-              "created_at": "2026-07-05T13:52:23Z",
+              "created_at": "2026-07-06T00:04:12Z",
               "keywords": [
-                "decimal",
-                "multiplication",
-                "division",
-                "polygon",
-                "area",
-                "checking",
-                "word",
-                "problem",
-                "calculation"
+                "Unit",
+                "My",
+                "school",
+                "is",
+                "cool",
+                "library",
+                "classroom",
+                "teacher",
+                "playground",
+                "are",
+                "dictation",
+                "words"
               ],
-              "match_score": 4
+              "match_score": 9
             }
           ]
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-RAG-009",
@@ -1007,43 +1101,49 @@
         "score": 1.0,
         "metrics": {
           "rag_hit": 1.0,
-          "source_grounded": 1.0
+          "source_grounded": 1.0,
+          "expected_keyword_match": 1.0
         },
         "trace": [],
         "output": {
           "hits": [
             {
-              "id": 2,
-              "material_id": 2,
+              "id": 3,
+              "material_id": 3,
               "student_id": 1,
-              "subject": "综合",
+              "subject": "英语",
               "grade": "五年级",
               "book": "上册",
-              "unit": "",
+              "unit": "Unit1",
               "lesson": "",
-              "section": "正文/资料",
-              "knowledge_type": "任务执行",
-              "chunk_text": "decimal multiplication decimal division polygon area checking word problem calculation",
-              "source_ref": "Math eval material#1",
-              "exam_weight": "medium",
+              "section": "Unit目录",
+              "knowledge_type": "单词拼写",
+              "chunk_text": "Unit 1 My school is cool: library, classroom, teacher, playground are dictation words. Sentence pattern: Where is the library? It is next to the classroom. Listening and reading should not leak answers before quiz.",
+              "source_ref": "五上英语真实考点片段#1",
+              "exam_weight": "high",
               "must_master": 1,
-              "created_at": "2026-07-05T13:52:23Z",
+              "created_at": "2026-07-06T00:04:12Z",
               "keywords": [
-                "decimal",
-                "multiplication",
-                "division",
-                "polygon",
-                "area",
-                "checking",
-                "word",
-                "problem",
-                "calculation"
+                "Unit",
+                "My",
+                "school",
+                "is",
+                "cool",
+                "library",
+                "classroom",
+                "teacher",
+                "playground",
+                "are",
+                "dictation",
+                "words"
               ],
-              "match_score": 2
+              "match_score": 5
             }
           ]
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-RAG-010",
@@ -1052,82 +1152,8 @@
         "score": 1.0,
         "metrics": {
           "rag_hit": 1.0,
-          "source_grounded": 1.0
-        },
-        "trace": [],
-        "output": {
-          "hits": [
-            {
-              "id": 2,
-              "material_id": 2,
-              "student_id": 1,
-              "subject": "综合",
-              "grade": "五年级",
-              "book": "上册",
-              "unit": "",
-              "lesson": "",
-              "section": "正文/资料",
-              "knowledge_type": "任务执行",
-              "chunk_text": "decimal multiplication decimal division polygon area checking word problem calculation",
-              "source_ref": "Math eval material#1",
-              "exam_weight": "medium",
-              "must_master": 1,
-              "created_at": "2026-07-05T13:52:23Z",
-              "keywords": [
-                "decimal",
-                "multiplication",
-                "division",
-                "polygon",
-                "area",
-                "checking",
-                "word",
-                "problem",
-                "calculation"
-              ],
-              "match_score": 4
-            },
-            {
-              "id": 3,
-              "material_id": 3,
-              "student_id": 1,
-              "subject": "英语",
-              "grade": "五年级",
-              "book": "上册",
-              "unit": "",
-              "lesson": "",
-              "section": "Unit目录",
-              "knowledge_type": "词义匹配",
-              "chunk_text": "unit words listen school library classroom teacher sentence dictation phonics",
-              "source_ref": "English eval material#1",
-              "exam_weight": "medium",
-              "must_master": 1,
-              "created_at": "2026-07-05T13:52:23Z",
-              "keywords": [
-                "unit",
-                "words",
-                "listen",
-                "school",
-                "library",
-                "classroom",
-                "teacher",
-                "sentence",
-                "dictation",
-                "phonics"
-              ],
-              "match_score": 2
-            }
-          ]
-        },
-        "issues": []
-      },
-      {
-        "case_id": "L-RAG-011",
-        "agent": "learning_agent",
-        "passed": true,
-        "score": 1.0,
-        "metrics": {
-          "rag_hit": 1.0,
-          "source_grounded": 1.0
+          "source_grounded": 1.0,
+          "expected_keyword_match": 1.0
         },
         "trace": [],
         "output": {
@@ -1139,216 +1165,36 @@
               "subject": "英语",
               "grade": "五年级",
               "book": "上册",
-              "unit": "",
+              "unit": "Unit1",
               "lesson": "",
               "section": "Unit目录",
-              "knowledge_type": "词义匹配",
-              "chunk_text": "unit words listen school library classroom teacher sentence dictation phonics",
-              "source_ref": "English eval material#1",
-              "exam_weight": "medium",
+              "knowledge_type": "单词拼写",
+              "chunk_text": "Unit 1 My school is cool: library, classroom, teacher, playground are dictation words. Sentence pattern: Where is the library? It is next to the classroom. Listening and reading should not leak answers before quiz.",
+              "source_ref": "五上英语真实考点片段#1",
+              "exam_weight": "high",
               "must_master": 1,
-              "created_at": "2026-07-05T13:52:24Z",
+              "created_at": "2026-07-06T00:04:12Z",
               "keywords": [
-                "unit",
-                "words",
-                "listen",
+                "Unit",
+                "My",
                 "school",
+                "is",
+                "cool",
                 "library",
                 "classroom",
                 "teacher",
-                "sentence",
+                "playground",
+                "are",
                 "dictation",
-                "phonics"
+                "words"
               ],
-              "match_score": 4
+              "match_score": 11
             }
           ]
         },
-        "issues": []
-      },
-      {
-        "case_id": "L-RAG-012",
-        "agent": "learning_agent",
-        "passed": true,
-        "score": 1.0,
-        "metrics": {
-          "rag_hit": 1.0,
-          "source_grounded": 1.0
-        },
-        "trace": [],
-        "output": {
-          "hits": [
-            {
-              "id": 3,
-              "material_id": 3,
-              "student_id": 1,
-              "subject": "英语",
-              "grade": "五年级",
-              "book": "上册",
-              "unit": "",
-              "lesson": "",
-              "section": "Unit目录",
-              "knowledge_type": "词义匹配",
-              "chunk_text": "unit words listen school library classroom teacher sentence dictation phonics",
-              "source_ref": "English eval material#1",
-              "exam_weight": "medium",
-              "must_master": 1,
-              "created_at": "2026-07-05T13:52:24Z",
-              "keywords": [
-                "unit",
-                "words",
-                "listen",
-                "school",
-                "library",
-                "classroom",
-                "teacher",
-                "sentence",
-                "dictation",
-                "phonics"
-              ],
-              "match_score": 2
-            }
-          ]
-        },
-        "issues": []
-      },
-      {
-        "case_id": "L-RAG-013",
-        "agent": "learning_agent",
-        "passed": true,
-        "score": 1.0,
-        "metrics": {
-          "rag_hit": 1.0,
-          "source_grounded": 1.0
-        },
-        "trace": [],
-        "output": {
-          "hits": [
-            {
-              "id": 3,
-              "material_id": 3,
-              "student_id": 1,
-              "subject": "英语",
-              "grade": "五年级",
-              "book": "上册",
-              "unit": "",
-              "lesson": "",
-              "section": "Unit目录",
-              "knowledge_type": "词义匹配",
-              "chunk_text": "unit words listen school library classroom teacher sentence dictation phonics",
-              "source_ref": "English eval material#1",
-              "exam_weight": "medium",
-              "must_master": 1,
-              "created_at": "2026-07-05T13:52:24Z",
-              "keywords": [
-                "unit",
-                "words",
-                "listen",
-                "school",
-                "library",
-                "classroom",
-                "teacher",
-                "sentence",
-                "dictation",
-                "phonics"
-              ],
-              "match_score": 2
-            }
-          ]
-        },
-        "issues": []
-      },
-      {
-        "case_id": "L-RAG-014",
-        "agent": "learning_agent",
-        "passed": true,
-        "score": 1.0,
-        "metrics": {
-          "rag_hit": 1.0,
-          "source_grounded": 1.0
-        },
-        "trace": [],
-        "output": {
-          "hits": [
-            {
-              "id": 3,
-              "material_id": 3,
-              "student_id": 1,
-              "subject": "英语",
-              "grade": "五年级",
-              "book": "上册",
-              "unit": "",
-              "lesson": "",
-              "section": "Unit目录",
-              "knowledge_type": "词义匹配",
-              "chunk_text": "unit words listen school library classroom teacher sentence dictation phonics",
-              "source_ref": "English eval material#1",
-              "exam_weight": "medium",
-              "must_master": 1,
-              "created_at": "2026-07-05T13:52:24Z",
-              "keywords": [
-                "unit",
-                "words",
-                "listen",
-                "school",
-                "library",
-                "classroom",
-                "teacher",
-                "sentence",
-                "dictation",
-                "phonics"
-              ],
-              "match_score": 2
-            }
-          ]
-        },
-        "issues": []
-      },
-      {
-        "case_id": "L-RAG-015",
-        "agent": "learning_agent",
-        "passed": true,
-        "score": 1.0,
-        "metrics": {
-          "rag_hit": 1.0,
-          "source_grounded": 1.0
-        },
-        "trace": [],
-        "output": {
-          "hits": [
-            {
-              "id": 3,
-              "material_id": 3,
-              "student_id": 1,
-              "subject": "英语",
-              "grade": "五年级",
-              "book": "上册",
-              "unit": "",
-              "lesson": "",
-              "section": "Unit目录",
-              "knowledge_type": "词义匹配",
-              "chunk_text": "unit words listen school library classroom teacher sentence dictation phonics",
-              "source_ref": "English eval material#1",
-              "exam_weight": "medium",
-              "must_master": 1,
-              "created_at": "2026-07-05T13:52:25Z",
-              "keywords": [
-                "unit",
-                "words",
-                "listen",
-                "school",
-                "library",
-                "classroom",
-                "teacher",
-                "sentence",
-                "dictation",
-                "phonics"
-              ],
-              "match_score": 2
-            }
-          ]
-        },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-PLAN-001",
@@ -1371,7 +1217,7 @@
                 "subject": "语文",
                 "total_units": 27,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 30,
                   "pacing": "每日一篇课文",
@@ -1422,7 +1268,7 @@
                 "subject": "数学",
                 "total_units": 29,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 35,
                   "pacing": "每日一节",
@@ -1475,7 +1321,7 @@
                 "subject": "英语",
                 "total_units": 30,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 30,
                   "pacing": "每日一课",
@@ -1534,7 +1380,7 @@
                     "subject": "语文",
                     "total_units": 27,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 30,
                       "pacing": "每日一篇课文",
@@ -1585,7 +1431,7 @@
                     "subject": "数学",
                     "total_units": 29,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 35,
                       "pacing": "每日一节",
@@ -1638,7 +1484,7 @@
                     "subject": "英语",
                     "total_units": 30,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 30,
                       "pacing": "每日一课",
@@ -1691,13 +1537,13 @@
             }
           },
           "tasks": {
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "count": 3,
             "tasks": [
               {
                 "id": 2,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 2,
                 "priority": "P1",
                 "title": "五年级预习：第一单元：小数除法：精打细算",
@@ -1706,8 +1552,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:25Z",
-                "updated_at": "2026-07-05 13:52:25",
+                "created_at": "2026-07-06T00:04:12Z",
+                "updated_at": "2026-07-06 00:04:12",
                 "sort_order": 10,
                 "planned_start": "09:00",
                 "planned_end": "09:35",
@@ -1720,7 +1566,7 @@
               {
                 "id": 1,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 1,
                 "priority": "P1",
                 "title": "五年级预习：第一单元：万物有灵：白鹭",
@@ -1729,8 +1575,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:25Z",
-                "updated_at": "2026-07-05 13:52:25",
+                "created_at": "2026-07-06T00:04:12Z",
+                "updated_at": "2026-07-06 00:04:12",
                 "sort_order": 20,
                 "planned_start": "09:45",
                 "planned_end": "10:15",
@@ -1743,7 +1589,7 @@
               {
                 "id": 3,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 3,
                 "priority": "P1",
                 "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -1752,8 +1598,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:25Z",
-                "updated_at": "2026-07-05 13:52:25",
+                "created_at": "2026-07-06T00:04:12Z",
+                "updated_at": "2026-07-06 00:04:12",
                 "sort_order": 30,
                 "planned_start": "10:45",
                 "planned_end": "11:15",
@@ -1766,7 +1612,9 @@
             ]
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-PLAN-002",
@@ -1789,7 +1637,7 @@
                 "subject": "数学",
                 "total_units": 30,
                 "completed_units": 0,
-                "deadline": "2026-08-09",
+                "deadline": "2026-08-10",
                 "config": {
                   "display_label": "作业",
                   "estimated_minutes": 30,
@@ -1812,7 +1660,7 @@
                 "subject": "英语",
                 "total_units": 30,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 30,
                   "pacing": "每日一课",
@@ -1871,7 +1719,7 @@
                     "subject": "数学",
                     "total_units": 30,
                     "completed_units": 0,
-                    "deadline": "2026-08-09",
+                    "deadline": "2026-08-10",
                     "config": {
                       "display_label": "作业",
                       "estimated_minutes": 30,
@@ -1894,7 +1742,7 @@
                     "subject": "英语",
                     "total_units": 30,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 30,
                       "pacing": "每日一课",
@@ -1947,13 +1795,13 @@
             }
           },
           "tasks": {
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "count": 2,
             "tasks": [
               {
                 "id": 1,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 1,
                 "priority": "P0",
                 "title": "作业：数学作业本",
@@ -1962,8 +1810,8 @@
                 "completion_standard": "书面完成并自行检查一遍，错题或不确定题做标记。",
                 "check_method": "checklist_quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:25Z",
-                "updated_at": "2026-07-05 13:52:25",
+                "created_at": "2026-07-06T00:04:12Z",
+                "updated_at": "2026-07-06 00:04:12",
                 "sort_order": 10,
                 "planned_start": "09:00",
                 "planned_end": "09:30",
@@ -1976,7 +1824,7 @@
               {
                 "id": 2,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 2,
                 "priority": "P1",
                 "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -1985,8 +1833,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:25Z",
-                "updated_at": "2026-07-05 13:52:25",
+                "created_at": "2026-07-06T00:04:12Z",
+                "updated_at": "2026-07-06 00:04:12",
                 "sort_order": 20,
                 "planned_start": "10:45",
                 "planned_end": "11:15",
@@ -1999,7 +1847,9 @@
             ]
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-PLAN-003",
@@ -2022,7 +1872,7 @@
                 "subject": "数学",
                 "total_units": 29,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 35,
                   "pacing": "每日一节",
@@ -2080,7 +1930,7 @@
                     "subject": "数学",
                     "total_units": 29,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 35,
                       "pacing": "每日一节",
@@ -2132,13 +1982,13 @@
             }
           },
           "tasks": {
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "count": 1,
             "tasks": [
               {
                 "id": 1,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 1,
                 "priority": "P1",
                 "title": "五年级预习：第一单元：小数除法：精打细算",
@@ -2147,8 +1997,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:26Z",
-                "updated_at": "2026-07-05 13:52:26",
+                "created_at": "2026-07-06T00:04:13Z",
+                "updated_at": "2026-07-06 00:04:13",
                 "sort_order": 10,
                 "planned_start": "09:00",
                 "planned_end": "09:35",
@@ -2161,7 +2011,9 @@
             ]
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-PLAN-004",
@@ -2184,7 +2036,7 @@
                 "subject": "语文",
                 "total_units": 27,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 30,
                   "pacing": "每日一篇课文",
@@ -2240,7 +2092,7 @@
                     "subject": "语文",
                     "total_units": 27,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 30,
                       "pacing": "每日一篇课文",
@@ -2290,13 +2142,13 @@
             }
           },
           "tasks": {
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "count": 1,
             "tasks": [
               {
                 "id": 1,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 1,
                 "priority": "P1",
                 "title": "五年级预习：第一单元：万物有灵：白鹭",
@@ -2305,8 +2157,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:26Z",
-                "updated_at": "2026-07-05 13:52:26",
+                "created_at": "2026-07-06T00:04:13Z",
+                "updated_at": "2026-07-06 00:04:13",
                 "sort_order": 10,
                 "planned_start": "09:00",
                 "planned_end": "09:30",
@@ -2319,7 +2171,9 @@
             ]
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-PLAN-005",
@@ -2342,7 +2196,7 @@
                 "subject": "英语",
                 "total_units": 30,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 30,
                   "pacing": "每日一课",
@@ -2401,7 +2255,7 @@
                     "subject": "英语",
                     "total_units": 30,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 30,
                       "pacing": "每日一课",
@@ -2454,13 +2308,13 @@
             }
           },
           "tasks": {
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "count": 1,
             "tasks": [
               {
                 "id": 1,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 1,
                 "priority": "P1",
                 "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -2469,8 +2323,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:26Z",
-                "updated_at": "2026-07-05 13:52:26",
+                "created_at": "2026-07-06T00:04:13Z",
+                "updated_at": "2026-07-06 00:04:13",
                 "sort_order": 10,
                 "planned_start": "10:45",
                 "planned_end": "11:15",
@@ -2483,7 +2337,9 @@
             ]
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-PLAN-006",
@@ -2506,7 +2362,7 @@
                 "subject": "数学",
                 "total_units": 29,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 35,
                   "pacing": "每日一节",
@@ -2559,7 +2415,7 @@
                 "subject": "英语",
                 "total_units": 30,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 30,
                   "pacing": "每日一课",
@@ -2618,7 +2474,7 @@
                     "subject": "数学",
                     "total_units": 29,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 35,
                       "pacing": "每日一节",
@@ -2671,7 +2527,7 @@
                     "subject": "英语",
                     "total_units": 30,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 30,
                       "pacing": "每日一课",
@@ -2724,13 +2580,13 @@
             }
           },
           "tasks": {
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "count": 2,
             "tasks": [
               {
                 "id": 1,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 1,
                 "priority": "P1",
                 "title": "五年级预习：第一单元：小数除法：精打细算",
@@ -2739,8 +2595,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:27Z",
-                "updated_at": "2026-07-05 13:52:27",
+                "created_at": "2026-07-06T00:04:13Z",
+                "updated_at": "2026-07-06 00:04:13",
                 "sort_order": 10,
                 "planned_start": "09:00",
                 "planned_end": "09:35",
@@ -2753,7 +2609,7 @@
               {
                 "id": 2,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 2,
                 "priority": "P1",
                 "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -2762,8 +2618,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:27Z",
-                "updated_at": "2026-07-05 13:52:27",
+                "created_at": "2026-07-06T00:04:13Z",
+                "updated_at": "2026-07-06 00:04:13",
                 "sort_order": 20,
                 "planned_start": "10:45",
                 "planned_end": "11:15",
@@ -2776,7 +2632,9 @@
             ]
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-PLAN-007",
@@ -2799,7 +2657,7 @@
                 "subject": "语文",
                 "total_units": 27,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 30,
                   "pacing": "每日一篇课文",
@@ -2850,7 +2708,7 @@
                 "subject": "数学",
                 "total_units": 29,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 35,
                   "pacing": "每日一节",
@@ -2903,7 +2761,7 @@
                 "subject": "英语",
                 "total_units": 30,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 30,
                   "pacing": "每日一课",
@@ -2962,7 +2820,7 @@
                     "subject": "语文",
                     "total_units": 27,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 30,
                       "pacing": "每日一篇课文",
@@ -3013,7 +2871,7 @@
                     "subject": "数学",
                     "total_units": 29,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 35,
                       "pacing": "每日一节",
@@ -3066,7 +2924,7 @@
                     "subject": "英语",
                     "total_units": 30,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 30,
                       "pacing": "每日一课",
@@ -3119,13 +2977,13 @@
             }
           },
           "tasks": {
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "count": 3,
             "tasks": [
               {
                 "id": 2,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 2,
                 "priority": "P1",
                 "title": "五年级预习：第一单元：小数除法：精打细算",
@@ -3134,8 +2992,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:27Z",
-                "updated_at": "2026-07-05 13:52:27",
+                "created_at": "2026-07-06T00:04:13Z",
+                "updated_at": "2026-07-06 00:04:13",
                 "sort_order": 10,
                 "planned_start": "09:00",
                 "planned_end": "09:35",
@@ -3148,7 +3006,7 @@
               {
                 "id": 1,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 1,
                 "priority": "P1",
                 "title": "五年级预习：第一单元：万物有灵：白鹭",
@@ -3157,8 +3015,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:27Z",
-                "updated_at": "2026-07-05 13:52:27",
+                "created_at": "2026-07-06T00:04:13Z",
+                "updated_at": "2026-07-06 00:04:13",
                 "sort_order": 20,
                 "planned_start": "09:45",
                 "planned_end": "10:15",
@@ -3171,7 +3029,7 @@
               {
                 "id": 3,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 3,
                 "priority": "P1",
                 "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -3180,8 +3038,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:27Z",
-                "updated_at": "2026-07-05 13:52:27",
+                "created_at": "2026-07-06T00:04:13Z",
+                "updated_at": "2026-07-06 00:04:13",
                 "sort_order": 30,
                 "planned_start": "10:45",
                 "planned_end": "11:15",
@@ -3194,7 +3052,9 @@
             ]
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-PLAN-008",
@@ -3217,7 +3077,7 @@
                 "subject": "语文",
                 "total_units": 27,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 30,
                   "pacing": "每日一篇课文",
@@ -3268,7 +3128,7 @@
                 "subject": "数学",
                 "total_units": 29,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 35,
                   "pacing": "每日一节",
@@ -3321,7 +3181,7 @@
                 "subject": "英语",
                 "total_units": 30,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 30,
                   "pacing": "每日一课",
@@ -3380,7 +3240,7 @@
                     "subject": "语文",
                     "total_units": 27,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 30,
                       "pacing": "每日一篇课文",
@@ -3431,7 +3291,7 @@
                     "subject": "数学",
                     "total_units": 29,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 35,
                       "pacing": "每日一节",
@@ -3484,7 +3344,7 @@
                     "subject": "英语",
                     "total_units": 30,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 30,
                       "pacing": "每日一课",
@@ -3537,13 +3397,13 @@
             }
           },
           "tasks": {
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "count": 3,
             "tasks": [
               {
                 "id": 2,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 2,
                 "priority": "P1",
                 "title": "五年级预习：第一单元：小数除法：精打细算",
@@ -3552,8 +3412,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:27Z",
-                "updated_at": "2026-07-05 13:52:27",
+                "created_at": "2026-07-06T00:04:13Z",
+                "updated_at": "2026-07-06 00:04:13",
                 "sort_order": 10,
                 "planned_start": "09:00",
                 "planned_end": "09:35",
@@ -3566,7 +3426,7 @@
               {
                 "id": 1,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 1,
                 "priority": "P1",
                 "title": "五年级预习：第一单元：万物有灵：白鹭",
@@ -3575,8 +3435,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:27Z",
-                "updated_at": "2026-07-05 13:52:27",
+                "created_at": "2026-07-06T00:04:13Z",
+                "updated_at": "2026-07-06 00:04:13",
                 "sort_order": 20,
                 "planned_start": "09:45",
                 "planned_end": "10:15",
@@ -3589,7 +3449,7 @@
               {
                 "id": 3,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 3,
                 "priority": "P1",
                 "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -3598,8 +3458,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:27Z",
-                "updated_at": "2026-07-05 13:52:27",
+                "created_at": "2026-07-06T00:04:13Z",
+                "updated_at": "2026-07-06 00:04:13",
                 "sort_order": 30,
                 "planned_start": "10:45",
                 "planned_end": "11:15",
@@ -3612,7 +3472,9 @@
             ]
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-PLAN-009",
@@ -3635,7 +3497,7 @@
                 "subject": "数学",
                 "total_units": 29,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 35,
                   "pacing": "每日一节",
@@ -3693,7 +3555,7 @@
                     "subject": "数学",
                     "total_units": 29,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 35,
                       "pacing": "每日一节",
@@ -3745,13 +3607,13 @@
             }
           },
           "tasks": {
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "count": 1,
             "tasks": [
               {
                 "id": 1,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 1,
                 "priority": "P1",
                 "title": "五年级预习：第一单元：小数除法：精打细算",
@@ -3760,8 +3622,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:27Z",
-                "updated_at": "2026-07-05 13:52:27",
+                "created_at": "2026-07-06T00:04:13Z",
+                "updated_at": "2026-07-06 00:04:13",
                 "sort_order": 10,
                 "planned_start": "09:00",
                 "planned_end": "09:35",
@@ -3774,7 +3636,9 @@
             ]
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-PLAN-010",
@@ -3797,7 +3661,7 @@
                 "subject": "英语",
                 "total_units": 30,
                 "completed_units": 0,
-                "deadline": "2026-08-19",
+                "deadline": "2026-08-20",
                 "config": {
                   "estimated_minutes": 30,
                   "pacing": "每日一课",
@@ -3856,7 +3720,7 @@
                     "subject": "英语",
                     "total_units": 30,
                     "completed_units": 0,
-                    "deadline": "2026-08-19",
+                    "deadline": "2026-08-20",
                     "config": {
                       "estimated_minutes": 30,
                       "pacing": "每日一课",
@@ -3909,13 +3773,13 @@
             }
           },
           "tasks": {
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "count": 1,
             "tasks": [
               {
                 "id": 1,
                 "student_id": 1,
-                "date": "2026-07-05",
+                "date": "2026-07-06",
                 "source_id": 1,
                 "priority": "P1",
                 "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -3924,8 +3788,8 @@
                 "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
                 "check_method": "quiz",
                 "status": "not_started",
-                "created_at": "2026-07-05T13:52:28Z",
-                "updated_at": "2026-07-05 13:52:28",
+                "created_at": "2026-07-06T00:04:14Z",
+                "updated_at": "2026-07-06 00:04:14",
                 "sort_order": 10,
                 "planned_start": "10:45",
                 "planned_end": "11:15",
@@ -3938,7 +3802,9 @@
             ]
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-STUCK-001",
@@ -3985,6 +3851,13 @@
             ]
           },
           "review_action": "已把“英语关键词、句意理解和基础表达”加入后续补漏和复测重点。",
+          "tool_validation": {
+            "ok": true,
+            "tool": "assist_stuck",
+            "side_effect": "write",
+            "idempotent": true,
+            "timeout_seconds": 10
+          },
           "tutor_session": {
             "session_id": 1,
             "subject": "英语",
@@ -3998,7 +3871,9 @@
           "timer_state": "stopped",
           "last_started_at": ""
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-STUCK-002",
@@ -4045,6 +3920,13 @@
             ]
           },
           "review_action": "已把“英语关键词、句意理解和基础表达”加入后续补漏和复测重点。",
+          "tool_validation": {
+            "ok": true,
+            "tool": "assist_stuck",
+            "side_effect": "write",
+            "idempotent": true,
+            "timeout_seconds": 10
+          },
           "tutor_session": {
             "session_id": 1,
             "subject": "英语",
@@ -4058,7 +3940,9 @@
           "timer_state": "stopped",
           "last_started_at": ""
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-STUCK-003",
@@ -4105,6 +3989,13 @@
             ]
           },
           "review_action": "已把“英语关键词、句意理解和基础表达”加入后续补漏和复测重点。",
+          "tool_validation": {
+            "ok": true,
+            "tool": "assist_stuck",
+            "side_effect": "write",
+            "idempotent": true,
+            "timeout_seconds": 10
+          },
           "tutor_session": {
             "session_id": 1,
             "subject": "英语",
@@ -4118,7 +4009,9 @@
           "timer_state": "stopped",
           "last_started_at": ""
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-STUCK-004",
@@ -4165,6 +4058,13 @@
             ]
           },
           "review_action": "已把“英语关键词、句意理解和基础表达”加入后续补漏和复测重点。",
+          "tool_validation": {
+            "ok": true,
+            "tool": "assist_stuck",
+            "side_effect": "write",
+            "idempotent": true,
+            "timeout_seconds": 10
+          },
           "tutor_session": {
             "session_id": 1,
             "subject": "英语",
@@ -4178,7 +4078,9 @@
           "timer_state": "stopped",
           "last_started_at": ""
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-STUCK-005",
@@ -4225,6 +4127,13 @@
             ]
           },
           "review_action": "已把“英语关键词、句意理解和基础表达”加入后续补漏和复测重点。",
+          "tool_validation": {
+            "ok": true,
+            "tool": "assist_stuck",
+            "side_effect": "write",
+            "idempotent": true,
+            "timeout_seconds": 10
+          },
           "tutor_session": {
             "session_id": 1,
             "subject": "英语",
@@ -4238,7 +4147,9 @@
           "timer_state": "stopped",
           "last_started_at": ""
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-STUCK-006",
@@ -4285,6 +4196,13 @@
             ]
           },
           "review_action": "已把“英语关键词、句意理解和基础表达”加入后续补漏和复测重点。",
+          "tool_validation": {
+            "ok": true,
+            "tool": "assist_stuck",
+            "side_effect": "write",
+            "idempotent": true,
+            "timeout_seconds": 10
+          },
           "tutor_session": {
             "session_id": 1,
             "subject": "英语",
@@ -4298,7 +4216,9 @@
           "timer_state": "stopped",
           "last_started_at": ""
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-STUCK-007",
@@ -4345,6 +4265,13 @@
             ]
           },
           "review_action": "已把“英语关键词、句意理解和基础表达”加入后续补漏和复测重点。",
+          "tool_validation": {
+            "ok": true,
+            "tool": "assist_stuck",
+            "side_effect": "write",
+            "idempotent": true,
+            "timeout_seconds": 10
+          },
           "tutor_session": {
             "session_id": 1,
             "subject": "英语",
@@ -4358,7 +4285,9 @@
           "timer_state": "stopped",
           "last_started_at": ""
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-STUCK-008",
@@ -4405,6 +4334,13 @@
             ]
           },
           "review_action": "已把“英语关键词、句意理解和基础表达”加入后续补漏和复测重点。",
+          "tool_validation": {
+            "ok": true,
+            "tool": "assist_stuck",
+            "side_effect": "write",
+            "idempotent": true,
+            "timeout_seconds": 10
+          },
           "tutor_session": {
             "session_id": 1,
             "subject": "英语",
@@ -4418,7 +4354,9 @@
           "timer_state": "stopped",
           "last_started_at": ""
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-STUCK-009",
@@ -4465,6 +4403,13 @@
             ]
           },
           "review_action": "已把“英语关键词、句意理解和基础表达”加入后续补漏和复测重点。",
+          "tool_validation": {
+            "ok": true,
+            "tool": "assist_stuck",
+            "side_effect": "write",
+            "idempotent": true,
+            "timeout_seconds": 10
+          },
           "tutor_session": {
             "session_id": 1,
             "subject": "英语",
@@ -4478,7 +4423,9 @@
           "timer_state": "stopped",
           "last_started_at": ""
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-STUCK-010",
@@ -4525,10 +4472,17 @@
             ]
           },
           "review_action": "已把“英语关键词、句意理解和基础表达”加入后续补漏和复测重点。",
+          "tool_validation": {
+            "ok": true,
+            "tool": "assist_stuck",
+            "side_effect": "write",
+            "idempotent": true,
+            "timeout_seconds": 10
+          },
           "tutor_session": {
             "session_id": 1,
             "subject": "英语",
-            "skill": "词义匹配",
+            "skill": "句型替换",
             "micro_practice": {
               "prompt": "先不看答案：把你卡住的单词读/拼一遍，或者写出它的中文意思。",
               "success_rule": "能读、能拼或能说出意思，就点“我会了，继续学”；否则继续提示。"
@@ -4538,7 +4492,9 @@
           "timer_state": "stopped",
           "last_started_at": ""
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-STUCK-011",
@@ -4585,6 +4541,13 @@
             ]
           },
           "review_action": "已把“英语关键词、句意理解和基础表达”加入后续补漏和复测重点。",
+          "tool_validation": {
+            "ok": true,
+            "tool": "assist_stuck",
+            "side_effect": "write",
+            "idempotent": true,
+            "timeout_seconds": 10
+          },
           "tutor_session": {
             "session_id": 1,
             "subject": "英语",
@@ -4598,7 +4561,9 @@
           "timer_state": "stopped",
           "last_started_at": ""
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-STUCK-012",
@@ -4645,6 +4610,13 @@
             ]
           },
           "review_action": "已把“英语关键词、句意理解和基础表达”加入后续补漏和复测重点。",
+          "tool_validation": {
+            "ok": true,
+            "tool": "assist_stuck",
+            "side_effect": "write",
+            "idempotent": true,
+            "timeout_seconds": 10
+          },
           "tutor_session": {
             "session_id": 1,
             "subject": "英语",
@@ -4658,7 +4630,9 @@
           "timer_state": "stopped",
           "last_started_at": ""
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-STUCK-013",
@@ -4705,6 +4679,13 @@
             ]
           },
           "review_action": "已把“英语关键词、句意理解和基础表达”加入后续补漏和复测重点。",
+          "tool_validation": {
+            "ok": true,
+            "tool": "assist_stuck",
+            "side_effect": "write",
+            "idempotent": true,
+            "timeout_seconds": 10
+          },
           "tutor_session": {
             "session_id": 1,
             "subject": "英语",
@@ -4718,7 +4699,9 @@
           "timer_state": "stopped",
           "last_started_at": ""
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-STUCK-014",
@@ -4765,6 +4748,13 @@
             ]
           },
           "review_action": "已把“英语关键词、句意理解和基础表达”加入后续补漏和复测重点。",
+          "tool_validation": {
+            "ok": true,
+            "tool": "assist_stuck",
+            "side_effect": "write",
+            "idempotent": true,
+            "timeout_seconds": 10
+          },
           "tutor_session": {
             "session_id": 1,
             "subject": "英语",
@@ -4778,7 +4768,9 @@
           "timer_state": "stopped",
           "last_started_at": ""
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-STUCK-015",
@@ -4825,6 +4817,13 @@
             ]
           },
           "review_action": "已把“英语关键词、句意理解和基础表达”加入后续补漏和复测重点。",
+          "tool_validation": {
+            "ok": true,
+            "tool": "assist_stuck",
+            "side_effect": "write",
+            "idempotent": true,
+            "timeout_seconds": 10
+          },
           "tutor_session": {
             "session_id": 1,
             "subject": "英语",
@@ -4838,7 +4837,9 @@
           "timer_state": "stopped",
           "last_started_at": ""
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-QUIZ-001",
@@ -4855,7 +4856,7 @@
           "task": {
             "id": 1,
             "student_id": 1,
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "source_id": 1,
             "priority": "P1",
             "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -4864,8 +4865,8 @@
             "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
             "check_method": "quiz",
             "status": "not_started",
-            "created_at": "2026-07-05T13:52:34Z",
-            "updated_at": "2026-07-05 13:52:34",
+            "created_at": "2026-07-06T00:04:17Z",
+            "updated_at": "2026-07-06 00:04:17",
             "sort_order": 10,
             "planned_start": "10:45",
             "planned_end": "11:15",
@@ -4878,11 +4879,11 @@
               "daily_task_id": 1,
               "question_type": "english_word_cn_to_en",
               "question": "中译英：【资料",
-              "created_at": "2026-07-05T13:52:34Z",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -4891,13 +4892,13 @@
             {
               "id": 2,
               "daily_task_id": 1,
-              "question_type": "english_spelling",
-              "question": "默写：请家长读中文「【资料」，孩子写英文单词。",
-              "created_at": "2026-07-05T13:52:34Z",
+              "question_type": "english_word_en_to_cn",
+              "question": "英译中：school",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -4906,13 +4907,13 @@
             {
               "id": 3,
               "daily_task_id": 1,
-              "question_type": "english_sentence_fill",
-              "question": "句型填空：There ___ a desk here.",
-              "created_at": "2026-07-05T13:52:34Z",
+              "question_type": "english_spelling",
+              "question": "默写：请家长读中文「图书馆」，孩子写英文单词。",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -4921,13 +4922,13 @@
             {
               "id": 4,
               "daily_task_id": 1,
-              "question_type": "english_translation",
-              "question": "翻译：我的学校很棒。",
-              "created_at": "2026-07-05T13:52:34Z",
+              "question_type": "english_sentence_fill",
+              "question": "句型填空：There ___ a desk here.",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -4936,13 +4937,13 @@
             {
               "id": 5,
               "daily_task_id": 1,
-              "question_type": "english_sentence_make",
-              "question": "造句：写一个介绍学校的完整英文句子。",
-              "created_at": "2026-07-05T13:52:34Z",
+              "question_type": "english_translation",
+              "question": "翻译：我的学校很棒。",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -4951,13 +4952,28 @@
             {
               "id": 6,
               "daily_task_id": 1,
+              "question_type": "english_sentence_make",
+              "question": "造句：写一个介绍学校的完整英文句子。",
+              "created_at": "2026-07-06T00:04:17Z",
+              "subject": "英语",
+              "skill": "单词拼写",
+              "difficulty": "basic",
+              "source_ref": "五上英语真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
               "question_type": "english_reading_check",
               "question": "课文理解：这一节主要介绍什么？",
-              "created_at": "2026-07-05T13:52:34Z",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -4972,7 +4988,9 @@
             "target": "95+"
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-QUIZ-002",
@@ -4989,7 +5007,7 @@
           "task": {
             "id": 1,
             "student_id": 1,
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "source_id": 1,
             "priority": "P1",
             "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -4998,8 +5016,8 @@
             "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
             "check_method": "quiz",
             "status": "not_started",
-            "created_at": "2026-07-05T13:52:35Z",
-            "updated_at": "2026-07-05 13:52:35",
+            "created_at": "2026-07-06T00:04:17Z",
+            "updated_at": "2026-07-06 00:04:17",
             "sort_order": 10,
             "planned_start": "10:45",
             "planned_end": "11:15",
@@ -5012,11 +5030,11 @@
               "daily_task_id": 1,
               "question_type": "english_word_cn_to_en",
               "question": "中译英：【资料",
-              "created_at": "2026-07-05T13:52:35Z",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5025,13 +5043,13 @@
             {
               "id": 2,
               "daily_task_id": 1,
-              "question_type": "english_spelling",
-              "question": "默写：请家长读中文「【资料」，孩子写英文单词。",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_word_en_to_cn",
+              "question": "英译中：school",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5040,13 +5058,13 @@
             {
               "id": 3,
               "daily_task_id": 1,
-              "question_type": "english_sentence_fill",
-              "question": "句型填空：There ___ a desk here.",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_spelling",
+              "question": "默写：请家长读中文「图书馆」，孩子写英文单词。",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5055,13 +5073,13 @@
             {
               "id": 4,
               "daily_task_id": 1,
-              "question_type": "english_translation",
-              "question": "翻译：我的学校很棒。",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_sentence_fill",
+              "question": "句型填空：There ___ a desk here.",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5070,13 +5088,13 @@
             {
               "id": 5,
               "daily_task_id": 1,
-              "question_type": "english_sentence_make",
-              "question": "造句：写一个介绍学校的完整英文句子。",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_translation",
+              "question": "翻译：我的学校很棒。",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5085,13 +5103,28 @@
             {
               "id": 6,
               "daily_task_id": 1,
+              "question_type": "english_sentence_make",
+              "question": "造句：写一个介绍学校的完整英文句子。",
+              "created_at": "2026-07-06T00:04:17Z",
+              "subject": "英语",
+              "skill": "单词拼写",
+              "difficulty": "basic",
+              "source_ref": "五上英语真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
               "question_type": "english_reading_check",
               "question": "课文理解：这一节主要介绍什么？",
-              "created_at": "2026-07-05T13:52:35Z",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5106,7 +5139,9 @@
             "target": "95+"
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-QUIZ-003",
@@ -5123,7 +5158,7 @@
           "task": {
             "id": 1,
             "student_id": 1,
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "source_id": 1,
             "priority": "P1",
             "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -5132,8 +5167,8 @@
             "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
             "check_method": "quiz",
             "status": "not_started",
-            "created_at": "2026-07-05T13:52:35Z",
-            "updated_at": "2026-07-05 13:52:35",
+            "created_at": "2026-07-06T00:04:17Z",
+            "updated_at": "2026-07-06 00:04:17",
             "sort_order": 10,
             "planned_start": "10:45",
             "planned_end": "11:15",
@@ -5146,11 +5181,11 @@
               "daily_task_id": 1,
               "question_type": "english_word_cn_to_en",
               "question": "中译英：【资料",
-              "created_at": "2026-07-05T13:52:35Z",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5159,13 +5194,13 @@
             {
               "id": 2,
               "daily_task_id": 1,
-              "question_type": "english_spelling",
-              "question": "默写：请家长读中文「【资料」，孩子写英文单词。",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_word_en_to_cn",
+              "question": "英译中：school",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5174,13 +5209,13 @@
             {
               "id": 3,
               "daily_task_id": 1,
-              "question_type": "english_sentence_fill",
-              "question": "句型填空：There ___ a desk here.",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_spelling",
+              "question": "默写：请家长读中文「图书馆」，孩子写英文单词。",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5189,13 +5224,13 @@
             {
               "id": 4,
               "daily_task_id": 1,
-              "question_type": "english_translation",
-              "question": "翻译：我的学校很棒。",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_sentence_fill",
+              "question": "句型填空：There ___ a desk here.",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5204,13 +5239,13 @@
             {
               "id": 5,
               "daily_task_id": 1,
-              "question_type": "english_sentence_make",
-              "question": "造句：写一个介绍学校的完整英文句子。",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_translation",
+              "question": "翻译：我的学校很棒。",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5219,13 +5254,28 @@
             {
               "id": 6,
               "daily_task_id": 1,
+              "question_type": "english_sentence_make",
+              "question": "造句：写一个介绍学校的完整英文句子。",
+              "created_at": "2026-07-06T00:04:17Z",
+              "subject": "英语",
+              "skill": "单词拼写",
+              "difficulty": "basic",
+              "source_ref": "五上英语真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
               "question_type": "english_reading_check",
               "question": "课文理解：这一节主要介绍什么？",
-              "created_at": "2026-07-05T13:52:35Z",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5240,7 +5290,9 @@
             "target": "95+"
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-QUIZ-004",
@@ -5257,7 +5309,7 @@
           "task": {
             "id": 1,
             "student_id": 1,
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "source_id": 1,
             "priority": "P1",
             "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -5266,8 +5318,8 @@
             "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
             "check_method": "quiz",
             "status": "not_started",
-            "created_at": "2026-07-05T13:52:35Z",
-            "updated_at": "2026-07-05 13:52:35",
+            "created_at": "2026-07-06T00:04:17Z",
+            "updated_at": "2026-07-06 00:04:17",
             "sort_order": 10,
             "planned_start": "10:45",
             "planned_end": "11:15",
@@ -5280,11 +5332,11 @@
               "daily_task_id": 1,
               "question_type": "english_word_cn_to_en",
               "question": "中译英：【资料",
-              "created_at": "2026-07-05T13:52:35Z",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5293,13 +5345,13 @@
             {
               "id": 2,
               "daily_task_id": 1,
-              "question_type": "english_spelling",
-              "question": "默写：请家长读中文「【资料」，孩子写英文单词。",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_word_en_to_cn",
+              "question": "英译中：school",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5308,13 +5360,13 @@
             {
               "id": 3,
               "daily_task_id": 1,
-              "question_type": "english_sentence_fill",
-              "question": "句型填空：There ___ a desk here.",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_spelling",
+              "question": "默写：请家长读中文「图书馆」，孩子写英文单词。",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5323,13 +5375,13 @@
             {
               "id": 4,
               "daily_task_id": 1,
-              "question_type": "english_translation",
-              "question": "翻译：我的学校很棒。",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_sentence_fill",
+              "question": "句型填空：There ___ a desk here.",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5338,13 +5390,13 @@
             {
               "id": 5,
               "daily_task_id": 1,
-              "question_type": "english_sentence_make",
-              "question": "造句：写一个介绍学校的完整英文句子。",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_translation",
+              "question": "翻译：我的学校很棒。",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5353,13 +5405,28 @@
             {
               "id": 6,
               "daily_task_id": 1,
+              "question_type": "english_sentence_make",
+              "question": "造句：写一个介绍学校的完整英文句子。",
+              "created_at": "2026-07-06T00:04:17Z",
+              "subject": "英语",
+              "skill": "单词拼写",
+              "difficulty": "basic",
+              "source_ref": "五上英语真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
               "question_type": "english_reading_check",
               "question": "课文理解：这一节主要介绍什么？",
-              "created_at": "2026-07-05T13:52:35Z",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5374,7 +5441,9 @@
             "target": "95+"
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-QUIZ-005",
@@ -5391,7 +5460,7 @@
           "task": {
             "id": 1,
             "student_id": 1,
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "source_id": 1,
             "priority": "P1",
             "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -5400,8 +5469,8 @@
             "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
             "check_method": "quiz",
             "status": "not_started",
-            "created_at": "2026-07-05T13:52:35Z",
-            "updated_at": "2026-07-05 13:52:35",
+            "created_at": "2026-07-06T00:04:17Z",
+            "updated_at": "2026-07-06 00:04:17",
             "sort_order": 10,
             "planned_start": "10:45",
             "planned_end": "11:15",
@@ -5414,11 +5483,11 @@
               "daily_task_id": 1,
               "question_type": "english_word_cn_to_en",
               "question": "中译英：【资料",
-              "created_at": "2026-07-05T13:52:35Z",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5427,13 +5496,13 @@
             {
               "id": 2,
               "daily_task_id": 1,
-              "question_type": "english_spelling",
-              "question": "默写：请家长读中文「【资料」，孩子写英文单词。",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_word_en_to_cn",
+              "question": "英译中：school",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5442,13 +5511,13 @@
             {
               "id": 3,
               "daily_task_id": 1,
-              "question_type": "english_sentence_fill",
-              "question": "句型填空：There ___ a desk here.",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_spelling",
+              "question": "默写：请家长读中文「图书馆」，孩子写英文单词。",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5457,13 +5526,13 @@
             {
               "id": 4,
               "daily_task_id": 1,
-              "question_type": "english_translation",
-              "question": "翻译：我的学校很棒。",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_sentence_fill",
+              "question": "句型填空：There ___ a desk here.",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5472,13 +5541,13 @@
             {
               "id": 5,
               "daily_task_id": 1,
-              "question_type": "english_sentence_make",
-              "question": "造句：写一个介绍学校的完整英文句子。",
-              "created_at": "2026-07-05T13:52:35Z",
+              "question_type": "english_translation",
+              "question": "翻译：我的学校很棒。",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5487,13 +5556,28 @@
             {
               "id": 6,
               "daily_task_id": 1,
+              "question_type": "english_sentence_make",
+              "question": "造句：写一个介绍学校的完整英文句子。",
+              "created_at": "2026-07-06T00:04:17Z",
+              "subject": "英语",
+              "skill": "单词拼写",
+              "difficulty": "basic",
+              "source_ref": "五上英语真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
               "question_type": "english_reading_check",
               "question": "课文理解：这一节主要介绍什么？",
-              "created_at": "2026-07-05T13:52:35Z",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5508,7 +5592,9 @@
             "target": "95+"
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-QUIZ-006",
@@ -5525,7 +5611,7 @@
           "task": {
             "id": 1,
             "student_id": 1,
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "source_id": 1,
             "priority": "P1",
             "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -5534,8 +5620,8 @@
             "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
             "check_method": "quiz",
             "status": "not_started",
-            "created_at": "2026-07-05T13:52:36Z",
-            "updated_at": "2026-07-05 13:52:36",
+            "created_at": "2026-07-06T00:04:17Z",
+            "updated_at": "2026-07-06 00:04:17",
             "sort_order": 10,
             "planned_start": "10:45",
             "planned_end": "11:15",
@@ -5548,11 +5634,11 @@
               "daily_task_id": 1,
               "question_type": "english_word_cn_to_en",
               "question": "中译英：【资料",
-              "created_at": "2026-07-05T13:52:36Z",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5561,13 +5647,13 @@
             {
               "id": 2,
               "daily_task_id": 1,
-              "question_type": "english_spelling",
-              "question": "默写：请家长读中文「【资料」，孩子写英文单词。",
-              "created_at": "2026-07-05T13:52:36Z",
+              "question_type": "english_word_en_to_cn",
+              "question": "英译中：school",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5576,13 +5662,13 @@
             {
               "id": 3,
               "daily_task_id": 1,
-              "question_type": "english_sentence_fill",
-              "question": "句型填空：There ___ a desk here.",
-              "created_at": "2026-07-05T13:52:36Z",
+              "question_type": "english_spelling",
+              "question": "默写：请家长读中文「图书馆」，孩子写英文单词。",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5591,13 +5677,13 @@
             {
               "id": 4,
               "daily_task_id": 1,
-              "question_type": "english_translation",
-              "question": "翻译：我的学校很棒。",
-              "created_at": "2026-07-05T13:52:36Z",
+              "question_type": "english_sentence_fill",
+              "question": "句型填空：There ___ a desk here.",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5606,13 +5692,13 @@
             {
               "id": 5,
               "daily_task_id": 1,
-              "question_type": "english_sentence_make",
-              "question": "造句：写一个介绍学校的完整英文句子。",
-              "created_at": "2026-07-05T13:52:36Z",
+              "question_type": "english_translation",
+              "question": "翻译：我的学校很棒。",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5621,13 +5707,28 @@
             {
               "id": 6,
               "daily_task_id": 1,
+              "question_type": "english_sentence_make",
+              "question": "造句：写一个介绍学校的完整英文句子。",
+              "created_at": "2026-07-06T00:04:17Z",
+              "subject": "英语",
+              "skill": "单词拼写",
+              "difficulty": "basic",
+              "source_ref": "五上英语真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
               "question_type": "english_reading_check",
               "question": "课文理解：这一节主要介绍什么？",
-              "created_at": "2026-07-05T13:52:36Z",
+              "created_at": "2026-07-06T00:04:17Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5642,7 +5743,9 @@
             "target": "95+"
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-QUIZ-007",
@@ -5659,7 +5762,7 @@
           "task": {
             "id": 1,
             "student_id": 1,
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "source_id": 1,
             "priority": "P1",
             "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -5668,8 +5771,8 @@
             "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
             "check_method": "quiz",
             "status": "not_started",
-            "created_at": "2026-07-05T13:52:36Z",
-            "updated_at": "2026-07-05 13:52:36",
+            "created_at": "2026-07-06T00:04:18Z",
+            "updated_at": "2026-07-06 00:04:18",
             "sort_order": 10,
             "planned_start": "10:45",
             "planned_end": "11:15",
@@ -5682,11 +5785,11 @@
               "daily_task_id": 1,
               "question_type": "english_word_cn_to_en",
               "question": "中译英：【资料",
-              "created_at": "2026-07-05T13:52:36Z",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5695,13 +5798,13 @@
             {
               "id": 2,
               "daily_task_id": 1,
-              "question_type": "english_spelling",
-              "question": "默写：请家长读中文「【资料」，孩子写英文单词。",
-              "created_at": "2026-07-05T13:52:36Z",
+              "question_type": "english_word_en_to_cn",
+              "question": "英译中：school",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5710,13 +5813,13 @@
             {
               "id": 3,
               "daily_task_id": 1,
-              "question_type": "english_sentence_fill",
-              "question": "句型填空：There ___ a desk here.",
-              "created_at": "2026-07-05T13:52:36Z",
+              "question_type": "english_spelling",
+              "question": "默写：请家长读中文「图书馆」，孩子写英文单词。",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5725,13 +5828,13 @@
             {
               "id": 4,
               "daily_task_id": 1,
-              "question_type": "english_translation",
-              "question": "翻译：我的学校很棒。",
-              "created_at": "2026-07-05T13:52:36Z",
+              "question_type": "english_sentence_fill",
+              "question": "句型填空：There ___ a desk here.",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5740,13 +5843,13 @@
             {
               "id": 5,
               "daily_task_id": 1,
-              "question_type": "english_sentence_make",
-              "question": "造句：写一个介绍学校的完整英文句子。",
-              "created_at": "2026-07-05T13:52:36Z",
+              "question_type": "english_translation",
+              "question": "翻译：我的学校很棒。",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5755,13 +5858,28 @@
             {
               "id": 6,
               "daily_task_id": 1,
+              "question_type": "english_sentence_make",
+              "question": "造句：写一个介绍学校的完整英文句子。",
+              "created_at": "2026-07-06T00:04:18Z",
+              "subject": "英语",
+              "skill": "单词拼写",
+              "difficulty": "basic",
+              "source_ref": "五上英语真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
               "question_type": "english_reading_check",
               "question": "课文理解：这一节主要介绍什么？",
-              "created_at": "2026-07-05T13:52:36Z",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5776,7 +5894,9 @@
             "target": "95+"
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-QUIZ-008",
@@ -5793,7 +5913,7 @@
           "task": {
             "id": 1,
             "student_id": 1,
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "source_id": 1,
             "priority": "P1",
             "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -5802,8 +5922,8 @@
             "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
             "check_method": "quiz",
             "status": "not_started",
-            "created_at": "2026-07-05T13:52:36Z",
-            "updated_at": "2026-07-05 13:52:36",
+            "created_at": "2026-07-06T00:04:18Z",
+            "updated_at": "2026-07-06 00:04:18",
             "sort_order": 10,
             "planned_start": "10:45",
             "planned_end": "11:15",
@@ -5816,11 +5936,11 @@
               "daily_task_id": 1,
               "question_type": "english_word_cn_to_en",
               "question": "中译英：【资料",
-              "created_at": "2026-07-05T13:52:36Z",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5829,13 +5949,13 @@
             {
               "id": 2,
               "daily_task_id": 1,
-              "question_type": "english_spelling",
-              "question": "默写：请家长读中文「【资料」，孩子写英文单词。",
-              "created_at": "2026-07-05T13:52:36Z",
+              "question_type": "english_word_en_to_cn",
+              "question": "英译中：school",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5844,13 +5964,13 @@
             {
               "id": 3,
               "daily_task_id": 1,
-              "question_type": "english_sentence_fill",
-              "question": "句型填空：There ___ a desk here.",
-              "created_at": "2026-07-05T13:52:36Z",
+              "question_type": "english_spelling",
+              "question": "默写：请家长读中文「图书馆」，孩子写英文单词。",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5859,13 +5979,13 @@
             {
               "id": 4,
               "daily_task_id": 1,
-              "question_type": "english_translation",
-              "question": "翻译：我的学校很棒。",
-              "created_at": "2026-07-05T13:52:36Z",
+              "question_type": "english_sentence_fill",
+              "question": "句型填空：There ___ a desk here.",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5874,13 +5994,13 @@
             {
               "id": 5,
               "daily_task_id": 1,
-              "question_type": "english_sentence_make",
-              "question": "造句：写一个介绍学校的完整英文句子。",
-              "created_at": "2026-07-05T13:52:36Z",
+              "question_type": "english_translation",
+              "question": "翻译：我的学校很棒。",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5889,13 +6009,28 @@
             {
               "id": 6,
               "daily_task_id": 1,
+              "question_type": "english_sentence_make",
+              "question": "造句：写一个介绍学校的完整英文句子。",
+              "created_at": "2026-07-06T00:04:18Z",
+              "subject": "英语",
+              "skill": "单词拼写",
+              "difficulty": "basic",
+              "source_ref": "五上英语真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
               "question_type": "english_reading_check",
               "question": "课文理解：这一节主要介绍什么？",
-              "created_at": "2026-07-05T13:52:36Z",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5910,7 +6045,9 @@
             "target": "95+"
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-QUIZ-009",
@@ -5927,7 +6064,7 @@
           "task": {
             "id": 1,
             "student_id": 1,
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "source_id": 1,
             "priority": "P1",
             "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -5936,8 +6073,8 @@
             "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
             "check_method": "quiz",
             "status": "not_started",
-            "created_at": "2026-07-05T13:52:37Z",
-            "updated_at": "2026-07-05 13:52:37",
+            "created_at": "2026-07-06T00:04:18Z",
+            "updated_at": "2026-07-06 00:04:18",
             "sort_order": 10,
             "planned_start": "10:45",
             "planned_end": "11:15",
@@ -5950,11 +6087,11 @@
               "daily_task_id": 1,
               "question_type": "english_word_cn_to_en",
               "question": "中译英：【资料",
-              "created_at": "2026-07-05T13:52:37Z",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5963,13 +6100,13 @@
             {
               "id": 2,
               "daily_task_id": 1,
-              "question_type": "english_spelling",
-              "question": "默写：请家长读中文「【资料」，孩子写英文单词。",
-              "created_at": "2026-07-05T13:52:37Z",
+              "question_type": "english_word_en_to_cn",
+              "question": "英译中：school",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5978,13 +6115,13 @@
             {
               "id": 3,
               "daily_task_id": 1,
-              "question_type": "english_sentence_fill",
-              "question": "句型填空：There ___ a desk here.",
-              "created_at": "2026-07-05T13:52:37Z",
+              "question_type": "english_spelling",
+              "question": "默写：请家长读中文「图书馆」，孩子写英文单词。",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -5993,13 +6130,13 @@
             {
               "id": 4,
               "daily_task_id": 1,
-              "question_type": "english_translation",
-              "question": "翻译：我的学校很棒。",
-              "created_at": "2026-07-05T13:52:37Z",
+              "question_type": "english_sentence_fill",
+              "question": "句型填空：There ___ a desk here.",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6008,13 +6145,13 @@
             {
               "id": 5,
               "daily_task_id": 1,
-              "question_type": "english_sentence_make",
-              "question": "造句：写一个介绍学校的完整英文句子。",
-              "created_at": "2026-07-05T13:52:37Z",
+              "question_type": "english_translation",
+              "question": "翻译：我的学校很棒。",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6023,13 +6160,28 @@
             {
               "id": 6,
               "daily_task_id": 1,
+              "question_type": "english_sentence_make",
+              "question": "造句：写一个介绍学校的完整英文句子。",
+              "created_at": "2026-07-06T00:04:18Z",
+              "subject": "英语",
+              "skill": "单词拼写",
+              "difficulty": "basic",
+              "source_ref": "五上英语真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
               "question_type": "english_reading_check",
               "question": "课文理解：这一节主要介绍什么？",
-              "created_at": "2026-07-05T13:52:37Z",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6044,7 +6196,9 @@
             "target": "95+"
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-QUIZ-010",
@@ -6061,7 +6215,7 @@
           "task": {
             "id": 1,
             "student_id": 1,
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "source_id": 1,
             "priority": "P1",
             "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -6070,8 +6224,8 @@
             "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
             "check_method": "quiz",
             "status": "not_started",
-            "created_at": "2026-07-05T13:52:37Z",
-            "updated_at": "2026-07-05 13:52:37",
+            "created_at": "2026-07-06T00:04:18Z",
+            "updated_at": "2026-07-06 00:04:18",
             "sort_order": 10,
             "planned_start": "10:45",
             "planned_end": "11:15",
@@ -6084,11 +6238,11 @@
               "daily_task_id": 1,
               "question_type": "english_word_cn_to_en",
               "question": "中译英：【资料",
-              "created_at": "2026-07-05T13:52:37Z",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6097,13 +6251,13 @@
             {
               "id": 2,
               "daily_task_id": 1,
-              "question_type": "english_spelling",
-              "question": "默写：请家长读中文「【资料」，孩子写英文单词。",
-              "created_at": "2026-07-05T13:52:37Z",
+              "question_type": "english_word_en_to_cn",
+              "question": "英译中：school",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6112,13 +6266,13 @@
             {
               "id": 3,
               "daily_task_id": 1,
-              "question_type": "english_sentence_fill",
-              "question": "句型填空：There ___ a desk here.",
-              "created_at": "2026-07-05T13:52:37Z",
+              "question_type": "english_spelling",
+              "question": "默写：请家长读中文「图书馆」，孩子写英文单词。",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6127,13 +6281,13 @@
             {
               "id": 4,
               "daily_task_id": 1,
-              "question_type": "english_translation",
-              "question": "翻译：我的学校很棒。",
-              "created_at": "2026-07-05T13:52:37Z",
+              "question_type": "english_sentence_fill",
+              "question": "句型填空：There ___ a desk here.",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6142,13 +6296,13 @@
             {
               "id": 5,
               "daily_task_id": 1,
-              "question_type": "english_sentence_make",
-              "question": "造句：写一个介绍学校的完整英文句子。",
-              "created_at": "2026-07-05T13:52:37Z",
+              "question_type": "english_translation",
+              "question": "翻译：我的学校很棒。",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6157,13 +6311,28 @@
             {
               "id": 6,
               "daily_task_id": 1,
+              "question_type": "english_sentence_make",
+              "question": "造句：写一个介绍学校的完整英文句子。",
+              "created_at": "2026-07-06T00:04:18Z",
+              "subject": "英语",
+              "skill": "单词拼写",
+              "difficulty": "basic",
+              "source_ref": "五上英语真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
               "question_type": "english_reading_check",
               "question": "课文理解：这一节主要介绍什么？",
-              "created_at": "2026-07-05T13:52:37Z",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6178,7 +6347,9 @@
             "target": "95+"
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-QUIZ-011",
@@ -6195,7 +6366,7 @@
           "task": {
             "id": 1,
             "student_id": 1,
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "source_id": 1,
             "priority": "P1",
             "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -6204,8 +6375,8 @@
             "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
             "check_method": "quiz",
             "status": "not_started",
-            "created_at": "2026-07-05T13:52:38Z",
-            "updated_at": "2026-07-05 13:52:38",
+            "created_at": "2026-07-06T00:04:18Z",
+            "updated_at": "2026-07-06 00:04:18",
             "sort_order": 10,
             "planned_start": "10:45",
             "planned_end": "11:15",
@@ -6218,11 +6389,11 @@
               "daily_task_id": 1,
               "question_type": "english_word_cn_to_en",
               "question": "中译英：【资料",
-              "created_at": "2026-07-05T13:52:38Z",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6231,13 +6402,13 @@
             {
               "id": 2,
               "daily_task_id": 1,
-              "question_type": "english_spelling",
-              "question": "默写：请家长读中文「【资料」，孩子写英文单词。",
-              "created_at": "2026-07-05T13:52:38Z",
+              "question_type": "english_word_en_to_cn",
+              "question": "英译中：school",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6246,13 +6417,13 @@
             {
               "id": 3,
               "daily_task_id": 1,
-              "question_type": "english_sentence_fill",
-              "question": "句型填空：There ___ a desk here.",
-              "created_at": "2026-07-05T13:52:38Z",
+              "question_type": "english_spelling",
+              "question": "默写：请家长读中文「图书馆」，孩子写英文单词。",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6261,13 +6432,13 @@
             {
               "id": 4,
               "daily_task_id": 1,
-              "question_type": "english_translation",
-              "question": "翻译：我的学校很棒。",
-              "created_at": "2026-07-05T13:52:38Z",
+              "question_type": "english_sentence_fill",
+              "question": "句型填空：There ___ a desk here.",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6276,13 +6447,13 @@
             {
               "id": 5,
               "daily_task_id": 1,
-              "question_type": "english_sentence_make",
-              "question": "造句：写一个介绍学校的完整英文句子。",
-              "created_at": "2026-07-05T13:52:38Z",
+              "question_type": "english_translation",
+              "question": "翻译：我的学校很棒。",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6291,13 +6462,28 @@
             {
               "id": 6,
               "daily_task_id": 1,
+              "question_type": "english_sentence_make",
+              "question": "造句：写一个介绍学校的完整英文句子。",
+              "created_at": "2026-07-06T00:04:18Z",
+              "subject": "英语",
+              "skill": "单词拼写",
+              "difficulty": "basic",
+              "source_ref": "五上英语真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
               "question_type": "english_reading_check",
               "question": "课文理解：这一节主要介绍什么？",
-              "created_at": "2026-07-05T13:52:38Z",
+              "created_at": "2026-07-06T00:04:18Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6312,7 +6498,9 @@
             "target": "95+"
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-QUIZ-012",
@@ -6329,7 +6517,7 @@
           "task": {
             "id": 1,
             "student_id": 1,
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "source_id": 1,
             "priority": "P1",
             "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -6338,8 +6526,8 @@
             "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
             "check_method": "quiz",
             "status": "not_started",
-            "created_at": "2026-07-05T13:52:38Z",
-            "updated_at": "2026-07-05 13:52:38",
+            "created_at": "2026-07-06T00:04:19Z",
+            "updated_at": "2026-07-06 00:04:19",
             "sort_order": 10,
             "planned_start": "10:45",
             "planned_end": "11:15",
@@ -6352,11 +6540,11 @@
               "daily_task_id": 1,
               "question_type": "english_word_cn_to_en",
               "question": "中译英：【资料",
-              "created_at": "2026-07-05T13:52:38Z",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6365,13 +6553,13 @@
             {
               "id": 2,
               "daily_task_id": 1,
-              "question_type": "english_spelling",
-              "question": "默写：请家长读中文「【资料」，孩子写英文单词。",
-              "created_at": "2026-07-05T13:52:38Z",
+              "question_type": "english_word_en_to_cn",
+              "question": "英译中：school",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6380,13 +6568,13 @@
             {
               "id": 3,
               "daily_task_id": 1,
-              "question_type": "english_sentence_fill",
-              "question": "句型填空：There ___ a desk here.",
-              "created_at": "2026-07-05T13:52:38Z",
+              "question_type": "english_spelling",
+              "question": "默写：请家长读中文「图书馆」，孩子写英文单词。",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6395,13 +6583,13 @@
             {
               "id": 4,
               "daily_task_id": 1,
-              "question_type": "english_translation",
-              "question": "翻译：我的学校很棒。",
-              "created_at": "2026-07-05T13:52:38Z",
+              "question_type": "english_sentence_fill",
+              "question": "句型填空：There ___ a desk here.",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6410,13 +6598,13 @@
             {
               "id": 5,
               "daily_task_id": 1,
-              "question_type": "english_sentence_make",
-              "question": "造句：写一个介绍学校的完整英文句子。",
-              "created_at": "2026-07-05T13:52:38Z",
+              "question_type": "english_translation",
+              "question": "翻译：我的学校很棒。",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6425,13 +6613,28 @@
             {
               "id": 6,
               "daily_task_id": 1,
+              "question_type": "english_sentence_make",
+              "question": "造句：写一个介绍学校的完整英文句子。",
+              "created_at": "2026-07-06T00:04:19Z",
+              "subject": "英语",
+              "skill": "单词拼写",
+              "difficulty": "basic",
+              "source_ref": "五上英语真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
               "question_type": "english_reading_check",
               "question": "课文理解：这一节主要介绍什么？",
-              "created_at": "2026-07-05T13:52:38Z",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6446,7 +6649,9 @@
             "target": "95+"
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-QUIZ-013",
@@ -6463,7 +6668,7 @@
           "task": {
             "id": 1,
             "student_id": 1,
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "source_id": 1,
             "priority": "P1",
             "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -6472,8 +6677,8 @@
             "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
             "check_method": "quiz",
             "status": "not_started",
-            "created_at": "2026-07-05T13:52:38Z",
-            "updated_at": "2026-07-05 13:52:38",
+            "created_at": "2026-07-06T00:04:19Z",
+            "updated_at": "2026-07-06 00:04:19",
             "sort_order": 10,
             "planned_start": "10:45",
             "planned_end": "11:15",
@@ -6486,11 +6691,11 @@
               "daily_task_id": 1,
               "question_type": "english_word_cn_to_en",
               "question": "中译英：【资料",
-              "created_at": "2026-07-05T13:52:38Z",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6499,13 +6704,13 @@
             {
               "id": 2,
               "daily_task_id": 1,
-              "question_type": "english_spelling",
-              "question": "默写：请家长读中文「【资料」，孩子写英文单词。",
-              "created_at": "2026-07-05T13:52:38Z",
+              "question_type": "english_word_en_to_cn",
+              "question": "英译中：school",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6514,13 +6719,13 @@
             {
               "id": 3,
               "daily_task_id": 1,
-              "question_type": "english_sentence_fill",
-              "question": "句型填空：There ___ a desk here.",
-              "created_at": "2026-07-05T13:52:38Z",
+              "question_type": "english_spelling",
+              "question": "默写：请家长读中文「图书馆」，孩子写英文单词。",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6529,13 +6734,13 @@
             {
               "id": 4,
               "daily_task_id": 1,
-              "question_type": "english_translation",
-              "question": "翻译：我的学校很棒。",
-              "created_at": "2026-07-05T13:52:38Z",
+              "question_type": "english_sentence_fill",
+              "question": "句型填空：There ___ a desk here.",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6544,13 +6749,13 @@
             {
               "id": 5,
               "daily_task_id": 1,
-              "question_type": "english_sentence_make",
-              "question": "造句：写一个介绍学校的完整英文句子。",
-              "created_at": "2026-07-05T13:52:38Z",
+              "question_type": "english_translation",
+              "question": "翻译：我的学校很棒。",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6559,13 +6764,28 @@
             {
               "id": 6,
               "daily_task_id": 1,
+              "question_type": "english_sentence_make",
+              "question": "造句：写一个介绍学校的完整英文句子。",
+              "created_at": "2026-07-06T00:04:19Z",
+              "subject": "英语",
+              "skill": "单词拼写",
+              "difficulty": "basic",
+              "source_ref": "五上英语真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
               "question_type": "english_reading_check",
               "question": "课文理解：这一节主要介绍什么？",
-              "created_at": "2026-07-05T13:52:38Z",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6580,7 +6800,9 @@
             "target": "95+"
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-QUIZ-014",
@@ -6597,7 +6819,7 @@
           "task": {
             "id": 1,
             "student_id": 1,
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "source_id": 1,
             "priority": "P1",
             "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -6606,8 +6828,8 @@
             "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
             "check_method": "quiz",
             "status": "not_started",
-            "created_at": "2026-07-05T13:52:39Z",
-            "updated_at": "2026-07-05 13:52:39",
+            "created_at": "2026-07-06T00:04:19Z",
+            "updated_at": "2026-07-06 00:04:19",
             "sort_order": 10,
             "planned_start": "10:45",
             "planned_end": "11:15",
@@ -6620,11 +6842,11 @@
               "daily_task_id": 1,
               "question_type": "english_word_cn_to_en",
               "question": "中译英：【资料",
-              "created_at": "2026-07-05T13:52:39Z",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6633,13 +6855,13 @@
             {
               "id": 2,
               "daily_task_id": 1,
-              "question_type": "english_spelling",
-              "question": "默写：请家长读中文「【资料」，孩子写英文单词。",
-              "created_at": "2026-07-05T13:52:39Z",
+              "question_type": "english_word_en_to_cn",
+              "question": "英译中：school",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6648,13 +6870,13 @@
             {
               "id": 3,
               "daily_task_id": 1,
-              "question_type": "english_sentence_fill",
-              "question": "句型填空：There ___ a desk here.",
-              "created_at": "2026-07-05T13:52:39Z",
+              "question_type": "english_spelling",
+              "question": "默写：请家长读中文「图书馆」，孩子写英文单词。",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6663,13 +6885,13 @@
             {
               "id": 4,
               "daily_task_id": 1,
-              "question_type": "english_translation",
-              "question": "翻译：我的学校很棒。",
-              "created_at": "2026-07-05T13:52:39Z",
+              "question_type": "english_sentence_fill",
+              "question": "句型填空：There ___ a desk here.",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6678,13 +6900,13 @@
             {
               "id": 5,
               "daily_task_id": 1,
-              "question_type": "english_sentence_make",
-              "question": "造句：写一个介绍学校的完整英文句子。",
-              "created_at": "2026-07-05T13:52:39Z",
+              "question_type": "english_translation",
+              "question": "翻译：我的学校很棒。",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6693,13 +6915,28 @@
             {
               "id": 6,
               "daily_task_id": 1,
+              "question_type": "english_sentence_make",
+              "question": "造句：写一个介绍学校的完整英文句子。",
+              "created_at": "2026-07-06T00:04:19Z",
+              "subject": "英语",
+              "skill": "单词拼写",
+              "difficulty": "basic",
+              "source_ref": "五上英语真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
               "question_type": "english_reading_check",
               "question": "课文理解：这一节主要介绍什么？",
-              "created_at": "2026-07-05T13:52:39Z",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6714,7 +6951,9 @@
             "target": "95+"
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-QUIZ-015",
@@ -6731,7 +6970,7 @@
           "task": {
             "id": 1,
             "student_id": 1,
-            "date": "2026-07-05",
+            "date": "2026-07-06",
             "source_id": 1,
             "priority": "P1",
             "title": "五年级预习：Unit 1：My school is cool：Ready to learn",
@@ -6740,8 +6979,8 @@
             "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
             "check_method": "quiz",
             "status": "not_started",
-            "created_at": "2026-07-05T13:52:39Z",
-            "updated_at": "2026-07-05 13:52:39",
+            "created_at": "2026-07-06T00:04:19Z",
+            "updated_at": "2026-07-06 00:04:19",
             "sort_order": 10,
             "planned_start": "10:45",
             "planned_end": "11:15",
@@ -6754,11 +6993,11 @@
               "daily_task_id": 1,
               "question_type": "english_word_cn_to_en",
               "question": "中译英：【资料",
-              "created_at": "2026-07-05T13:52:39Z",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6767,13 +7006,13 @@
             {
               "id": 2,
               "daily_task_id": 1,
-              "question_type": "english_spelling",
-              "question": "默写：请家长读中文「【资料」，孩子写英文单词。",
-              "created_at": "2026-07-05T13:52:39Z",
+              "question_type": "english_word_en_to_cn",
+              "question": "英译中：school",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6782,13 +7021,13 @@
             {
               "id": 3,
               "daily_task_id": 1,
-              "question_type": "english_sentence_fill",
-              "question": "句型填空：There ___ a desk here.",
-              "created_at": "2026-07-05T13:52:39Z",
+              "question_type": "english_spelling",
+              "question": "默写：请家长读中文「图书馆」，孩子写英文单词。",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6797,13 +7036,13 @@
             {
               "id": 4,
               "daily_task_id": 1,
-              "question_type": "english_translation",
-              "question": "翻译：我的学校很棒。",
-              "created_at": "2026-07-05T13:52:39Z",
+              "question_type": "english_sentence_fill",
+              "question": "句型填空：There ___ a desk here.",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6812,13 +7051,13 @@
             {
               "id": 5,
               "daily_task_id": 1,
-              "question_type": "english_sentence_make",
-              "question": "造句：写一个介绍学校的完整英文句子。",
-              "created_at": "2026-07-05T13:52:39Z",
+              "question_type": "english_translation",
+              "question": "翻译：我的学校很棒。",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6827,13 +7066,28 @@
             {
               "id": 6,
               "daily_task_id": 1,
+              "question_type": "english_sentence_make",
+              "question": "造句：写一个介绍学校的完整英文句子。",
+              "created_at": "2026-07-06T00:04:19Z",
+              "subject": "英语",
+              "skill": "单词拼写",
+              "difficulty": "basic",
+              "source_ref": "五上英语真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
               "question_type": "english_reading_check",
               "question": "课文理解：这一节主要介绍什么？",
-              "created_at": "2026-07-05T13:52:39Z",
+              "created_at": "2026-07-06T00:04:19Z",
               "subject": "英语",
-              "skill": "词义匹配",
+              "skill": "单词拼写",
               "difficulty": "basic",
-              "source_ref": "English eval material#1",
+              "source_ref": "五上英语真实考点片段#1",
               "quality_score": 0.92,
               "answer_aliases_json": "[]",
               "grading_rubric_json": "{}",
@@ -6848,7 +7102,9 @@
             "target": "95+"
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-SAFE-001",
@@ -6878,10 +7134,12 @@
           "knowledge_graph": {
             "student_id": 1,
             "source_chunks": 4,
-            "upserted": 12
+            "upserted": 25
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-SAFE-002",
@@ -6911,10 +7169,12 @@
           "knowledge_graph": {
             "student_id": 1,
             "source_chunks": 4,
-            "upserted": 13
+            "upserted": 26
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-SAFE-003",
@@ -6944,10 +7204,12 @@
           "knowledge_graph": {
             "student_id": 1,
             "source_chunks": 4,
-            "upserted": 12
+            "upserted": 25
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-SAFE-004",
@@ -6977,10 +7239,12 @@
           "knowledge_graph": {
             "student_id": 1,
             "source_chunks": 4,
-            "upserted": 11
+            "upserted": 24
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-SAFE-005",
@@ -7010,10 +7274,12 @@
           "knowledge_graph": {
             "student_id": 1,
             "source_chunks": 4,
-            "upserted": 12
+            "upserted": 25
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-SAFE-006",
@@ -7043,10 +7309,12 @@
           "knowledge_graph": {
             "student_id": 1,
             "source_chunks": 4,
-            "upserted": 12
+            "upserted": 25
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-SAFE-007",
@@ -7076,10 +7344,12 @@
           "knowledge_graph": {
             "student_id": 1,
             "source_chunks": 4,
-            "upserted": 11
+            "upserted": 24
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-SAFE-008",
@@ -7109,10 +7379,12 @@
           "knowledge_graph": {
             "student_id": 1,
             "source_chunks": 4,
-            "upserted": 11
+            "upserted": 24
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-SAFE-009",
@@ -7142,10 +7414,12 @@
           "knowledge_graph": {
             "student_id": 1,
             "source_chunks": 4,
-            "upserted": 11
+            "upserted": 24
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
       },
       {
         "case_id": "L-SAFE-010",
@@ -7175,10 +7449,371 @@
           "knowledge_graph": {
             "student_id": 1,
             "source_chunks": 4,
-            "upserted": 11
+            "upserted": 24
           }
         },
-        "issues": []
+        "issues": [],
+        "expected_result": "pass",
+        "gap_reason": ""
+      },
+      {
+        "case_id": "L-GAP-RAG-001",
+        "agent": "learning_agent",
+        "passed": false,
+        "score": 0.667,
+        "metrics": {
+          "rag_hit": 1.0,
+          "source_grounded": 1.0,
+          "expected_keyword_match": 0.0
+        },
+        "trace": [],
+        "output": {
+          "hits": [
+            {
+              "id": 1,
+              "material_id": 1,
+              "student_id": 1,
+              "subject": "语文",
+              "grade": "五年级",
+              "book": "上册",
+              "unit": "",
+              "lesson": "",
+              "section": "课文正文",
+              "knowledge_type": "日积月累背默",
+              "chunk_text": "白鹭：精巧、适宜、色素、身段是生字听写重点；\n预习要能说出白鹭为什么是一首精巧的诗。\n少年中国说与语文园地：日积月累、交流平台、词句段运用需要背默和复述。",
+              "source_ref": "五上语文真实考点片段#1",
+              "exam_weight": "medium",
+              "must_master": 1,
+              "created_at": "2026-07-06T00:04:21Z",
+              "keywords": [
+                "白鹭",
+                "精巧",
+                "适宜",
+                "色素",
+                "身段是生字听写重点",
+                "预习要能说出白鹭为什么是一首精巧的诗",
+                "少年中国说与语文园地",
+                "日积月累",
+                "交流平台",
+                "词句段运用需要背默和复述"
+              ],
+              "match_score": 1
+            }
+          ]
+        },
+        "issues": [
+          "missing keyword: 桂花雨",
+          "missing keyword: 父亲的话"
+        ],
+        "expected_result": "known_gap",
+        "gap_reason": "当前种子资料不是完整五上语文教材，真实课后题召回不足。"
+      },
+      {
+        "case_id": "L-GAP-RAG-002",
+        "agent": "learning_agent",
+        "passed": false,
+        "score": 0.667,
+        "metrics": {
+          "rag_hit": 1.0,
+          "source_grounded": 1.0,
+          "expected_keyword_match": 0.0
+        },
+        "trace": [],
+        "output": {
+          "hits": [
+            {
+              "id": 1,
+              "material_id": 1,
+              "student_id": 1,
+              "subject": "语文",
+              "grade": "五年级",
+              "book": "上册",
+              "unit": "",
+              "lesson": "",
+              "section": "课文正文",
+              "knowledge_type": "日积月累背默",
+              "chunk_text": "白鹭：精巧、适宜、色素、身段是生字听写重点；\n预习要能说出白鹭为什么是一首精巧的诗。\n少年中国说与语文园地：日积月累、交流平台、词句段运用需要背默和复述。",
+              "source_ref": "五上语文真实考点片段#1",
+              "exam_weight": "medium",
+              "must_master": 1,
+              "created_at": "2026-07-06T00:04:21Z",
+              "keywords": [
+                "白鹭",
+                "精巧",
+                "适宜",
+                "色素",
+                "身段是生字听写重点",
+                "预习要能说出白鹭为什么是一首精巧的诗",
+                "少年中国说与语文园地",
+                "日积月累",
+                "交流平台",
+                "词句段运用需要背默和复述"
+              ],
+              "match_score": 1
+            }
+          ]
+        },
+        "issues": [
+          "missing keyword: 落花生",
+          "missing keyword: 借物喻人"
+        ],
+        "expected_result": "known_gap",
+        "gap_reason": "需要接入完整教材/教参资料后才能稳定召回。"
+      },
+      {
+        "case_id": "L-GAP-RAG-003",
+        "agent": "learning_agent",
+        "passed": false,
+        "score": 0.667,
+        "metrics": {
+          "rag_hit": 1.0,
+          "source_grounded": 1.0,
+          "expected_keyword_match": 0.0
+        },
+        "trace": [],
+        "output": {
+          "hits": [
+            {
+              "id": 2,
+              "material_id": 2,
+              "student_id": 1,
+              "subject": "数学",
+              "grade": "五年级",
+              "book": "上册",
+              "unit": "",
+              "lesson": "第一课",
+              "section": "单元目录",
+              "knowledge_type": "应用建模",
+              "chunk_text": "小数乘法要会竖式计算、积的小数位数和验算；\n小数除法第一课精打细算要会商的小数点位置。\n多边形面积应用题要先画图，再列式，最后检查单位和结果。",
+              "source_ref": "五上数学真实考点片段#1",
+              "exam_weight": "medium",
+              "must_master": 1,
+              "created_at": "2026-07-06T00:04:21Z",
+              "keywords": [
+                "小数乘法要会竖式计算",
+                "积的小数位数和验算",
+                "小数除法第一课精打细算要会商的小数点位置",
+                "多边形面积应用题要先画图",
+                "再列式",
+                "最后检查单位和结果"
+              ],
+              "match_score": 1
+            }
+          ]
+        },
+        "issues": [
+          "missing keyword: 质数",
+          "missing keyword: 合数"
+        ],
+        "expected_result": "known_gap",
+        "gap_reason": "当前数学种子只覆盖小数与面积，未覆盖完整单元。"
+      },
+      {
+        "case_id": "L-GAP-RAG-004",
+        "agent": "learning_agent",
+        "passed": false,
+        "score": 0.667,
+        "metrics": {
+          "rag_hit": 1.0,
+          "source_grounded": 1.0,
+          "expected_keyword_match": 0.0
+        },
+        "trace": [],
+        "output": {
+          "hits": [
+            {
+              "id": 3,
+              "material_id": 3,
+              "student_id": 1,
+              "subject": "英语",
+              "grade": "五年级",
+              "book": "上册",
+              "unit": "Unit1",
+              "lesson": "",
+              "section": "Unit目录",
+              "knowledge_type": "单词拼写",
+              "chunk_text": "Unit 1 My school is cool: library, classroom, teacher, playground are dictation words. Sentence pattern: Where is the library? It is next to the classroom. Listening and reading should not leak answers before quiz.",
+              "source_ref": "五上英语真实考点片段#1",
+              "exam_weight": "high",
+              "must_master": 1,
+              "created_at": "2026-07-06T00:04:21Z",
+              "keywords": [
+                "Unit",
+                "My",
+                "school",
+                "is",
+                "cool",
+                "library",
+                "classroom",
+                "teacher",
+                "playground",
+                "are",
+                "dictation",
+                "words"
+              ],
+              "match_score": 3
+            }
+          ]
+        },
+        "issues": [
+          "missing keyword: ice world",
+          "missing keyword: 听力原文"
+        ],
+        "expected_result": "known_gap",
+        "gap_reason": "当前英语种子只覆盖 Unit 1，未覆盖全册音频原文。"
+      },
+      {
+        "case_id": "L-GAP-QUIZ-001",
+        "agent": "learning_agent",
+        "passed": true,
+        "score": 0.967,
+        "metrics": {
+          "min_items": 1.0,
+          "no_answer_leakage": 1.0,
+          "quality": 0.9
+        },
+        "trace": [],
+        "output": {
+          "task": {
+            "id": 1,
+            "student_id": 1,
+            "date": "2026-07-06",
+            "source_id": 1,
+            "priority": "P1",
+            "title": "五年级预习：第一单元：万物有灵：白鹭",
+            "description": "预习「第一单元：万物有灵：白鹭」：通读课文，圈出生字词和不理解的句子。；用 2–3 句话概括主要内容。；找 1 个关键句，说明它好在哪里。；完成一段仿写或口头复述。。",
+            "estimated_minutes": 30,
+            "completion_standard": "能讲出今天学了什么、完成基础练习，并通过小测。",
+            "check_method": "quiz",
+            "status": "not_started",
+            "created_at": "2026-07-06T00:04:21Z",
+            "updated_at": "2026-07-06 00:04:21",
+            "sort_order": 10,
+            "planned_start": "09:00",
+            "planned_end": "09:30",
+            "schedule_block": "上午深度学习",
+            "schedule_reason": "上午注意力较稳定，适合数学计算、语文理解等高认知任务。"
+          },
+          "items": [
+            {
+              "id": 1,
+              "daily_task_id": 1,
+              "question_type": "chinese_word_dictation",
+              "question": "听写：请家长读第 1 个听写词，孩子输入听到的词语。（题目不显示答案）",
+              "created_at": "2026-07-06T00:04:21Z",
+              "subject": "语文",
+              "skill": "日积月累背默",
+              "difficulty": "basic",
+              "source_ref": "五上语文真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 2,
+              "daily_task_id": 1,
+              "question_type": "chinese_pinyin",
+              "question": "拼音：生字「鹭」的读音是什么？",
+              "created_at": "2026-07-06T00:04:21Z",
+              "subject": "语文",
+              "skill": "日积月累背默",
+              "difficulty": "basic",
+              "source_ref": "五上语文真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 3,
+              "daily_task_id": 1,
+              "question_type": "chinese_char_group",
+              "question": "组词：用生字「鹭」组一个课内相关词语。",
+              "created_at": "2026-07-06T00:04:21Z",
+              "subject": "语文",
+              "skill": "日积月累背默",
+              "difficulty": "basic",
+              "source_ref": "五上语文真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 4,
+              "daily_task_id": 1,
+              "question_type": "chinese_word_explain",
+              "question": "词义：请解释「说明它好在哪里。」的大概意思。",
+              "created_at": "2026-07-06T00:04:21Z",
+              "subject": "语文",
+              "skill": "日积月累背默",
+              "difficulty": "basic",
+              "source_ref": "五上语文真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 5,
+              "daily_task_id": 1,
+              "question_type": "chinese_sentence_understand",
+              "question": "为什么说“白鹭是一首精巧的诗”？",
+              "created_at": "2026-07-06T00:04:21Z",
+              "subject": "语文",
+              "skill": "日积月累背默",
+              "difficulty": "basic",
+              "source_ref": "五上语文真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 6,
+              "daily_task_id": 1,
+              "question_type": "chinese_summary",
+              "question": "概括：《白鹭》主要写了什么？",
+              "created_at": "2026-07-06T00:04:21Z",
+              "subject": "语文",
+              "skill": "日积月累背默",
+              "difficulty": "basic",
+              "source_ref": "五上语文真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            },
+            {
+              "id": 7,
+              "daily_task_id": 1,
+              "question_type": "chinese_expression",
+              "question": "仿照课文，用一句话写一种动物的外形特点。",
+              "created_at": "2026-07-06T00:04:21Z",
+              "subject": "语文",
+              "skill": "日积月累背默",
+              "difficulty": "basic",
+              "source_ref": "五上语文真实考点片段#1",
+              "quality_score": 0.92,
+              "answer_aliases_json": "[]",
+              "grading_rubric_json": "{}",
+              "options": []
+            }
+          ],
+          "quality": {
+            "task_id": 1,
+            "score": 0.9,
+            "passed": true,
+            "issues": [
+              "题干疑似泄露答案：组词：用生字「鹭」组一个课内相关词语。"
+            ],
+            "target": "95+"
+          }
+        },
+        "issues": [],
+        "expected_result": "known_gap",
+        "gap_reason": "缺少完整教材资料时，小测只能规则兜底，不能保证 95+ 质量。"
       }
     ]
   }

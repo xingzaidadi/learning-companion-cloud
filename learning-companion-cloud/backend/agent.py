@@ -23,6 +23,7 @@ from .agent_core import (
     update_mastery_from_quiz_result,
 )
 from .ai_provider import call_ai_json_with_meta
+from .agent_tool_registry import validate_tool_call
 from .db import loads
 from .plan_generator import generate_plan_from_text
 from .planner import generate_daily_tasks as rule_generate_daily_tasks
@@ -62,12 +63,13 @@ def generate_daily_tasks(
     target_date: str | None = None,
     force_all_sources: bool = False,
 ) -> dict[str, Any]:
+    tool_validation = validate_tool_call("generate_daily_tasks", {"student_id": student_id, "target_date": target_date})
     tasks = rule_generate_daily_tasks(conn, student_id, target_date, force_all_sources=force_all_sources)
     for task in tasks:
         ensure_task_guidance(conn, task["id"])
     adjustment = recommend_daily_adjustments(conn, student_id, target_date)
-    output = {"count": len(tasks), "tasks": tasks, "target_95_adjustment": adjustment}
-    log_agent_run(conn, student_id, "daily_tasks", {"target_date": target_date, "force_all_sources": force_all_sources}, output)
+    output = {"count": len(tasks), "tasks": tasks, "target_95_adjustment": adjustment, "tool_validation": tool_validation}
+    log_agent_run(conn, student_id, "generate_daily_tasks", {"target_date": target_date, "force_all_sources": force_all_sources, "tool_validation": tool_validation}, output)
     return output
 
 
@@ -88,34 +90,37 @@ def ensure_task_guidance(conn: Connection, task_id: int) -> dict[str, Any]:
 
 
 def generate_quiz(conn: Connection, task_id: int, force: bool = False) -> dict[str, Any]:
+    tool_validation = validate_tool_call("generate_quiz", {"task_id": task_id})
     task = get_task(conn, task_id)
     if not task:
-        return {"task_id": task_id, "items": []}
+        return {"task_id": task_id, "items": [], "tool_validation": tool_validation}
     items = regenerate_quiz_for_task(conn, task_id) if force else ensure_quiz_for_task(conn, task)
     quality = evaluate_quiz_quality(conn, task_id)
-    output = {"task_id": task_id, "items": [_public_quiz_item(item) for item in items], "quality": quality}
-    log_agent_run(conn, int(task["student_id"]), "quiz", {"task_id": task_id, "force": force}, output)
+    output = {"task_id": task_id, "items": [_public_quiz_item(item) for item in items], "quality": quality, "tool_validation": tool_validation}
+    log_agent_run(conn, int(task["student_id"]), "generate_quiz", {"task_id": task_id, "force": force, "tool_validation": tool_validation}, output)
     return output
 
 
 def grade_submission(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[str, Any]:
+    tool_validation = validate_tool_call("grade_quiz", {"task_id": task_id, "answers": answers})
     task = get_task(conn, task_id)
     if not task:
-        return {"task_id": task_id, "status": "not_found", "wrong_items": []}
+        return {"task_id": task_id, "status": "not_found", "wrong_items": [], "tool_validation": tool_validation}
     if task.get("status") != "completed":
         save_submissions(conn, task_id, answers)
     rule_result = grade_quiz(conn, task_id, answers)
     diagnosis = diagnose_learning(conn, task_id, rule_result)
     mastery_update = update_mastery_from_quiz_result(conn, task_id, rule_result)
-    output = {**rule_result, "diagnosis": diagnosis, "target_95_mastery_update": mastery_update}
-    log_agent_run(conn, int(task["student_id"]), "grade", {"task_id": task_id, "answers": answers}, output)
+    output = {**rule_result, "diagnosis": diagnosis, "target_95_mastery_update": mastery_update, "tool_validation": tool_validation}
+    log_agent_run(conn, int(task["student_id"]), "grade_quiz", {"task_id": task_id, "answers": answers, "tool_validation": tool_validation}, output)
     return output
 
 
 def assist_stuck(conn: Connection, task_id: int, note: str = "") -> dict[str, Any]:
+    tool_validation = validate_tool_call("assist_stuck", {"task_id": task_id, "note": note})
     task = get_task(conn, task_id)
     if not task:
-        return {"task_id": task_id, "status": "not_found", "assistance": _fallback_stuck_assistance({}, None, note)}
+        return {"task_id": task_id, "status": "not_found", "assistance": _fallback_stuck_assistance({}, None, note), "tool_validation": tool_validation}
 
     source = get_task_source(conn, task.get("source_id"))
     guidance = ensure_task_guidance(conn, task_id)
@@ -146,14 +151,15 @@ def assist_stuck(conn: Connection, task_id: int, note: str = "") -> dict[str, An
         "status": "assisted",
         "assistant_source": "ai" if ai_meta.get("used_ai") else "rule",
         "assistance": assistance,
-        "review_action": f"已把“{assistance['review_focus']}”加入后续补漏和复测重点。",
+        "review_action": f"\u5df2\u628a\u201c{assistance['review_focus']}\u201d\u52a0\u5165\u540e\u7eed\u8865\u6f0f\u548c\u590d\u6d4b\u91cd\u70b9\u3002",
+        "tool_validation": tool_validation,
     }
     output["tutor_session"] = open_or_update_tutor_session(conn, task, note, assistance)
     log_agent_run(
         conn,
         int(task["student_id"]),
         "stuck_assist",
-        {"task_id": task_id, "note": note},
+        {"task_id": task_id, "note": note, "tool_validation": tool_validation},
         output,
         ai_meta["model"],
         ai_meta["status"],
@@ -242,14 +248,13 @@ def get_agent_overview(conn: Connection, student_id: int = 1) -> dict[str, Any]:
 
 def _fallback_guidance(task: dict[str, Any]) -> list[str]:
     title = task.get("title", "")
-    if "语文" in title:
-        return ["通读课文", "圈出生字词", "概括主要内容", "找关键句说明理由"]
-    if "数学" in title:
-        return ["看例题", "讲清步骤", "做基础题", "整理易错点"]
-    if "英语" in title or "KET" in title:
-        return ["听读单词句子", "记 3-5 个关键词", "用句型造句", "标记不会的词"]
-    return ["读清要求", "独立完成", "检查一遍", "标记卡点"]
-
+    if '语文' in title:
+        return ['通读课文', '圈出生字词', '概括主要内容', '找关键句说明理由']
+    if '数学' in title:
+        return ['看例题', '讲清步骤', '做基础题', '整理易错点']
+    if '英语' in title or "KET" in title:
+        return ['听读单词句子', '记 3-5 个关键词', '用句型造句', '标记不会的词']
+    return ['读清要求', '独立完成', '检查一遍', '标记卡点']
 
 def _public_quiz_item(item: dict[str, Any]) -> dict[str, Any]:
     data = dict(item)

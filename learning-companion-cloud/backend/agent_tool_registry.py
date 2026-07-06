@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
@@ -32,7 +32,7 @@ TOOLS: dict[str, ToolSpec] = {
     ),
     "generate_quiz": ToolSpec(
         name="generate_quiz",
-        description="为每日任务生成带来源、难度、评分规则的小测题。",
+        description="为每日任务生成带来源、难度和评分规则的小测题。",
         parameters={"type": "object", "required": ["task_id"], "properties": {"task_id": {"type": "integer"}}},
         output_schema={"type": "object"},
         side_effect="write",
@@ -68,3 +68,21 @@ def list_tool_specs() -> list[dict[str, Any]]:
 
 def get_tool_spec(name: str) -> ToolSpec | None:
     return TOOLS.get(name)
+
+
+def validate_tool_call(name: str, arguments: dict[str, Any], *, allow_write: bool = True) -> dict[str, Any]:
+    spec = get_tool_spec(name)
+    if not spec:
+        return {"ok": False, "tool": name, "error": "unknown_tool"}
+    if spec.side_effect == "write" and not allow_write:
+        return {"ok": False, "tool": name, "error": "write_not_allowed"}
+    missing = [key for key in spec.parameters.get("required", []) if key not in arguments]
+    if missing:
+        return {"ok": False, "tool": name, "error": "missing_required", "missing": missing}
+    return {
+        "ok": True,
+        "tool": name,
+        "side_effect": spec.side_effect,
+        "idempotent": spec.idempotent,
+        "timeout_seconds": spec.timeout_seconds,
+    }

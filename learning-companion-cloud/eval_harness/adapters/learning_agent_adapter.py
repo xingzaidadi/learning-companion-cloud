@@ -37,9 +37,24 @@ class LearningAgentAdapter:
     def _seed_materials(self) -> None:
         assert self.client
         fixtures = [
-            ("Chinese eval material", "", "bailu shaonian zhongguo yuandi accumulation characters writing reading"),
-            ("Math eval material", "", "decimal multiplication decimal division polygon area checking word problem calculation"),
-            ("English eval material", "", "unit words listen school library classroom teacher sentence dictation phonics"),
+            (
+                "五上语文真实考点片段",
+                "语文",
+                "白鹭：精巧、适宜、色素、身段是生字听写重点；预习要能说出白鹭为什么是一首精巧的诗。"
+                "少年中国说与语文园地：日积月累、交流平台、词句段运用需要背默和复述。",
+            ),
+            (
+                "五上数学真实考点片段",
+                "数学",
+                "小数乘法要会竖式计算、积的小数位数和验算；小数除法第一课精打细算要会商的小数点位置。"
+                "多边形面积应用题要先画图，再列式，最后检查单位和结果。",
+            ),
+            (
+                "五上英语真实考点片段",
+                "英语",
+                "Unit 1 My school is cool: library, classroom, teacher, playground are dictation words. "
+                "Sentence pattern: Where is the library? It is next to the classroom. Listening and reading should not leak answers before quiz.",
+            ),
         ]
         for title, subject, content in fixtures:
             self.client.post(
@@ -61,9 +76,14 @@ class LearningAgentAdapter:
             output = {"hits": hits[:2]}
             metrics["rag_hit"] = 1.0 if hits else 0.0
             metrics["source_grounded"] = 1.0 if hits and hits[0].get("source_ref") else 0.0
-            for keyword in case.get("expected_keywords", []):
-                if not any(keyword in row.get("chunk_text", "") or keyword in row.get("source_ref", "") for row in hits):
+            expected_keywords = case.get("expected_keywords", [])
+            matched_keywords = 0
+            for keyword in expected_keywords:
+                if any(keyword.lower() in row.get("chunk_text", "").lower() or keyword.lower() in row.get("source_ref", "").lower() for row in hits):
+                    matched_keywords += 1
+                else:
                     issues.append(f"missing keyword: {keyword}")
+            metrics["expected_keyword_match"] = matched_keywords / max(len(expected_keywords), 1)
         elif case_type == "planning":
             plan = self.client.post("/api/study-plan/generate", data={"raw_text": case["input"], "student_id": "1"}).json()
             tasks = self.client.post("/api/daily-tasks/generate").json()
@@ -81,13 +101,20 @@ class LearningAgentAdapter:
             metrics["no_direct_answer"] = 0.0 if any(word in str(stuck) for word in case.get("forbidden", [])) else 1.0
         elif case_type == "quiz":
             self.client.post("/api/study-plan/generate", data={"raw_text": case.get("plan", "preview, English daily unit, English, 8"), "student_id": "1"})
-            tasks = self.client.post("/api/daily-tasks/generate").json()["tasks"]
-            task = next((item for item in tasks if case.get("subject", "") in item["title"] or case.get("subject", "") in item["description"]), tasks[0])
-            quiz = self.client.get(f"/api/daily-tasks/{task['id']}/quiz").json()
-            output = quiz
-            metrics["min_items"] = 1.0 if len(quiz.get("items", [])) >= case.get("min_items", 3) else 0.0
-            metrics["no_answer_leakage"] = 1.0 if all("answer" not in item and "explanation" not in item for item in quiz.get("items", [])) else 0.0
-            metrics["quality"] = float(quiz.get("quality", {}).get("score", 0))
+            tasks = self.client.post("/api/daily-tasks/generate").json().get("tasks", [])
+            if not tasks:
+                output = {"tasks": []}
+                metrics["min_items"] = 0.0
+                metrics["no_answer_leakage"] = 1.0
+                metrics["quality"] = 0.0
+                issues.append("no task generated for quiz case")
+            else:
+                task = next((item for item in tasks if case.get("subject", "") in item["title"] or case.get("subject", "") in item["description"]), tasks[0])
+                quiz = self.client.get(f"/api/daily-tasks/{task['id']}/quiz").json()
+                output = quiz
+                metrics["min_items"] = 1.0 if len(quiz.get("items", [])) >= case.get("min_items", 3) else 0.0
+                metrics["no_answer_leakage"] = 1.0 if all("answer" not in item and "explanation" not in item for item in quiz.get("items", [])) else 0.0
+                metrics["quality"] = float(quiz.get("quality", {}).get("score", 0))
         elif case_type == "safety":
             response = self.client.post("/api/materials", data={"title": case["title"], "subject": "", "material_type": "notes", "content_text": case["payload"], "student_id": "1"})
             output = response.json()

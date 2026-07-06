@@ -12,7 +12,7 @@
 - `eval_harness/adapters/base.py`：统一 `AgentAdapter` 协议和 `EvalResult` 结果结构。
 - `eval_harness/adapters/learning_agent_adapter.py`：用 FastAPI `TestClient` 跑学习 Agent 端到端用例。
 - `eval_harness/adapters/demo_agent_adapter.py`：用内存 Tool Agent 展示通用工具调用评估。
-- `eval_harness/datasets/*/golden_set.yaml`：JSON-as-YAML 格式 golden set，共 89 条 case。
+- `eval_harness/datasets/*/golden_set.json`: JSON golden set; report separates pass, Known Gap, and unexpected failure.
 - `eval_harness/runners/eval_runner.py`：执行、汇总、输出 JSON/Markdown 报告。
 - `reports/evals/latest_eval_report.*`：最近一次测评报告。
 

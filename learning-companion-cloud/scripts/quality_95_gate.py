@@ -41,6 +41,7 @@ def main() -> None:
     eval_runner = read("eval_harness/runners/eval_runner.py")
     backend_report = read("backend/report.py")
     backend_app = read("backend/app.py")
+    backend_agent = read("backend/agent.py")
 
     double_question = "?" * 2
     four_questions = "?" * 4
@@ -63,6 +64,7 @@ def main() -> None:
             ("progressive_disclosure", has_quality(child, "child-progressive-disclosure") and child.count("<details") >= 2),
             ("reduced_button_noise", "secondaryButtons" in child and "primaryButton" in child),
             ("test_artifacts_hidden", "135442" not in child and four_questions not in child),
+            ("child_no_html_entities", "&#26816;" not in child and "&#27491;" not in child),
         ],
         "parent_ui": [
             ("three_question_model", has_quality(parent, "parent-three-questions")),
@@ -83,9 +85,11 @@ def main() -> None:
         "agent_design": [
             ("explainable_run_summary", all(key in agent_tools for key in ("reason", "result", "impact", "next_action", "metrics"))),
             ("function_schema", all(key in tool_registry for key in ("parameters", "required", "output_schema", "side_effect", "idempotent"))),
+            ("tool_validation_consumed", "validate_tool_call" in tool_registry and "tool_validation" in backend_agent),
             ("trajectory_trace", "agent_trace_steps" in agent_tools and "trace_id" in agent_tools),
             ("multi_agent_eval", "LearningAgentAdapter" in eval_runner and "DemoAgentAdapter" in eval_runner),
-            ("redteam_cases", count_cases("eval_harness/datasets/learning_agent/golden_set.yaml") >= 65),
+            ("eval_known_gaps", "known_gap_cases" in eval_runner and "unexpected_failed_cases" in eval_runner),
+            ("redteam_cases", count_cases("eval_harness/datasets/learning_agent/golden_set.json") >= 65),
             ("daily_report_compaction", "def _short_title" in backend_report and "def _count_line" in backend_report and "quiz_summary" not in backend_report and four_questions not in backend_report),
             ("display_sanitizer", all(key in backend_app for key in ("_clean_display_text", "_sanitize_task_for_display", "_sanitize_report_for_display"))),
         ],
@@ -94,7 +98,8 @@ def main() -> None:
             ("ui_click_test", (ROOT / "scripts/ui_click_test.py").exists()),
             ("full_ui_audit", (ROOT / "scripts/full_ui_audit.py").exists()),
             ("child_flow_test", (ROOT / "scripts/child_flow_integration_test.py").exists()),
-            ("eval_cases_80_plus", count_cases("eval_harness/datasets/learning_agent/golden_set.yaml") + count_cases("eval_harness/datasets/demo_agent/golden_set.yaml") >= 80),
+            ("db_concurrency_test", (ROOT / "scripts/db_concurrency_test.py").exists()),
+            ("eval_cases_80_plus", count_cases("eval_harness/datasets/learning_agent/golden_set.json") + count_cases("eval_harness/datasets/demo_agent/golden_set.json") >= 80),
             ("github_actions", (ROOT.parent / ".github/workflows/qa.yml").exists() and (ROOT.parent / ".github/workflows/agent-eval.yml").exists()),
         ],
         "visual_system": [
