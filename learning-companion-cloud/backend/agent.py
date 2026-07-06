@@ -345,7 +345,7 @@ def _blank_stuck_help(subject: str, title: str, standard: str) -> dict[str, str]
         likely = "你还没有写具体卡点。先判断是：不会读单词、听不懂音频、看不懂句子，还是不知道要交什么。"
         hint = "这项英语任务先只做第一步：听或朗读 1 分钟，圈出 1 个不会读的词，不要一次想做完整个任务。"
         question = "你现在最卡的是哪一个词或哪一句？如果是单词，直接写：不会读 school。"
-        example = "例如卡在 library，就先做三件事：读 library，知道它是“图书馆”，再放回句子 There is a library."
+        example = "例如卡在某个单词，就先做三件事：圈出这个词、跟读 3 遍、再放回原句读 1 遍；不要直接查整句答案。"
         retry = "现在先圈出一个不会读/不会拼的词，写到卡住输入框里；如果没有，就读完第一段再点完成检查。"
         focus = "英语具体卡点：单词读音、词义或句型"
     elif "数学" in subject:
@@ -406,6 +406,22 @@ def _direct_solution_for_subject(subject: str, blocker: str, title: str, standar
 
 
 def _targeted_stuck_help(subject: str, blocker: str, title: str) -> dict[str, str] | None:
+    if "\u82f1\u8bed" in subject or any(word in blocker.lower() for word in ("word", "unit", "english", "单词")):
+        english_word = _extract_english_word(blocker)
+        if english_word:
+            return _unknown_english_word_help(english_word)
+        if "单词" in blocker or "不认识" in blocker or "不会读" in blocker or "不会拼" in blocker:
+            return {
+                "encouragement": "先把问题缩小到一个单词，不要把整课都当成不会。",
+                "likely_blocker": "你现在说的是“有单词不认识”，但还没有写出具体是哪一个单词。",
+                "hint_1": "回到课本或任务卡，圈出那个不会读/不会拼的英文单词，只写这个单词本身。",
+                "guiding_question": "请直接写：我不会的单词是 ____。不要写整句话。",
+                "mini_example": "示例格式：我不会的单词是 ____。然后系统会按读音、词义、原句三步帮你拆。",
+                "try_again": "现在先补充 1 个具体英文单词，再继续求助。",
+                "if_still_stuck": "如果不知道哪个词不会，就先逐词读一遍，卡住的第一个词就是要发出来的词。",
+                "review_focus": "英语单词具体卡点定位",
+                "parent_note": "孩子没有写出具体英文单词，建议先让孩子圈出一个不会读或不会拼的词。",
+            }
     char = _extract_unknown_char(blocker)
     if char:
         return _unknown_char_help(char, title)
@@ -438,6 +454,8 @@ def _targeted_stuck_help(subject: str, blocker: str, title: str) -> dict[str, st
 
 
 def _extract_unknown_char(blocker: str) -> str:
+    if "单词" in blocker or "英文" in blocker:
+        return ""
     patterns = (
         r"不认识\s*([\u4e00-\u9fff])\s*(?:这个)?(?:字|生字)?",
         r"([\u4e00-\u9fff])\s*(?:这个)?字\s*(?:不认识|不会读|怎么读)",
@@ -448,6 +466,29 @@ def _extract_unknown_char(blocker: str) -> str:
         if match:
             return match.group(1)
     return ""
+
+
+def _extract_english_word(blocker: str) -> str:
+    candidates = re.findall(r"\b[A-Za-z][A-Za-z'-]{1,20}\b", blocker)
+    stop = {"word", "unit", "english"}
+    for candidate in candidates:
+        if candidate.lower() not in stop:
+            return candidate
+    return ""
+
+
+def _unknown_english_word_help(word: str) -> dict[str, str]:
+    return {
+        "encouragement": "这个问题很具体，可以直接解决。",
+        "likely_blocker": f"你卡在英文单词“{word}”，先解决读音、词义和原句用法。",
+        "hint_1": f"1. 圈出“{word}”；2. 跟读或拆音节读 3 遍；3. 回到原句，判断它是人、地点、物品还是动作。",
+        "guiding_question": f"“{word}”在原句里前后各是什么词？它更像地点、人物、物品还是动作？",
+        "mini_example": "处理英文生词按三步：会读 -> 知道大意 -> 放回原句。",
+        "try_again": f"现在先读“{word}”三遍，再把它所在的原句读一遍。",
+        "if_still_stuck": "如果还是不会，把包含这个词的完整句子发出来，系统继续拆句子。",
+        "review_focus": f"英语单词：{word}",
+        "parent_note": f"孩子卡在英文单词“{word}”，建议先听读，再回到原句理解，不要直接翻译整段。",
+    }
 
 
 def _extract_unknown_word(blocker: str) -> str:

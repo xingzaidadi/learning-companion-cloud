@@ -1,11 +1,11 @@
 # Full UI Audit
 
-- Created: `2026-07-06T08:31:19`
+- Created: `2026-07-06T08:46:56`
 - Checks: `48`
 - Passed: `48`
 - Failed: `0`
 - Console errors: `0`
-- Screenshots: `25`
+- Screenshots: `24`
 
 ## Failures
 - None
@@ -28,7 +28,6 @@
 - `reports\ui_audit\latest\child_after_01.png`
 - `reports\ui_audit\latest\child_after_02.png`
 - `reports\ui_audit\latest\child_after_03.png`
-- `reports\ui_audit\latest\child_after_04.png`
 - `reports\ui_audit\latest\parent_initial_01.png`
 - `reports\ui_audit\latest\parent_initial_02.png`
 - `reports\ui_audit\latest\parent_initial_03.png`

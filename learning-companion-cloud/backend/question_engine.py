@@ -209,7 +209,7 @@ def _build_chinese_quiz(topic: str, content: str, config: dict[str, Any], versio
         _short(
             f"词义：请解释「{explain_word}」的大概意思。",
             explain_answer,
-            "能用自己的话解释词语意思，并放回课文语境即可。",
+            "答案需说明词语基本意思，并能结合课文语境说出作用。",
             "chinese_word_explain",
         ),
         _short(
@@ -297,7 +297,7 @@ def _build_english_quiz(topic: str, content: str, config: dict[str, Any], versio
         _short(
             "课文理解：这一节主要介绍什么？",
             "school",
-            "能说出单元主题或课文信息即可。",
+            "答案需包含单元主题或课文关键信息，不能只写一个孤立单词。",
             "english_reading_check",
         ),
     ]
@@ -364,7 +364,7 @@ def _generic_math_items(topic: str, content: str) -> list[dict[str, Any]]:
     return [
         _exact("精确计算：3.6 × 10 = ?", "36", "小数乘 10，小数点向右移动一位。", "math_exact"),
         _choice("概念选择：数学预习后最重要的是？", ["只看例题", "能说清方法并做一道同类题", "直接看答案"], "能说清方法并做一道同类题", "会讲、会算、会用才算掌握。", "math_concept_choice"),
-        _short(f"步骤说明：请说出「{unit}」今天学到的核心方法。", "说清方法", "用自己的话说出步骤即可。", "math_step_explain"),
+        _short(f"步骤说明：请说出「{unit}」今天学到的核心方法。", "说清方法", "需按先后顺序说明关键步骤，并说出一个容易错的地方。", "math_step_explain"),
         _exact("应用题：每本本子 3.6 元，买 8 本多少钱？", "28.8", "单价×数量=总价，3.6×8=28.8 元。", "math_word_problem"),
         _choice("错因判断：应用题没有写单位，主要属于哪类问题？", ["计算错", "单位错", "概念错"], "单位错", "应用题答案需要带合适单位。", "math_error_reason"),
         _exact("同类变式：4.8 ÷ 10 = ?", "0.48", "小数除以 10，小数点向左移动一位。", "math_variant"),
@@ -428,12 +428,12 @@ def build_variant_questions(question: str, answer: str = "") -> list[dict[str, A
     if any(key in text for key in ("听写", "拼音", "生字", "词语")):
         return [
             _exact("变式听写：请家长再读一遍错词，孩子重新输入。", answer or "已订正", "错字需要当天订正，第二天复听写。", "chinese_word_dictation"),
-            _short(f"变式组词：用错字相关生字组词。原题：{question[:40]}", "组词", "能组出正确词语即可。", "chinese_char_group"),
+            _short(f"变式组词：用错字相关生字组词。原题：{question[:40]}", "组词", "词语必须包含目标生字，且符合常见语境。", "chinese_char_group"),
         ]
     if any(key in text.lower() for key in ("english", "中译英", "英译中", "默写", "there")):
         return [
             _exact("变式默写：请重新写出这个单词或句型答案。", answer or "已订正", "英语错词按 1/3/7 天复默。", "english_spelling"),
-            _short("变式造句：用这个词写一个新的英文短句。", "完整英文句子", "能正确使用错词即可。", "english_sentence_make"),
+            _short("变式造句：用这个词写一个新的英文短句。", "完整英文句子", "句子需包含目标词，首字母、基本语序和句末标点要正确。", "english_sentence_make"),
         ]
     if any(key in text for key in ("小数乘", "×", "乘整数")):
         return [
@@ -456,5 +456,5 @@ def build_variant_questions(question: str, answer: str = "") -> list[dict[str, A
             _exact("变式题：三角形底 8 cm，高 5 cm，面积是多少？", "20", "面积=底×高÷2=8×5÷2=20。", "math_variant"),
         ]
     return [
-        _short(f"变式复习：请重新说明这道题的关键：{question[:80]}", "说清关键", "能说清为什么错、正确方法是什么即可。")
+        _short(f"变式复习：请重新说明这道题的关键：{question[:80]}", "说清关键", "需说明错因、正确方法和下一次检查点。")
     ]

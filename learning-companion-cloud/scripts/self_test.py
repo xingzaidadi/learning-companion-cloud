@@ -75,6 +75,7 @@ def run_e2e() -> None:
     sys.path.insert(0, str(ROOT))
 
     from fastapi.testclient import TestClient
+    from backend.agent import _targeted_stuck_help
     from backend.app import app
     from backend.db import get_conn
 
@@ -88,9 +89,16 @@ def run_e2e() -> None:
         assert_true(settings["region"]["city"] == "武汉", "默认城市应为武汉")
         saved_settings = assert_status(client.post("/api/settings", json={"daily_limits": {"max_total_minutes": 100}, "ai": {"enabled": False}}))
         assert_true(saved_settings["daily_limits"]["max_total_minutes"] == 100, "设置保存失败")
+        english_stuck = _targeted_stuck_help("英语", "不认识这个单词", "英语预习 Unit 1")
+        assert_true(
+            english_stuck and "英语单词" in english_stuck["review_focus"] and "生字" not in english_stuck["review_focus"],
+            f"英语卡住不能误判成中文生字：{english_stuck}",
+        )
 
-        plan = assert_status(client.post("/api/study-plan/generate", data={"raw_text": "暑假作业本每日一小节；语文书每日一篇课文；数学书每日一节", "student_id": "1"}))
-        assert_true(plan["created"] >= 1, f"计划生成失败：{plan}")
+        plan = assert_status(client.post("/api/study-plan/generate", data={"raw_text": "暑假作业本每日一小节；语文书每日一篇课文；数学书每日一节；英语 Unit 1 每天听写 5 个单词", "student_id": "1"}))
+        subjects = {item.get("subject") for item in plan.get("items", [])}
+        categories = {item.get("category") for item in plan.get("items", [])}
+        assert_true(plan["created"] >= 4 and {"语文", "数学", "英语"}.issubset(subjects) and "summer_homework" in categories, f"多来源计划生成失败：{plan}")
         generated = assert_status(client.post("/api/daily-tasks/generate"))
         assert_true(generated["count"] >= 1, f"今日任务生成失败：{generated}")
         assert_true(all(task.get("planned_start") and task.get("planned_end") for task in generated["tasks"]), "任务应有学习时间段")

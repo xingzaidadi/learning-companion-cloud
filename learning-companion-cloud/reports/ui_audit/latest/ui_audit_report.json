@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-07-06T08:31:19",
+  "created_at": "2026-07-06T08:46:56",
   "results": [
     {
       "page": "admin",
@@ -310,7 +310,6 @@
     "reports\\ui_audit\\latest\\child_after_01.png",
     "reports\\ui_audit\\latest\\child_after_02.png",
     "reports\\ui_audit\\latest\\child_after_03.png",
-    "reports\\ui_audit\\latest\\child_after_04.png",
     "reports\\ui_audit\\latest\\parent_initial_01.png",
     "reports\\ui_audit\\latest\\parent_initial_02.png",
     "reports\\ui_audit\\latest\\parent_initial_03.png",
@@ -324,6 +323,6 @@
     "passed": 48,
     "failed": 0,
     "console_error_count": 0,
-    "screenshot_count": 25
+    "screenshot_count": 24
   }
 }

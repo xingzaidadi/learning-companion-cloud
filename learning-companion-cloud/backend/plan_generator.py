@@ -211,7 +211,7 @@ def _study_steps(subject: str) -> list[str]:
 def generate_plan_from_text(conn: Connection, raw_text: str, student_id: int = 1) -> dict[str, Any]:
     settings = get_settings(conn)
     chunks = [chunk.strip() for chunk in re.split(r"[;\n；。]", raw_text) if chunk.strip()]
-    if _looks_like_english_request(raw_text):
+    if len(chunks) <= 1 and _looks_like_english_request(raw_text):
         chunks.insert(0, raw_text.strip())
 
     now = utc_now()

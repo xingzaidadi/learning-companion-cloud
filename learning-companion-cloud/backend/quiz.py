@@ -124,7 +124,7 @@ def _best_source_ref(conn: Connection, task: dict[str, Any], subject: str, quest
     return best["source_ref"], best["knowledge_type"]
 
 
-def _short(question: str, answer: str, explanation: str = "回答不为空即可，重点是说清楚思路。") -> dict[str, Any]:
+def _short(question: str, answer: str, explanation: str = "需包含关键概念、步骤或依据；只写无关内容不得分。") -> dict[str, Any]:
     return {
         "question_type": "short",
         "question": question,
