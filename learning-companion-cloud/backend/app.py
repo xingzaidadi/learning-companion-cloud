@@ -952,11 +952,12 @@ def list_daily_tasks(
 def generate_tasks(
     student_id: int = 1,
     target_date: str | None = None,
+    force_all_sources: bool = False,
     _: str = Depends(require_admin_auth),
 ) -> dict[str, object]:
     today = target_date or date.today().isoformat()
     with get_conn() as conn:
-        result = agent_daily_tasks(conn, student_id, today, force_all_sources=True)
+        result = agent_daily_tasks(conn, student_id, today, force_all_sources=force_all_sources)
         tasks = _annotate_tasks(conn, [dict(task) for task in result["tasks"]])
         notify(conn, student_id, "tasks_generated", "今日学习任务已生成", f"今天共有 {len(tasks)} 个任务。")
         return {"date": today, "count": len(tasks), "tasks": tasks}
@@ -987,8 +988,9 @@ def schedule_tasks(data: dict[str, Any], _: str = Depends(require_parent_or_admi
 def agent_daily_tasks_endpoint(data: dict[str, Any], _: str = Depends(require_admin_auth)) -> dict[str, object]:
     student_id = int(data.get("student_id", 1))
     target_date = data.get("target_date") or date.today().isoformat()
+    force_all_sources = bool(data.get("force_all_sources", False))
     with get_conn() as conn:
-        result = agent_daily_tasks(conn, student_id, target_date, force_all_sources=True)
+        result = agent_daily_tasks(conn, student_id, target_date, force_all_sources=force_all_sources)
         result["tasks"] = _annotate_tasks(conn, [dict(task) for task in result["tasks"]])
         result["date"] = target_date
         return result
