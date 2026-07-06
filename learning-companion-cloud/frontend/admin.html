@@ -269,6 +269,18 @@
       const { api, toast, taskStatusTag, priorityTag } = window.LearningApp;
       const categoryText = { summer_homework: "作业", preview: "五年级预习", ket: "KET" };
 
+      function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+      }
+
+      function cleanDisplayText(value, fallback = "内容待重新生成") {
+        const text = String(value ?? "").trim();
+        const questionCount = (text.match(/\?/g) || []).length;
+        const hasChinese = /[\u4e00-\u9fff]/.test(text);
+        if (!text || (questionCount >= 6 && questionCount >= text.length * 0.45 && !hasChinese)) return fallback;
+        return text.replace(/^\?+\s*/, "").replace(/\s*\?+$/g, "").trim() || fallback;
+      }
+
       async function loadSources() {
         const data = await api("/api/task-sources");
         const box = document.querySelector("#sources");
@@ -279,10 +291,10 @@
           card.innerHTML = `
             <div class="task-head">
               <div>
-                <h3 class="task-title">${source.title}</h3>
-                <p class="muted">${source.subject || "综合"} · ${source.completed_units}/${source.total_units} · 截止 ${source.deadline || "未设置"}</p>
+                <h3 class="task-title">${escapeHtml(cleanDisplayText(source.title, "计划标题待重新生成"))}</h3>
+                <p class="muted">${escapeHtml(cleanDisplayText(source.subject || "综合", "综合"))} · ${source.completed_units}/${source.total_units} · 截止 ${escapeHtml(source.deadline || "未设置")}</p>
               </div>
-              <span class="tag">${categoryText[source.category] || source.category}</span>
+              <span class="tag">${escapeHtml(categoryText[source.category] || source.category)}</span>
             </div>
           `;
           box.append(card);
@@ -299,8 +311,8 @@
           card.innerHTML = `
             <div class="task-head">
               <div>
-                <h3 class="task-title">${task.title}</h3>
-                <p class="muted">${task.description}</p>
+                <h3 class="task-title">${escapeHtml(cleanDisplayText(task.title, "任务标题待重新生成"))}</h3>
+                <p class="muted">${escapeHtml(cleanDisplayText(task.description, "任务说明待重新生成"))}</p>
               </div>
               <div class="task-meta">${priorityTag(task)}${taskStatusTag(task)}</div>
             </div>
@@ -429,8 +441,8 @@
           <article class="task-card active">
             <h3 class="task-title">生成完成</h3>
             <p>已生成 ${items.length} 条长期计划，今日 ${tasks.length} 个任务。</p>
-            ${items.length ? `<p><strong>长期计划：</strong>${items.map((item) => item.title).join("；")}</p>` : ""}
-            ${tasks.length ? `<p><strong>今日任务：</strong>${tasks.map((task) => task.title).join("；")}</p>` : ""}
+            ${items.length ? `<p><strong>长期计划：</strong>${items.map((item) => escapeHtml(cleanDisplayText(item.title, "计划标题待重新生成"))).join("；")}</p>` : ""}
+            ${tasks.length ? `<p><strong>今日任务：</strong>${tasks.map((task) => escapeHtml(cleanDisplayText(task.title, "任务标题待重新生成"))).join("；")}</p>` : ""}
             <div class="actions">
               <a class="button primary" href="/child">去孩子端开始学习</a>
               <a class="button" href="/parent">去家长端看结果</a>

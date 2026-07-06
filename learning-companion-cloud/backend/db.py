@@ -538,6 +538,45 @@ def init_db() -> None:
                 """,
                 ("孩子", 11, "四年级", "五年级", now),
             )
+        _repair_dirty_question_mark_records(conn)
+
+
+def _looks_like_dirty_question_text(value: str | None) -> bool:
+    text = (value or "").strip()
+    if len(text) < 3:
+        return False
+    compact = "".join(ch for ch in text if not ch.isspace())
+    if len(compact) < 3:
+        return False
+    question_count = compact.count("?") + compact.count("？")
+    return question_count >= 3 and question_count / max(len(compact), 1) >= 0.55
+
+
+def _repair_dirty_question_mark_records(conn: sqlite3.Connection) -> None:
+    now = utc_now()
+    source_rows = conn.execute("SELECT id, title, subject, config_json FROM task_sources").fetchall()
+    for row in source_rows:
+        if any(_looks_like_dirty_question_text(row[field]) for field in ("title", "subject", "config_json")):
+            conn.execute(
+                """
+                UPDATE task_sources
+                SET title = ?, subject = ?, config_json = ?, status = 'archived', updated_at = ?
+                WHERE id = ?
+                """,
+                ("计划标题待重新生成", "待确认", dumps({"warning": "原计划内容编码损坏，请在管理端重新粘贴中文原文。"}), now, row["id"]),
+            )
+
+    task_rows = conn.execute("SELECT id, title, description FROM daily_tasks").fetchall()
+    for row in task_rows:
+        if _looks_like_dirty_question_text(row["title"]) or _looks_like_dirty_question_text(row["description"]):
+            conn.execute(
+                """
+                UPDATE daily_tasks
+                SET title = ?, description = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                ("任务标题待重新生成", "原任务内容编码损坏，请回到管理端重新生成今日任务。", now, row["id"]),
+            )
 
 
 def _ensure_columns(conn: sqlite3.Connection, table: str, columns: dict[str, str]) -> None:

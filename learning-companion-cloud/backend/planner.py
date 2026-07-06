@@ -43,7 +43,8 @@ def _build_daily_task(source: Row, today: str) -> dict[str, Any]:
     category = source["category"]
     config = loads(source["config_json"], {})
     remaining = max(int(source["total_units"]) - int(source["completed_units"]), 1)
-    daily_units = max(1, ceil(remaining / _days_left(source["deadline"], today)))
+    configured_daily_units = int(config.get("daily_units") or 0)
+    daily_units = configured_daily_units if configured_daily_units > 0 else max(1, ceil(remaining / _days_left(source["deadline"], today)))
     label = config.get("display_label") or CATEGORY_LABELS.get(category, "学习任务")
     title = f"{label}：{source['title']}"
     sequence = config.get("lesson_sequence") or []

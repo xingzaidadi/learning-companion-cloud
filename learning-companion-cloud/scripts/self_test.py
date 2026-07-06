@@ -102,6 +102,11 @@ def run_e2e() -> None:
         subjects = {item.get("subject") for item in plan.get("items", [])}
         categories = {item.get("category") for item in plan.get("items", [])}
         assert_true(plan["created"] >= 4 and {"语文", "数学", "英语"}.issubset(subjects) and "summer_homework" in categories, f"多来源计划生成失败：{plan}")
+        full_prompt = "暑假作业、KET备考、预习五年级上册语文数学英语。数学暑假作业本22小节已完成3，数学口算29页，数学每日一练48页。英语暑假作业本14 Day已完成3。语文诵读一夏12个已完成3，妙笔一下37个已完成3每天4个，阅读7本书，一本7个，电影寻梦环游记，每天运动1小时。数学目录：观察简单组合体、小数乘法、小数除法、图形的运动、用字母表示数和数量关系、多边形的面积、有趣的密铺。"
+        full_plan = assert_status(client.post("/api/study-plan/generate", data={"raw_text": full_prompt, "student_id": "1"}))
+        full_titles = [item.get("title", "") for item in full_plan.get("items", [])]
+        assert_true(full_plan["created"] >= 13, f"完整暑假规划应提取出作业/KET/预习/阅读/运动等任务源：{full_plan}")
+        assert_true(all("?" not in title for title in full_titles), f"完整规划不能生成问号标题：{full_titles}")
         generated = assert_status(client.post("/api/daily-tasks/generate"))
         assert_true(generated["count"] >= 1, f"今日任务生成失败：{generated}")
         assert_true(all(task.get("planned_start") and task.get("planned_end") for task in generated["tasks"]), "任务应有学习时间段")
