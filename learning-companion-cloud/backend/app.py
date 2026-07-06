@@ -42,6 +42,7 @@ try:
     from .ai_provider import check_ai_connection
     from .agent_tool_registry import list_tool_specs
     from .curriculum import CURRICULUM, WUHAN_DEFAULTS, get_subject_units
+    from .day_timeline import build_day_timeline
     from .db import dict_rows, dumps, get_conn, init_db, loads, utc_now
     from .importer import import_task_sources
     from .knowledge_graph import rebuild_knowledge_points, weakest_knowledge_points
@@ -81,6 +82,7 @@ except ImportError:
     from ai_provider import check_ai_connection
     from agent_tool_registry import list_tool_specs
     from curriculum import CURRICULUM, WUHAN_DEFAULTS, get_subject_units
+    from day_timeline import build_day_timeline
     from db import dict_rows, dumps, get_conn, init_db, loads, utc_now
     from importer import import_task_sources
     from knowledge_graph import rebuild_knowledge_points, weakest_knowledge_points
@@ -948,6 +950,17 @@ def list_daily_tasks(
         return _annotate_tasks(conn, dict_rows(rows))
 
 
+@app.get("/api/day-timeline")
+def day_timeline(
+    student_id: int = 1,
+    target_date: str | None = None,
+    _: str = Depends(require_child_or_admin_auth),
+) -> dict[str, object]:
+    today = target_date or date.today().isoformat()
+    tasks = list_daily_tasks(student_id=student_id, target_date=today, _=_)
+    return {"date": today, **build_day_timeline(tasks)}
+
+
 @app.post("/api/daily-tasks/generate")
 def generate_tasks(
     student_id: int = 1,
@@ -960,7 +973,7 @@ def generate_tasks(
         result = agent_daily_tasks(conn, student_id, today, force_all_sources=force_all_sources)
         tasks = _annotate_tasks(conn, [dict(task) for task in result["tasks"]])
         notify(conn, student_id, "tasks_generated", "今日学习任务已生成", f"今天共有 {len(tasks)} 个任务。")
-        return {"date": today, "count": len(tasks), "tasks": tasks}
+        return {"date": today, "count": len(tasks), "tasks": tasks, "timeline": build_day_timeline(tasks)}
 
 
 @app.post("/api/daily-tasks/schedule")
@@ -980,8 +993,8 @@ def schedule_tasks(data: dict[str, Any], _: str = Depends(require_parent_or_admi
                     """,
                     (index * 10, "家长手动调整顺序；系统重新分配时间段。", now, int(task_id), student_id, target_date),
                 )
-        tasks = arrange_daily_schedule(conn, student_id, target_date, respect_existing_order=bool(order))
-        return {"date": target_date, "count": len(tasks), "tasks": _annotate_tasks(conn, tasks)}
+        tasks = _annotate_tasks(conn, arrange_daily_schedule(conn, student_id, target_date, respect_existing_order=bool(order)))
+        return {"date": target_date, "count": len(tasks), "tasks": tasks, "timeline": build_day_timeline(tasks)}
 
 
 @app.post("/api/agent/daily-tasks")

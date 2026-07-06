@@ -33,6 +33,16 @@
         </div>
       </section>
 
+      <details class="card day-timeline-card" open data-quality="child-full-day-dynamic-schedule">
+        <summary>
+          <span>全天动态安排</span>
+          <small>学习、休息、午餐、运动都会显示；点“重新排时间”会动态更新。</small>
+        </summary>
+        <div id="dayTimeline" class="day-timeline" role="list" aria-label="今日全天动态安排">
+          <p class="muted">正在加载全天安排...</p>
+        </div>
+      </details>
+
       <section class="child-workbench child-focus-layout">
         <section class="card current-task-card" data-quality="child-current-task-only">
           <div class="section-head">
@@ -99,6 +109,7 @@
     <script>
       const { api, postEvent, toast, taskStatusTag, priorityTag, checkMethodTag } = window.LearningApp;
       let tasks = [];
+      let dayTimeline = null;
       let activeTaskId = null;
       let timerHandle = null;
       const pendingActions = new Set();
@@ -110,7 +121,9 @@
         if (!Array.isArray(tasks)) {
           tasks = tasks.value || [];
         }
+        dayTimeline = await api(`/api/day-timeline?_=${Date.now()}`, { cache: "no-store" });
         renderTasks();
+        renderTimeline();
         const checkTask = tasks.find((task) => ["checking", "needs_revision"].includes(task.status));
         if (checkTask) await showQuiz(checkTask.id);
       }
@@ -143,6 +156,61 @@
         updateTimers();
       }
 
+      function timelineStatusTag(block) {
+        if (!block.is_task) return `<span class="tag">${block.minutes} 分钟</span>`;
+        const task = tasks.find((item) => item.id === block.task_id);
+        const status = task?.status || block.task_status || "not_started";
+        return `${taskStatusTag({ status })}<span class="tag">${block.minutes} 分钟</span>`;
+      }
+
+      function timelineKindText(kind) {
+        return {
+          task: "学习",
+          ket: "KET",
+          reading: "阅读",
+          movement: "运动",
+          break: "休息",
+          buffer: "自由",
+          meal: "生活",
+        }[kind] || "安排";
+      }
+
+      function renderTimeline() {
+        const box = document.querySelector("#dayTimeline");
+        const blocks = dayTimeline?.blocks || [];
+        if (!blocks.length) {
+          box.innerHTML = '<p class="muted">暂无全天安排。生成今日任务后会自动补齐休息、运动和生活时间。</p>';
+          return;
+        }
+        const summary = dayTimeline.summary || {};
+        box.innerHTML = `
+          <div class="timeline-summary">
+            <span class="tag ok">学习 ${Math.round((summary.task_minutes || 0) / 60 * 10) / 10} 小时</span>
+            <span class="tag">休息/生活 ${Math.round((summary.rest_minutes || 0) / 60 * 10) / 10} 小时</span>
+            <span class="tag">${dayTimeline.day_start}-${dayTimeline.day_end}</span>
+          </div>
+          <div class="timeline-list">
+            ${blocks.map((block) => `
+              <article class="timeline-block timeline-${block.kind}" role="listitem">
+                <div class="timeline-time">
+                  <strong>${block.start}</strong>
+                  <span>${block.end}</span>
+                </div>
+                <div class="timeline-dot" aria-hidden="true"></div>
+                <div class="timeline-content">
+                  <div class="timeline-title-row">
+                    <span class="tag">${timelineKindText(block.kind)}</span>
+                    ${timelineStatusTag(block)}
+                  </div>
+                  <strong>${escapeHtml(block.title)}</strong>
+                  <p>${escapeHtml(block.description || block.schedule_block || "按当前节奏执行。")}</p>
+                </div>
+              </article>
+            `).join("")}
+          </div>
+        `;
+      }
+
       function primaryAction() {
         const checking = tasks.find((task) => task.status === "checking");
         if (checking) return { task: checking, type: "showQuiz", label: "继续当前检查" };
@@ -168,6 +236,7 @@
 
       function subjectName(task) {
         const text = `${task.title || ""} ${task.description || ""}`;
+        if (/运动|体育|跳绳|拉伸|慢跑/.test(text)) return "运动";
         if (/英语|Unit|school|classroom|library|teacher/i.test(text)) return "英语";
         if (/数学|小数|计算|除法|乘法|应用题/.test(text)) return "数学";
         if (/语文|课文|生字|白鹭|阅读|作文/.test(text)) return "语文";
@@ -179,6 +248,7 @@
         if (subject === "英语") return "subject-english";
         if (subject === "数学") return "subject-math";
         if (subject === "语文") return "subject-chinese";
+        if (subject === "运动") return "subject-movement";
         return "subject-general";
       }
 
@@ -361,6 +431,7 @@
         }
         document.querySelector("#doneCount").textContent = tasks.filter((item) => item.status === "completed").length;
         updatePrimaryActionButton();
+        renderTimeline();
         updateTimers();
       }
 
@@ -418,7 +489,9 @@
           body: JSON.stringify({ student_id: 1 }),
         });
         tasks = result.tasks || tasks;
+        dayTimeline = result.timeline || dayTimeline;
         renderTasks();
+        renderTimeline();
         toast("已按注意力节奏重新安排今天时间");
       }
 

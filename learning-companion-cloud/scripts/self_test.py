@@ -121,6 +121,14 @@ def run_e2e() -> None:
         assert_true(sum(1 for ok in mixed_markers.values() if ok) >= 4, f"完整长提示词生成的今日任务必须语数英运动穿插：{mixed_markers} {generated['tasks']}")
         math_count = sum(1 for task in generated["tasks"] if any(word in f"{task.get('title', '')} {task.get('description', '')}" for word in ("数学", "口算", "小数")))
         assert_true(math_count <= 3, f"数学任务不能过重堆叠：math_count={math_count} tasks={generated['tasks']}")
+        timeline = assert_status(client.get("/api/day-timeline"))
+        blocks = timeline.get("blocks", [])
+        block_text = "\n".join(f"{block.get('start')}-{block.get('end')} {block.get('kind')} {block.get('title')}" for block in blocks)
+        assert_true(blocks and blocks[0]["start"] == "08:30" and blocks[-1]["end"] == "21:00", f"全天动态安排应覆盖 08:30-21:00：{blocks}")
+        assert_true(any(block.get("kind") == "break" for block in blocks), f"全天安排应显式展示休息块：{block_text}")
+        assert_true(any("午餐" in block.get("title", "") for block in blocks), f"全天安排应展示午餐午休：{block_text}")
+        assert_true(any("晚餐" in block.get("title", "") for block in blocks), f"全天安排应展示晚餐放松：{block_text}")
+        assert_true(any(block.get("kind") == "movement" for block in blocks), f"全天安排应展示运动块：{block_text}")
 
         material = assert_status(client.post("/api/materials", data={
             "student_id": "1",

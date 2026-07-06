@@ -336,6 +336,129 @@ details.card[open] > summary::after {
   background: rgba(255, 255, 255, 0.72);
 }
 
+.day-timeline-card {
+  margin-top: 16px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(19, 166, 104, 0.12), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 251, 255, 0.86));
+}
+
+.day-timeline {
+  padding: 0 20px 20px;
+}
+
+.timeline-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.timeline-list {
+  display: grid;
+  gap: 8px;
+}
+
+.timeline-block {
+  display: grid;
+  grid-template-columns: 58px 14px minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  border: 1px solid rgba(230, 232, 239, 0.9);
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.timeline-time {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  color: #243055;
+  font-weight: 1000;
+}
+
+.timeline-time span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.timeline-dot {
+  position: relative;
+}
+
+.timeline-dot::before {
+  content: "";
+  position: absolute;
+  inset: 6px auto 6px 6px;
+  width: 2px;
+  border-radius: 999px;
+  background: #dbe4ff;
+}
+
+.timeline-dot::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: var(--primary);
+  box-shadow: 0 0 0 4px rgba(56, 103, 255, 0.10);
+}
+
+.timeline-content {
+  display: grid;
+  gap: 5px;
+}
+
+.timeline-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.timeline-content strong {
+  color: #172033;
+  font-size: 15px;
+}
+
+.timeline-content p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.timeline-break,
+.timeline-buffer,
+.timeline-meal {
+  background: rgba(248, 250, 252, 0.76);
+}
+
+.timeline-break .timeline-dot::after {
+  background: #94a3b8;
+}
+
+.timeline-buffer .timeline-dot::after {
+  background: #14b8a6;
+}
+
+.timeline-meal .timeline-dot::after {
+  background: #f59f00;
+}
+
+.timeline-ket .timeline-dot::after,
+.timeline-reading .timeline-dot::after {
+  background: var(--english);
+}
+
+.timeline-movement .timeline-dot::after {
+  background: #22c55e;
+}
+
 .compact-task-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -482,6 +605,12 @@ details.card[open] > summary::after {
 .focus-status.subject-general .subject-badge,
 .queue-task-row.subject-general .subject-badge {
   background: linear-gradient(135deg, var(--general), #14b8a6);
+}
+
+.focus-task-card.subject-movement::before,
+.focus-status.subject-movement .subject-badge,
+.queue-task-row.subject-movement .subject-badge {
+  background: linear-gradient(135deg, #22c55e, #14b8a6);
 }
 
 .focus-status {
