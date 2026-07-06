@@ -6,10 +6,11 @@ from typing import Any
 
 
 DEFAULT_WINDOWS = [
-    {"block": "上午深度学习", "start": "09:00", "end": "10:25", "best_for": ["数学", "语文"], "max_minutes": 85},
-    {"block": "上午轻输入", "start": "10:45", "end": "11:30", "best_for": ["英语", "语文"], "max_minutes": 45},
-    {"block": "下午练习巩固", "start": "14:30", "end": "15:20", "best_for": ["数学", "英语", "综合"], "max_minutes": 50},
-    {"block": "傍晚复盘补漏", "start": "16:10", "end": "16:45", "best_for": ["语文", "英语", "综合"], "max_minutes": 35},
+    {"block": "上午深度学习", "start": "08:30", "end": "10:10", "best_for": ["数学", "语文"], "max_minutes": 100},
+    {"block": "上午轻输入", "start": "10:30", "end": "11:30", "best_for": ["英语", "语文"], "max_minutes": 60},
+    {"block": "下午练习巩固", "start": "14:00", "end": "15:40", "best_for": ["数学", "英语", "综合"], "max_minutes": 100},
+    {"block": "下午运动阅读", "start": "16:00", "end": "18:00", "best_for": ["体育", "语文", "综合"], "max_minutes": 120},
+    {"block": "晚上轻复盘", "start": "19:00", "end": "21:00", "best_for": ["英语", "语文", "综合"], "max_minutes": 120},
 ]
 
 BREAK_MINUTES = 10
@@ -17,6 +18,8 @@ BREAK_MINUTES = 10
 
 def infer_subject_from_task(task: dict[str, Any]) -> str:
     text = f"{task.get('title', '')} {task.get('description', '')} {task.get('completion_standard', '')}"
+    if any(word in text for word in ("体育", "运动", "跳绳", "拉伸", "慢跑")):
+        return "体育"
     if any(word in text for word in ("英语", "Unit", "school", "library", "classroom", "teacher", "单词")):
         return "英语"
     if any(word in text for word in ("数学", "小数", "乘法", "除法", "计算", "应用题", "面积")):
@@ -49,7 +52,7 @@ def _priority_rank(task: dict[str, Any]) -> int:
         "completed": 9,
     }.get(task.get("status", "not_started"), 5)
     kind_rank = {"补漏复习": 0, "书面作业": 1, "新课预习": 2, "综合任务": 3}.get(_task_kind(task), 3)
-    subject_rank = {"数学": 0, "语文": 1, "英语": 2, "综合": 3}.get(infer_subject_from_task(task), 3)
+    subject_rank = {"数学": 0, "语文": 1, "英语": 2, "体育": 3, "综合": 4}.get(infer_subject_from_task(task), 4)
     priority_rank = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}.get(task.get("priority", "P2"), 2)
     return status_rank * 1000 + kind_rank * 100 + priority_rank * 10 + subject_rank
 
@@ -109,7 +112,7 @@ def arrange_daily_schedule(conn: Connection, student_id: int = 1, target_date: s
     last_subject = ""
 
     for task in pending:
-        minutes = max(10, min(int(task.get("estimated_minutes") or 20), 45))
+        minutes = max(10, min(int(task.get("estimated_minutes") or 20), 60))
         subject = infer_subject_from_task(task)
         candidates = sorted(
             windows,
@@ -156,4 +159,13 @@ def arrange_daily_schedule(conn: Connection, student_id: int = 1, target_date: s
         arranged.append(task)
         sort_order += 10
         last_subject = subject
+    arranged.sort(key=lambda task: (task.get("planned_start") or "99:99", int(task["id"])))
+    for index, task in enumerate(arranged, start=1):
+        chronological_order = index * 10
+        if int(task.get("sort_order") or 0) != chronological_order:
+            conn.execute(
+                "UPDATE daily_tasks SET sort_order = ?, updated_at = datetime('now') WHERE id = ?",
+                (chronological_order, task["id"]),
+            )
+            task["sort_order"] = chronological_order
     return arranged

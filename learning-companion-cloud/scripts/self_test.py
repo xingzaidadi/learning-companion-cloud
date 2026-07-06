@@ -111,6 +111,16 @@ def run_e2e() -> None:
         generated = assert_status(client.post("/api/daily-tasks/generate"))
         assert_true(generated["count"] >= 1, f"今日任务生成失败：{generated}")
         assert_true(all(task.get("planned_start") and task.get("planned_end") for task in generated["tasks"]), "任务应有学习时间段")
+        task_text = "\n".join(f"{task.get('title', '')} {task.get('description', '')}" for task in generated["tasks"])
+        mixed_markers = {
+            "数学": any(word in task_text for word in ("数学", "口算", "小数")),
+            "语文": any(word in task_text for word in ("语文", "诵读", "妙笔", "阅读", "一本")),
+            "英语": any(word in task_text for word in ("英语", "KET", "Unit")),
+            "运动": any(word in task_text for word in ("运动", "跳绳")),
+        }
+        assert_true(sum(1 for ok in mixed_markers.values() if ok) >= 4, f"完整长提示词生成的今日任务必须语数英运动穿插：{mixed_markers} {generated['tasks']}")
+        math_count = sum(1 for task in generated["tasks"] if any(word in f"{task.get('title', '')} {task.get('description', '')}" for word in ("数学", "口算", "小数")))
+        assert_true(math_count <= 3, f"数学任务不能过重堆叠：math_count={math_count} tasks={generated['tasks']}")
 
         material = assert_status(client.post("/api/materials", data={
             "student_id": "1",

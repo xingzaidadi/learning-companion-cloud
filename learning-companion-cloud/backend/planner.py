@@ -39,6 +39,141 @@ def _source_priority(source: Row) -> str:
     return "P2"
 
 
+def _source_text(source: Row) -> str:
+    config = loads(source["config_json"], {})
+    parts = [
+        str(source["category"] or ""),
+        str(source["title"] or ""),
+        str(source["subject"] or ""),
+        str(config.get("display_label") or ""),
+        str(config.get("module") or ""),
+        str(config.get("lesson_content") or ""),
+        str(config.get("knowledge_points") or ""),
+    ]
+    return " ".join(parts)
+
+
+def _source_subject(source: Row) -> str:
+    text = _source_text(source)
+    subject = str(source["subject"] or "")
+    if subject:
+        return subject
+    if any(word in text for word in ("体育", "运动", "跳绳", "拉伸")):
+        return "体育"
+    if any(word in text for word in ("数学", "小数", "口算", "每日一练")):
+        return "数学"
+    if any(word in text for word in ("英语", "KET", "Unit", "单词")):
+        return "英语"
+    if any(word in text for word in ("语文", "诵读", "妙笔", "阅读", "课文")):
+        return "语文"
+    return "综合"
+
+
+def _source_bucket(source: Row) -> str:
+    text = _source_text(source)
+    category = str(source["category"] or "")
+    subject = _source_subject(source)
+    if category == "ket" or "KET" in text:
+        return "ket"
+    if category == "preview":
+        return "preview"
+    if subject == "体育" or any(word in text for word in ("每日运动", "跳绳", "拉伸", "慢跑")):
+        return "movement"
+    if any(word in text for word in ("阅读书目", "一千零一夜", "民间故事", "外婆")):
+        return "reading"
+    if any(word in text for word in ("娱乐", "电影", "寻梦环游记")):
+        return "leisure"
+    if subject == "数学":
+        if any(word in str(source["title"] or "") for word in ("口算", "每日一练")):
+            return "math_light"
+        return "math_core"
+    if subject == "语文":
+        return "chinese_homework"
+    if subject == "英语":
+        return "english_homework"
+    return "general"
+
+
+def _day_index(today: str) -> int:
+    try:
+        current = datetime.strptime(today, "%Y-%m-%d").date()
+        return max((current - date(2026, 7, 4)).days, 0)
+    except ValueError:
+        return 0
+
+
+def _is_weekend(today: str) -> bool:
+    try:
+        return datetime.strptime(today, "%Y-%m-%d").date().weekday() >= 5
+    except ValueError:
+        return False
+
+
+def _pick_rotating(candidates: list[Row], day_index: int, used_ids: set[int]) -> Row | None:
+    available = [source for source in candidates if int(source["id"]) not in used_ids]
+    if not available:
+        return None
+    return available[day_index % len(available)]
+
+
+def _select_balanced_sources(sources: list[Row], slots: int, today: str) -> list[Row]:
+    if slots <= 0:
+        return []
+    day_index = _day_index(today)
+    buckets: dict[str, list[Row]] = {}
+    for source in sources:
+        buckets.setdefault(_source_bucket(source), []).append(source)
+
+    for bucket_sources in buckets.values():
+        bucket_sources.sort(key=lambda source: (source["deadline"] is None, source["deadline"] or "", int(source["id"])))
+
+    if slots >= 8:
+        desired = ["math_core", "math_light", "chinese_homework", "english_homework", "preview", "ket", "reading", "movement"]
+    elif slots == 7:
+        desired = ["math_core", "math_light", "chinese_homework", "english_homework", "preview", "ket", "movement"]
+    elif slots == 6:
+        desired = ["math_core", "math_light", "chinese_homework", "english_homework", "preview", "movement"]
+    else:
+        desired = ["math_core", "chinese_homework", "english_homework", "preview", "movement"][:slots]
+
+    if _is_weekend(today) and buckets.get("leisure") and "reading" in desired:
+        desired[desired.index("reading")] = "leisure"
+
+    selected: list[Row] = []
+    used_ids: set[int] = set()
+    subject_counts: dict[str, int] = {}
+
+    def add_source(source: Row | None) -> None:
+        if not source or int(source["id"]) in used_ids or len(selected) >= slots:
+            return
+        selected.append(source)
+        used_ids.add(int(source["id"]))
+        subject = _source_subject(source)
+        subject_counts[subject] = subject_counts.get(subject, 0) + 1
+
+    for bucket in desired:
+        candidates = buckets.get(bucket, [])
+        if bucket == "math_core" and not candidates:
+            candidates = buckets.get("math_light", [])
+        if bucket == "math_light" and not candidates:
+            candidates = buckets.get("math_core", [])
+        add_source(_pick_rotating(candidates, day_index, used_ids))
+
+    remaining = [source for source in sources if int(source["id"]) not in used_ids]
+    remaining.sort(
+        key=lambda source: (
+            subject_counts.get(_source_subject(source), 0),
+            0 if _source_bucket(source) in {"movement", "reading", "ket", "preview"} else 1,
+            source["deadline"] is None,
+            source["deadline"] or "",
+            int(source["id"]),
+        )
+    )
+    for source in remaining:
+        add_source(source)
+    return selected
+
+
 def _build_daily_task(source: Row, today: str) -> dict[str, Any]:
     category = source["category"]
     config = loads(source["config_json"], {})
@@ -119,12 +254,13 @@ def generate_daily_tasks(
         return _today_tasks(conn, student_id, today)
 
     block_new_preview = False if force_all_sources else _should_block_new_preview(conn, student_id, today, rules)
-    source_limit = 500 if force_all_sources else remaining_slots
+    source_limit = 500
 
     sources = conn.execute(
         """
         SELECT * FROM task_sources
         WHERE student_id = ? AND status = 'active'
+          AND completed_units < total_units
           AND (? = 0 OR category != 'preview')
           AND id NOT IN (
               SELECT source_id FROM daily_tasks
@@ -144,6 +280,8 @@ def generate_daily_tasks(
         """,
         (student_id, 1 if block_new_preview else 0, student_id, today, source_limit),
     ).fetchall()
+    if not force_all_sources:
+        sources = _select_balanced_sources(list(sources), remaining_slots, today)
 
     now = utc_now()
     for source in sources:

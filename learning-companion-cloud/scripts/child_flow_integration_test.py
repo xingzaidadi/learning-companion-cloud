@@ -94,6 +94,19 @@ def seed_quiz(conn: Any, task_id: int) -> list[int]:
     return ids
 
 
+def seed_quiz_for_task_if_empty(task_id: int) -> list[int]:
+    from backend.db import get_conn
+
+    with get_conn() as conn:
+        existing = [
+            int(row[0])
+            for row in conn.execute("SELECT id FROM quiz_items WHERE daily_task_id = ? ORDER BY id", (task_id,)).fetchall()
+        ]
+        if existing:
+            return existing
+        return seed_quiz(conn, task_id)
+
+
 def task_by_id(tasks: list[dict[str, Any]], task_id: int) -> dict[str, Any]:
     for task in tasks:
         if int(task["id"]) == task_id:
@@ -111,7 +124,7 @@ def run_child_flow() -> None:
 
     with TestClient(app) as client:
         with get_conn() as conn:
-            task1 = seed_task(conn, "英语预习 Unit 1")
+            task1 = seed_task(conn, "数学小数乘法")
             task2 = seed_task(conn, "语文预习 白鹭", "P1")
             task3 = seed_task(conn, "数学小数乘法", "P2")
             item_ids = seed_quiz(conn, task1)
@@ -124,6 +137,9 @@ def run_child_flow() -> None:
 
         tasks = assert_status(client.get("/api/daily-tasks"))
         assert_true([task["status"] for task in tasks] == ["not_started", "not_started", "not_started"], f"初始状态错误：{tasks}")
+        task1 = int(tasks[0]["id"])
+        task2 = int(tasks[1]["id"])
+        item_ids = seed_quiz_for_task_if_empty(task1)
 
         later_start = assert_status(client.post(f"/api/daily-tasks/{task2}/event", json={"event_type": "start"}))
         assert_true(later_start.get("blocked") is True, f"不能越过第一个任务启动第二个任务：{later_start}")
@@ -141,7 +157,7 @@ def run_child_flow() -> None:
         resume = assert_status(client.post(f"/api/daily-tasks/{task1}/event", json={"event_type": "start"}))
         assert_true(resume["status"] == "in_progress" and resume["timer_state"] == "running", f"继续学习失败：{resume}")
 
-        stuck = assert_status(client.post(f"/api/daily-tasks/{task1}/event", json={"event_type": "stuck", "note": "不会读 library"}))
+        stuck = assert_status(client.post(f"/api/daily-tasks/{task1}/event", json={"event_type": "stuck", "note": "不会判断小数点位置"}))
         assert_true(stuck["status"] == "stuck" and stuck["timer_state"] == "stopped", f"卡住状态错误：{stuck}")
         assistance = stuck.get("assistance", {})
         for key in ("encouragement", "hint_1", "try_again", "review_focus"):

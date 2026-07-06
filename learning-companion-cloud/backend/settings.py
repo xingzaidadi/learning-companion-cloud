@@ -24,7 +24,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "path_rules": {
         "quiz_pass_score": 0.8,
         "low_score_blocks_new_preview": True,
-        "max_daily_tasks": 5,
+        "max_daily_tasks": 8,
         "weekend_light_mode": True,
     },
     "ai": {
