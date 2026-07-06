@@ -1,0 +1,38 @@
+{
+  "schema_version": "learning-agent-query-assets-v1",
+  "source_policy": "Queries are phrased as parent/student/exam prompts and intentionally kept separate from seed corpus text.",
+  "mutation_queries": [
+    {
+      "id": "MQ-CHINESE-BAILU",
+      "subject": "语文",
+      "expected_keywords": ["白鹭"],
+      "queries": ["白鹭为什么美", "白鹭为啥像诗", "白鹭精巧在哪里", "白露这课讲什么"]
+    },
+    {
+      "id": "MQ-MATH-DECIMAL",
+      "subject": "数学",
+      "expected_keywords": ["小数"],
+      "queries": ["小数点放哪", "积的小数位数怎么算", "竖式小数乘法老错", "小数乘發怎么验算"]
+    },
+    {
+      "id": "MQ-ENGLISH-LIBRARY",
+      "subject": "英语",
+      "expected_keywords": ["library"],
+      "queries": ["图书馆英文怎么记", "library 总拼错", "where is the library", "学校图书馆在教室旁边"]
+    }
+  ],
+  "distractor_queries": [
+    {
+      "id": "DQ-MATH-OVERGRADE",
+      "subject": "数学",
+      "query": "五年级今天学小数乘法，不要给我初中有理数",
+      "forbidden_keywords": ["初中有理数", "方程组"]
+    },
+    {
+      "id": "DQ-CHINESE-SCOPE",
+      "subject": "语文",
+      "query": "白鹭预习要考什么，不要跑到六年级课文",
+      "forbidden_keywords": ["六年级"]
+    }
+  ]
+}

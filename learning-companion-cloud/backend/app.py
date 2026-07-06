@@ -5,6 +5,7 @@ import html
 import json
 from pathlib import Path
 import re
+import statistics
 from typing import Annotated, Any
 
 import os
@@ -1168,6 +1169,66 @@ def read_review_book(student_id: int = 1, _: str = Depends(require_parent_or_adm
 def agent_overview(student_id: int = 1, _: str = Depends(require_parent_or_admin_auth)) -> dict[str, object]:
     with get_conn() as conn:
         return get_agent_overview(conn, student_id)
+
+
+@app.get("/api/agent/metrics")
+def agent_metrics(student_id: int = 1, _: str = Depends(require_parent_or_admin_auth)) -> dict[str, object]:
+    with get_conn() as conn:
+        runs = dict_rows(
+            conn.execute(
+                """
+                SELECT id, run_type, model, status, error, latency_ms, quality_score, trace_id, created_at
+                FROM agent_runs
+                WHERE student_id = ?
+                ORDER BY id DESC
+                LIMIT 500
+                """,
+                (student_id,),
+            ).fetchall()
+        )
+        latencies = sorted(int(run.get("latency_ms") or 0) for run in runs)
+        trace_rows = dict_rows(
+            conn.execute(
+                """
+                SELECT step_type, status, score
+                FROM agent_trace_steps
+                WHERE trace_id IN (
+                    SELECT trace_id FROM agent_runs WHERE student_id = ? ORDER BY id DESC LIMIT 100
+                )
+                """,
+                (student_id,),
+            ).fetchall()
+        )
+    fallback_count = sum(1 for run in runs if run.get("model") == "rule" or run.get("status") in {"rule_fallback", "disabled_or_missing_key"})
+    error_count = sum(1 for run in runs if run.get("error") or run.get("status") == "error")
+    ai_count = sum(1 for run in runs if run.get("model") not in {"", "rule", None})
+    required_steps = {"goal", "plan", "decision", "tool_call", "observation", "evaluate", "supervise", "final"}
+    observed_steps = {str(row.get("step_type") or "") for row in trace_rows}
+    return {
+        "total_runs": len(runs),
+        "ai_runs": ai_count,
+        "fallback_rate": round(fallback_count / max(len(runs), 1), 3),
+        "error_rate": round(error_count / max(len(runs), 1), 3),
+        "latency_ms": {
+            "p50": _percentile(latencies, 0.5),
+            "p95": _percentile(latencies, 0.95),
+            "avg": round(statistics.mean(latencies), 1) if latencies else 0,
+        },
+        "trace": {
+            "step_count": len(trace_rows),
+            "observed_types": sorted(observed_steps),
+            "missing_standard_types": sorted(required_steps - observed_steps),
+            "avg_step_score": round(statistics.mean(float(row.get("score") or 0) for row in trace_rows), 3) if trace_rows else 0,
+        },
+        "recent_status": runs[:20],
+    }
+
+
+def _percentile(values: list[int], ratio: float) -> int:
+    if not values:
+        return 0
+    index = min(len(values) - 1, max(0, round((len(values) - 1) * ratio)))
+    return int(values[index])
 
 
 @app.get("/api/parent/dashboard")

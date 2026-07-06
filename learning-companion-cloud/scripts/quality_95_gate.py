@@ -46,6 +46,8 @@ def main() -> None:
     learning_quality = read("backend/learning_quality.py")
     learning_judge = read("eval_harness/judges/learning_judge.py")
     eval_runner = read("eval_harness/runners/eval_runner.py")
+    eval_adapter = read("eval_harness/adapters/learning_agent_adapter.py")
+    ui_rubric = read("scripts/ui_design_rubric.py")
     backend_report = read("backend/report.py")
     backend_app = read("backend/app.py")
     backend_agent = read("backend/agent.py")
@@ -95,16 +97,21 @@ def main() -> None:
             ("tool_validation_consumed", "validate_tool_call" in tool_registry and "tool_validation" in backend_agent),
             ("controlled_tool_loop", "run_controlled_tool_loop" in agent_runtime and "controlled_tool_loop" in backend_agent),
             ("controlled_runtime_loop", all(key in agent_runtime for key in ("run_controlled_agent_runtime", "Planner", "Executor", "Supervisor", "STANDARD_TRACE_TYPES")) and "run_controlled_agent_runtime" in backend_agent),
-            ("hybrid_rag_scoring", "retrieval_method" in agent_core and "hybrid_keyword_vector_embedding" in agent_core and "embedding_score_for_chunk" in agent_core),
-            ("persistent_embedding_rag", "material_embeddings" in read("backend/db.py") and "local_embedding" in rag_engine and "upsert_chunk_embedding" in rag_engine),
+            ("hybrid_rag_scoring", all(key in agent_core for key in ("hybrid_bm25_semantic_embedding", "_bm25_like_score", "embedding_model"))),
+            ("persistent_embedding_rag", "material_embeddings" in read("backend/db.py") and all(key in rag_engine for key in ("embed_texts", "semantic_embedding", "local_embedding", "upsert_chunk_embedding", "OPENAI_EMBEDDING_MODEL"))),
+            ("semantic_embedding_provider", all(key in rag_engine for key in ("SEMANTIC_MODEL", "SEMANTIC_ALIASES", "_api_embed_texts", "effective_embedding_model"))),
             ("structured_knowledge_base", "iter_core_knowledge" in knowledge_schema and "CHINESE_UNITS" in knowledge_schema and "MATH_UNITS" in knowledge_schema and "ENGLISH_UNITS" in knowledge_schema),
             ("grading_rubrics", "rubric_for_item" in grading_rubrics and "grading_rubric_json" in read("backend/quiz.py")),
             ("trajectory_trace", all(key in agent_tools for key in ("agent_trace_steps", "thought", "decision_json", "retry_count", "save_agent_trace_steps"))),
-            ("llm_judge_layers", all(key in learning_judge for key in ("judge_learning_case", "llm_judge", "human_rubric", "trace_completeness"))),
+            ("llm_judge_layers", all(key in learning_judge for key in ("judge_learning_case", "JUDGE_MODE", "_llm_judge_live", "rule_judge_agreement", "human_rubric", "trace_completeness"))),
             ("learning_quality_loop", all(key in learning_quality for key in ("score_learning_day", "ensure_remediation_queue", "auto_remediation")) and "learning_quality" in backend_agent and "remediation_queue" in backend_agent),
+            ("memory_governance", all(key in agent_core for key in ("_apply_forgetting_decay", "compress_learning_memories", "conflict_count", "stable_weakness"))),
+            ("multi_step_reflect", all(key in agent_runtime for key in ("max_steps", "reflect", "_refine_search_arguments", "_needs_more_evidence")) and "multi_step_convergence" in eval_adapter),
+            ("agent_metrics_api", all(key in backend_app for key in ("def agent_metrics", "fallback_rate", "p95", "missing_standard_types"))),
             ("multi_agent_eval", "LearningAgentAdapter" in eval_runner and "DemoAgentAdapter" in eval_runner),
             ("eval_known_gaps", "known_gap_cases" in eval_runner and "unexpected_failed_cases" in eval_runner),
             ("eval_lifecycle_governance", all(key in eval_runner for key in ("dataset_version", "difficulty_scores", "failure_root_causes", "eval_history.jsonl")) and "schema_version" in read("eval_harness/datasets/learning_agent/golden_set.json")),
+            ("rag_mutation_eval", all(key in eval_adapter for key in ("mutation_rag", "distractor_rag", "recall_robustness", "precision_vs_distractor")) and (ROOT / "eval_harness/datasets/learning_agent/queries.json").exists()),
             ("redteam_cases", count_cases("eval_harness/datasets/learning_agent/golden_set.json") >= 200),
             ("daily_report_compaction", "def _short_title" in backend_report and "def _count_line" in backend_report and "quiz_summary" not in backend_report and four_questions not in backend_report),
             ("display_sanitizer", all(key in backend_app for key in ("_clean_display_text", "_sanitize_task_for_display", "_sanitize_report_for_display"))),
@@ -118,9 +125,11 @@ def main() -> None:
             ("db_concurrency_test", (ROOT / "scripts/db_concurrency_test.py").exists()),
             ("seven_day_simulation", (ROOT / "scripts/simulate_7_day_learning.py").exists()),
             ("interview_pack", (ROOT / "scripts/generate_interview_pack.py").exists()),
+            ("eval_dashboard", (ROOT / "scripts/generate_eval_dashboard.py").exists()),
             ("knowledge_seed_script", (ROOT / "scripts/seed_core_materials.py").exists() and (ROOT / "data/knowledge/coverage_summary.json").exists()),
             ("eval_cases_80_plus", count_cases("eval_harness/datasets/learning_agent/golden_set.json") + count_cases("eval_harness/datasets/demo_agent/golden_set.json") >= 80),
             ("github_actions", (ROOT.parent / ".github/workflows/qa.yml").exists() and (ROOT.parent / ".github/workflows/agent-eval.yml").exists()),
+            ("live_judge_workflow", (ROOT.parent / ".github/workflows/agent-eval-live.yml").exists()),
         ],
         "visual_system": [
             ("design_tokens", all(token in css for token in ("--primary", "--muted", "--line", "--radius"))),
@@ -130,6 +139,7 @@ def main() -> None:
             ("agent_audit_styles", "agent-run-card" in css and "agent-trace-panel" in css),
             ("no_visible_question_mark_noise", not any(noise in child + parent + admin + css for noise in visible_question_mark_noise)),
             ("css_collapsible_labels_not_garbled", f'content: "{double_question}"' not in css and "\\5c55\\5f00" in css and "\\6536\\8d77" in css),
+            ("accessibility_ux_rubric", all(key in ui_rubric for key in ("aria_coverage", "touch_target_size", "child_copy_length", "focus_visible")) and "aria-label" in child + parent + admin and "min-height: 44px" in css),
         ],
     }
 

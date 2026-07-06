@@ -16,5 +16,5 @@
 ## R - Result
 - 7 天仿真状态：`SIMULATE_7_DAY_OK`。
 - Agent eval 意外失败数：`0`。
-- 学习 Agent case 数：`210`。
+- 学习 Agent case 数：`219`。
 - 可演示能力：孩子端学习闭环、家长端结论看板、管理端 Agent Trace 和 eval 报告。

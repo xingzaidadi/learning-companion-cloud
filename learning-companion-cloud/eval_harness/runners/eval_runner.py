@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import statistics
 import sys
 from datetime import datetime
@@ -46,6 +47,9 @@ def summarize(agent: str, case_results: list[tuple[dict[str, Any], Any]]) -> dic
     difficulty_totals: dict[str, list[float]] = {}
     lifecycle_totals: dict[str, int] = {}
     root_causes: dict[str, int] = {}
+    judge_total = 0
+    judge_agree = 0
+    judge_disagreements: list[dict[str, Any]] = []
     for result in results:
         for name, value in result.metrics.items():
             metric_totals.setdefault(name, []).append(float(value))
@@ -59,6 +63,20 @@ def summarize(agent: str, case_results: list[tuple[dict[str, Any], Any]]) -> dic
             lifecycle_totals["open"] = lifecycle_totals.get("open", 0) + 1
         root = result.output.get("failure_root_cause", "unknown") if isinstance(result.output, dict) else "unknown"
         root_causes[root] = root_causes.get(root, 0) + 1
+        judge = result.output.get("judge", {}) if isinstance(result.output, dict) else {}
+        if judge:
+            judge_total += 1
+            if judge.get("rule_judge_agreement"):
+                judge_agree += 1
+            elif len(judge_disagreements) < 5:
+                judge_disagreements.append(
+                    {
+                        "case_id": result.case_id,
+                        "rule_score": judge.get("rule_score"),
+                        "judge_score": (judge.get("llm_judge") or {}).get("score"),
+                        "final_score": judge.get("final_score"),
+                    }
+                )
     metrics = {name: round(sum(values) / len(values), 3) for name, values in metric_totals.items()}
     difficulty_scores = {name: round(sum(values) / len(values), 3) for name, values in difficulty_totals.items()}
     return {
@@ -70,6 +88,9 @@ def summarize(agent: str, case_results: list[tuple[dict[str, Any], Any]]) -> dic
         "avg_score": round(sum(scores) / max(len(scores), 1), 3),
         "score_stdev": round(statistics.pstdev(scores), 3) if len(scores) > 1 else 0,
         "metrics": metrics,
+        "judge_mode": os.getenv("JUDGE_MODE", "fallback"),
+        "judge_rule_agreement": round(judge_agree / judge_total, 3) if judge_total else None,
+        "judge_disagreements": judge_disagreements,
         "difficulty_scores": difficulty_scores,
         "case_lifecycle": lifecycle_totals,
         "failure_root_causes": root_causes,
@@ -100,6 +121,10 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines.extend(["", "## Metrics", ""])
     for summary in report["summaries"]:
         lines.append(f"### {summary['agent']}")
+        lines.append(f"- Judge mode: `{summary.get('judge_mode', 'fallback')}`")
+        lines.append(f"- Judge/rule agreement: `{summary.get('judge_rule_agreement', '-')}`")
+        if summary.get("judge_disagreements"):
+            lines.append(f"- Judge disagreements: `{summary['judge_disagreements']}`")
         for name, value in summary["metrics"].items():
             lines.append(f"- `{name}`: {value}")
         lines.append(f"- Difficulty scores: `{summary.get('difficulty_scores', {})}`")

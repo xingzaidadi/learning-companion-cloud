@@ -23,4 +23,5 @@ jobs:
       - run: python scripts/ui_design_rubric.py
       - run: python scripts/simulate_7_day_learning.py
       - run: python scripts/generate_interview_pack.py
+      - run: python scripts/generate_eval_dashboard.py
       - run: python scripts/quality_95_gate.py

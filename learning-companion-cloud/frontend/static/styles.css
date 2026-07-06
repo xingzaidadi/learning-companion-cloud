@@ -88,12 +88,24 @@ button,
   border: 0;
   border-radius: 999px;
   padding: 10px 16px;
+  min-height: 44px;
+  min-width: 44px;
   background: var(--card);
   color: var(--text);
   text-decoration: none;
   font-weight: 700;
   box-shadow: 0 8px 18px rgba(36, 48, 85, 0.08);
   cursor: pointer;
+}
+
+button:focus-visible,
+.button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 3px solid rgba(79, 70, 229, 0.42);
+  outline-offset: 3px;
 }
 
 button.primary,
@@ -1153,4 +1165,15 @@ textarea {
 .parent-report-mini strong {
   font-size: 18px;
   line-height: 1.5;
+}
+
+body.large-copy {
+  font-size: 18px;
+}
+
+body.large-copy button,
+body.large-copy .button,
+body.large-copy input,
+body.large-copy textarea {
+  font-size: 18px;
 }

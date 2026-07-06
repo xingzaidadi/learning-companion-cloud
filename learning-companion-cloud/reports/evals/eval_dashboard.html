@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agent Eval Dashboard</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; padding: 28px; background: #f6f7fb; color: #172033; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .card { background: white; border: 1px solid #e5e7ef; border-radius: 18px; padding: 18px; box-shadow: 0 12px 30px rgba(31, 41, 55, .08); }
+    .score { font-size: 44px; font-weight: 800; margin: 8px 0; color: #4f46e5; }
+    pre { white-space: pre-wrap; background: #f8fafc; padding: 12px; border-radius: 12px; }
+    canvas { width: 100%; height: 220px; background: white; border-radius: 18px; border: 1px solid #e5e7ef; }
+  </style>
+</head>
+<body>
+  <h1>Agent Eval Dashboard</h1>
+  <p>生成时间：2026-07-06T11:47:37；趋势点：6</p>
+  <section class="grid">
+            <article class="card">
+              <h2>demo_agent</h2>
+              <p class="score">1.0</p>
+              <p>Case: 24｜Avg: 1.0｜Known gaps: 0</p>
+              <pre>{
+  "medium": 1.0
+}</pre>
+            </article>
+            
+            <article class="card">
+              <h2>learning_agent</h2>
+              <p class="score">0.963</p>
+              <p>Case: 219｜Avg: 0.978｜Known gaps: 8</p>
+              <pre>{
+  "medium": 0.996,
+  "hard": 0.99,
+  "redteam": 0.841
+}</pre>
+            </article>
+            </section>
+  <h2>回归趋势</h2>
+  <canvas id="trend" width="900" height="240" aria-label="Eval avg score trend"></canvas>
+  <script>
+    const values = [0.994,0.994,0.994,0.988,0.988,0.989];
+    const labels = ["07-06T10:42","07-06T10:45","07-06T10:48","07-06T11:40","07-06T11:44","07-06T11:47"];
+    const canvas = document.getElementById('trend');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#4f46e5'; ctx.lineWidth = 4;
+    ctx.beginPath();
+    values.forEach((value, index) => {
+      const x = 40 + index * ((canvas.width - 80) / Math.max(values.length - 1, 1));
+      const y = canvas.height - 35 - value * (canvas.height - 70);
+      if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      ctx.fillText(labels[index] || '', x - 20, canvas.height - 10);
+    });
+    ctx.stroke();
+  </script>
+</body>
+</html>

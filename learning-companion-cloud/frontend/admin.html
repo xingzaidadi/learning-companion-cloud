@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <main class="shell" data-quality="admin-natural-plan admin-three-core-actions admin-agent-audit admin-rag-quality admin-advanced-collapsed">
+    <main class="shell" role="main" aria-label="管理端" data-quality="admin-natural-plan admin-three-core-actions admin-agent-audit admin-rag-quality admin-advanced-collapsed admin-accessible">
       <header class="topbar">
         <div class="brand">
           <h1>一句话安排学习</h1>
@@ -28,9 +28,9 @@
             <textarea name="raw_text" required placeholder="暑假作业本，每日一小节；语文书，每日一篇课文"></textarea>
           </label>
           <div class="actions full">
-            <button class="primary" id="quickPlanSubmit">生成计划并生成今日任务</button>
-            <button type="button" id="generateToday">补齐/同步今日任务</button>
-            <button type="button" id="refresh">刷新</button>
+            <button class="primary" id="quickPlanSubmit" aria-label="生成学习计划并生成今日任务">生成计划并生成今日任务</button>
+            <button type="button" id="generateToday" aria-label="补齐并同步今日任务">补齐/同步今日任务</button>
+            <button type="button" id="refresh" aria-label="刷新管理端数据">刷新</button>
           </div>
         </form>
         <div id="quickPlanResult" class="task-list" style="margin-top:16px"></div>

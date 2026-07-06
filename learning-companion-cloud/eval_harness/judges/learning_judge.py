@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import os
 from typing import Any
+
+from backend.ai_provider import call_ai_json_with_meta
 
 
 TRACE_REQUIRED_TYPES = {"goal", "plan", "decision", "tool_call", "observation", "evaluate", "supervise", "final"}
@@ -15,14 +18,18 @@ def judge_learning_case(case: dict[str, Any], output: dict[str, Any], metrics: d
     """
 
     rule_score = _rule_score(metrics, issues)
-    llm_judge = _llm_judge_fallback(case, output, metrics)
+    judge_mode = os.getenv("JUDGE_MODE", "fallback").strip().lower()
+    llm_judge = _llm_judge_live(case, output, metrics, issues) if judge_mode == "live" else _llm_judge_fallback(case, output, metrics)
     human_rubric = _human_rubric(case, output, issues)
+    agreement = abs(rule_score - float(llm_judge.get("score", 0))) <= 0.2
     final_score = round(rule_score * 0.55 + llm_judge["score"] * 0.3 + human_rubric["score"] * 0.15, 3)
     return {
         "version": "learning-judge-v1",
+        "judge_mode": judge_mode if llm_judge.get("mode") == "live" else "fallback",
         "rule_score": round(rule_score, 3),
         "llm_judge": llm_judge,
         "human_rubric": human_rubric,
+        "rule_judge_agreement": agreement,
         "final_score": final_score,
         "passed": final_score >= float(case.get("threshold", 0.7)) and not issues,
     }
@@ -89,6 +96,50 @@ def _llm_judge_fallback(case: dict[str, Any], output: dict[str, Any], metrics: d
             "actionable": actionable,
         },
         "note": "生产环境可打开真实 LLM-as-Judge；离线 CI 使用同一 Rubric 的确定性 fallback。",
+    }
+
+
+def _llm_judge_live(case: dict[str, Any], output: dict[str, Any], metrics: dict[str, float], issues: list[str]) -> dict[str, Any]:
+    prompt = {
+        "role": "learning_agent_eval_judge",
+        "rubric": {
+            "no_answer_leak": "孩子端小测/卡住提示不能直接泄露标准答案。",
+            "grounded": "回答必须能追溯到教材或任务证据。",
+            "actionable": "建议必须是孩子能执行的短步骤。",
+            "age_appropriate": "文案适合 11 岁孩子，不说空话、不成人化。",
+            "score": "0 到 1，0.8 以上为通过。",
+        },
+        "case": case,
+        "metrics": metrics,
+        "issues": issues,
+        "output_preview": str(output)[:4000],
+        "required_json": {
+            "no_answer_leak": True,
+            "grounded": True,
+            "actionable": True,
+            "age_appropriate": True,
+            "score": 0.0,
+            "reason": "简短中文原因",
+        },
+    }
+    result, meta = call_ai_json_with_meta({"ai": {"enabled": True}}, str(prompt), {})
+    if not isinstance(result, dict) or "score" not in result:
+        fallback = _llm_judge_fallback(case, output, metrics)
+        fallback["mode"] = "live_failed_fallback"
+        fallback["live_error"] = meta.get("error", "")
+        return fallback
+    score = max(0.0, min(1.0, float(result.get("score", 0) or 0)))
+    return {
+        "mode": "live",
+        "model": meta.get("model", ""),
+        "score": round(score, 3),
+        "rubric": {
+            "no_answer_leak": bool(result.get("no_answer_leak")),
+            "grounded": bool(result.get("grounded")),
+            "actionable": bool(result.get("actionable")),
+            "age_appropriate": bool(result.get("age_appropriate")),
+        },
+        "reason": str(result.get("reason", ""))[:300],
     }
 
 

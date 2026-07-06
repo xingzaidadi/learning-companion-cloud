@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <main class="shell" data-quality="child-one-focus child-light-progress child-progressive-disclosure">
+    <main class="shell" role="main" aria-label="孩子学习端" data-quality="child-one-focus child-light-progress child-progressive-disclosure child-accessible child-age-copy">
       <header class="topbar">
         <div class="brand">
           <h1>学习驾驶舱</h1>
@@ -28,8 +28,8 @@
           </div>
         </div>
         <div class="actions">
-          <button id="startNext" class="primary big-action">开始下一个任务</button>
-          <button id="rescheduleDay" type="button" class="quiet-action">重新排时间</button>
+          <button id="startNext" class="primary big-action" aria-label="开始当前最重要的任务">开始下一个任务</button>
+          <button id="rescheduleDay" type="button" class="quiet-action" aria-label="重新安排今天任务时间">重新排时间</button>
         </div>
       </section>
 
@@ -42,7 +42,7 @@
             </div>
             <span class="tag ok">只看这一张</span>
           </div>
-          <div id="currentTask" class="current-task-shell">
+          <div id="currentTask" class="current-task-shell" role="region" aria-live="polite" aria-label="当前任务">
             <div class="empty-state">
               <strong>正在加载当前任务...</strong>
               <p>系统会自动选出现在最该做的一项。</p>
@@ -64,7 +64,7 @@
                 </div>
                 <span class="tag warn">通过线 80%</span>
               </div>
-              <div id="quizBox" class="empty-state">
+              <div id="quizBox" class="empty-state" role="region" aria-live="polite" aria-label="小测检查">
                 <strong>完成任务后，在这里正式检查</strong>
                 <p>题目会在这里展示，答完立即给出订正建议。</p>
               </div>
@@ -77,7 +77,7 @@
                 </div>
                 <span class="tag">先提示，不报答案</span>
               </div>
-              <div id="assistBox" class="empty-state compact">
+              <div id="assistBox" class="empty-state compact" role="status" aria-live="polite" aria-label="卡点提示">
                 <strong>遇到卡点就写一句话</strong>
                 <p>系统会按当前任务给解决步骤，学会后再回到任务继续。</p>
               </div>
@@ -90,7 +90,7 @@
             <span>后续任务队列</span>
             <small>只做完当前一项后再看。</small>
           </summary>
-          <div id="tasks" class="task-list compact-task-list"><p class="muted">正在加载今日任务...</p></div>
+          <div id="tasks" class="task-list compact-task-list" role="list" aria-label="后续任务队列"><p class="muted">正在加载今日任务...</p></div>
         </details>
       </section>
     </main>
@@ -211,15 +211,16 @@
 
       function primaryButton(task, doneAction, doneLabel, startDisabled, doneDisabled) {
         if (["checking", "needs_revision"].includes(task.status)) {
-          return `<button class="primary" data-action="${doneAction}" data-id="${task.id}" ${doneDisabled}>${doneLabel}</button>`;
+          return `<button class="primary" data-action="${doneAction}" data-id="${task.id}" aria-label="${doneLabel}" ${doneDisabled}>${doneLabel}</button>`;
         }
         if (task.status === "stuck") {
-          return `<button class="primary" data-action="resume" data-id="${task.id}" ${startDisabled}>我学会了，继续学</button>`;
+          return `<button class="primary" data-action="resume" data-id="${task.id}" aria-label="我学会了，继续学" ${startDisabled}>我学会了，继续学</button>`;
         }
         if (task.status === "in_progress") {
-          return `<button class="primary" data-action="${doneAction}" data-id="${task.id}" ${doneDisabled}>${doneLabel}</button>`;
+          return `<button class="primary" data-action="${doneAction}" data-id="${task.id}" aria-label="${doneLabel}" ${doneDisabled}>${doneLabel}</button>`;
         }
-        return `<button class="primary" data-action="${task.status === "stuck" ? "resume" : "start"}" data-id="${task.id}" ${startDisabled}>${task.status === "paused" ? "继续学习" : task.status === "completed" ? "已完成" : "开始学习"}</button>`;
+        const label = task.status === "paused" ? "继续学习" : task.status === "completed" ? "已完成" : "开始学习";
+        return `<button class="primary" data-action="${task.status === "stuck" ? "resume" : "start"}" data-id="${task.id}" aria-label="${label}" ${startDisabled}>${label}</button>`;
       }
 
       function secondaryButtons(buttons) {
@@ -291,10 +292,11 @@
                   : "我做完了，开始检查";
         const doneDisabled = canFinishTask && task.status !== "completed" ? "" : "disabled";
         const stuckDisabled = canAskStuck ? "" : "disabled";
-        const pauseButton = task.status === "in_progress" ? `<button data-action="pause" data-id="${task.id}">暂停</button>` : "";
-        const checkAfterPauseButton = task.status === "paused" ? `<button class="warn" data-action="${doneAction}" data-id="${task.id}" ${doneDisabled}>我做完了，开始检查</button>` : "";
-        const checkAfterStuckButton = task.status === "stuck" ? `<button class="warn" data-action="${doneAction}" data-id="${task.id}" ${doneDisabled}>${doneLabel}</button>` : "";
-        const stuckButton = canAskStuck ? `<button class="danger" data-action="stuck" data-id="${task.id}" ${stuckDisabled}>${task.status === "stuck" ? "还不会，再提示" : "我卡住了"}</button>` : "";
+        const pauseButton = task.status === "in_progress" ? `<button data-action="pause" data-id="${task.id}" aria-label="暂停计时">暂停</button>` : "";
+        const checkAfterPauseButton = task.status === "paused" ? `<button class="warn" data-action="${doneAction}" data-id="${task.id}" aria-label="我做完了，开始检查" ${doneDisabled}>我做完了，开始检查</button>` : "";
+        const checkAfterStuckButton = task.status === "stuck" ? `<button class="warn" data-action="${doneAction}" data-id="${task.id}" aria-label="${doneLabel}" ${doneDisabled}>${doneLabel}</button>` : "";
+        const stuckLabel = task.status === "stuck" ? "还不会，再提示" : "我卡住了";
+        const stuckButton = canAskStuck ? `<button class="danger" data-action="stuck" data-id="${task.id}" aria-label="${stuckLabel}" ${stuckDisabled}>${stuckLabel}</button>` : "";
         return `
           <div class="focus-status ${subjectClass(task)}">
             <span class="subject-badge">${subjectName(task)}</span>
@@ -503,6 +505,7 @@
         const submit = document.createElement("button");
         submit.className = "primary";
         submit.textContent = "提交小测";
+        submit.setAttribute("aria-label", "提交小测答案");
         form.append(submit);
         form.addEventListener("submit", async (event) => {
           event.preventDefault();

@@ -472,6 +472,23 @@ def init_db() -> None:
         )
         _ensure_columns(
             conn,
+            "skill_mastery",
+            {
+                "conflict_count": "INTEGER NOT NULL DEFAULT 0",
+                "decay_factor": "REAL NOT NULL DEFAULT 1",
+                "stable_weakness": "INTEGER NOT NULL DEFAULT 0",
+            },
+        )
+        _ensure_columns(
+            conn,
+            "memory_records",
+            {
+                "compressed_from_json": "TEXT NOT NULL DEFAULT '[]'",
+                "governance_event": "TEXT NOT NULL DEFAULT ''",
+            },
+        )
+        _ensure_columns(
+            conn,
             "agent_trace_steps",
             {
                 "thought": "TEXT NOT NULL DEFAULT ''",

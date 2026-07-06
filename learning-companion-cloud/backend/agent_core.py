@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import math
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from sqlite3 import Connection
 from typing import Any
 
 from .db import dumps, loads, utc_now
-from .rag_engine import embedding_score_for_chunk, upsert_chunk_embedding
+from .rag_engine import embedding_backend_status, embedding_score_for_chunk, upsert_chunk_embedding
 
 
 EXAM_TARGET = {'goal': '五年级上册语文、数学、英语阶段性考试稳定 95+',
@@ -164,26 +164,60 @@ def update_skill_mastery(
         (student_id, subject, skill),
     ).fetchone()
     previous = float(row["mastery_score"]) if row else 0.5
-    next_score = round(max(0.0, min(1.0, previous * 0.65 + score * 0.35)), 3)
+    decayed_previous, decay_factor = _apply_forgetting_decay(previous, str(row["updated_at"]) if row else now)
+    conflict_count = int(row["conflict_count"] if row and "conflict_count" in row.keys() else 0)
+    conflict = (decayed_previous >= 0.8 and score < 0.6) or (decayed_previous < 0.6 and score >= 0.85)
+    if conflict:
+        conflict_count += 1
+    confidence = round(max(0.35, min(0.9, 0.78 - conflict_count * 0.08 + score * 0.08)), 3)
+    weight = 0.45 if conflict else 0.35
+    next_score = round(max(0.0, min(1.0, decayed_previous * (1 - weight) + score * weight)), 3)
     previous_evidence = loads(row["evidence_json"] if row else None, [])
-    evidence_items = ([evidence] + previous_evidence)[:8]
+    governance_note = {
+        "event": "mastery_update",
+        "score": round(score, 3),
+        "previous": previous,
+        "decayed_previous": decayed_previous,
+        "decay_factor": decay_factor,
+        "conflict": conflict,
+        "conflict_count": conflict_count,
+    }
+    evidence_items = ([evidence, governance_note] + previous_evidence)[:10]
+    stable_weakness = 1 if next_score < 0.75 and conflict_count >= 1 else 0
     conn.execute(
         """
         INSERT INTO skill_mastery (
             student_id, subject, skill, mastery_score, confidence, evidence_json,
-            last_task_id, last_quiz_result_id, updated_at
+            last_task_id, last_quiz_result_id, updated_at, conflict_count, decay_factor, stable_weakness
         )
-        VALUES (?, ?, ?, ?, 0.75, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(student_id, subject, skill, unit, lesson) DO UPDATE SET
             mastery_score = excluded.mastery_score,
             confidence = excluded.confidence,
             evidence_json = excluded.evidence_json,
             last_task_id = excluded.last_task_id,
             last_quiz_result_id = excluded.last_quiz_result_id,
+            conflict_count = excluded.conflict_count,
+            decay_factor = excluded.decay_factor,
+            stable_weakness = excluded.stable_weakness,
             updated_at = excluded.updated_at
         """,
-        (student_id, subject, skill, next_score, dumps(evidence_items), daily_task_id, quiz_result_id, now),
+        (student_id, subject, skill, next_score, confidence, dumps(evidence_items), daily_task_id, quiz_result_id, now, conflict_count, decay_factor, stable_weakness),
     )
+    if conflict or stable_weakness:
+        write_memory(
+            conn,
+            student_id,
+            "semantic" if stable_weakness else "episodic",
+            subject,
+            skill,
+            f"{skill}出现{'稳定薄弱点' if stable_weakness else '冲突证据'}：本次得分 {score:.2f}，历史衰减后 {decayed_previous:.2f}。",
+            "memory_governance",
+            quiz_result_id or daily_task_id,
+            0.85 if stable_weakness else 0.7,
+            governance_event="stable_weakness" if stable_weakness else "conflict_resolution",
+        )
+    compress_learning_memories(conn, student_id, subject, skill)
 
 
 def write_memory(
@@ -197,6 +231,8 @@ def write_memory(
     source_id: int | None = None,
     confidence: float = 0.7,
     status: str = "active",
+    governance_event: str = "",
+    compressed_from: list[int] | None = None,
 ) -> int:
     now = utc_now()
     blocked = ["忽略规则", "直接告诉我答案", "以后都给答案", "ignore previous"]
@@ -207,13 +243,60 @@ def write_memory(
         """
         INSERT INTO memory_records (
             student_id, memory_type, subject, skill, content, source_type,
-            source_id, confidence, status, created_at, updated_at
+            source_id, confidence, status, compressed_from_json, governance_event, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (student_id, memory_type, subject, skill, content[:600], source_type, source_id, confidence, status, now, now),
+        (student_id, memory_type, subject, skill, content[:600], source_type, source_id, confidence, status, dumps(compressed_from or []), governance_event, now, now),
     )
     return int(cursor.lastrowid)
+
+
+def compress_learning_memories(conn: Connection, student_id: int, subject: str, skill: str, threshold: int = 5) -> dict[str, Any]:
+    rows = conn.execute(
+        """
+        SELECT * FROM memory_records
+        WHERE student_id = ? AND subject = ? AND skill = ? AND memory_type = 'episodic' AND status = 'active'
+        ORDER BY id DESC
+        LIMIT 20
+        """,
+        (student_id, subject, skill),
+    ).fetchall()
+    if len(rows) < threshold:
+        return {"compressed": False, "count": len(rows)}
+    selected = [dict(row) for row in rows[:threshold]]
+    source_ids = [int(row["id"]) for row in selected]
+    weakness_count = sum(1 for row in selected if any(word in row["content"] for word in ("错", "薄弱", "不会", "未掌握", "冲突")))
+    summary = f"{subject}{skill}近期出现 {len(selected)} 条学习记忆，其中 {weakness_count} 条指向薄弱或错因；后续计划应优先短复盘。"
+    memory_id = write_memory(
+        conn,
+        student_id,
+        "semantic",
+        subject,
+        skill,
+        summary,
+        "memory_compression",
+        None,
+        min(0.95, 0.65 + weakness_count * 0.06),
+        "active",
+        governance_event="memory_compression",
+        compressed_from=source_ids,
+    )
+    conn.execute(
+        f"UPDATE memory_records SET status = 'compressed', updated_at = ? WHERE id IN ({','.join('?' for _ in source_ids)})",
+        (utc_now(), *source_ids),
+    )
+    return {"compressed": True, "memory_id": memory_id, "source_ids": source_ids}
+
+
+def _apply_forgetting_decay(previous: float, updated_at: str) -> tuple[float, float]:
+    try:
+        parsed = datetime.fromisoformat(updated_at.replace("Z", "+00:00")).date()
+    except ValueError:
+        parsed = date.today()
+    days = max(0, (date.today() - parsed).days)
+    decay_factor = round(max(0.72, 0.97 ** days), 3)
+    return round(previous * decay_factor + 0.5 * (1 - decay_factor), 3), decay_factor
 
 
 def list_active_memories(conn: Connection, student_id: int = 1, limit: int = 50) -> list[dict[str, Any]]:
@@ -374,6 +457,7 @@ def index_material(conn: Connection, material_id: int) -> dict[str, Any]:
 
 def search_material_chunks(conn: Connection, query: str, subject: str = "", student_id: int = 1, limit: int = 8) -> list[dict[str, Any]]:
     terms = _keywords(query)
+    negative_terms = _negative_scope_terms(query)
     query_vector = _retrieval_vector(query)
     rows = conn.execute(
         """
@@ -384,25 +468,63 @@ def search_material_chunks(conn: Connection, query: str, subject: str = "", stud
         """,
         (student_id, subject, subject),
     ).fetchall()
-    scored: list[tuple[float, dict[str, Any]]] = []
+    scored_raw: list[tuple[float, float, float, dict[str, Any]]] = []
     for row in rows:
         item = dict(row)
         keywords = loads(item["keywords_json"], [])
         haystack = f"{item['chunk_text']} {' '.join(keywords)} {item['source_ref']} {item['section']} {item['knowledge_type']}"
+        if negative_terms and any(term in haystack for term in negative_terms):
+            continue
         keyword_score = sum(2 if term in item["chunk_text"] else 1 for term in terms if term in haystack)
         vector_score = max(_cosine_similarity(query_vector, _retrieval_vector(haystack)), embedding_score_for_chunk(conn, int(item["id"]), query))
         if subject and item["subject"] == subject:
             keyword_score += 1
-        score = keyword_score + vector_score * 4
-        if score > 0 or not terms:
+        bm25_score = _bm25_like_score(terms, haystack)
+        if keyword_score > 0 or bm25_score > 0 or vector_score > 0.12 or not terms:
             item["keywords"] = loads(item.pop("keywords_json"), [])
-            item["match_score"] = round(score, 3)
             item["keyword_score"] = keyword_score
+            item["bm25_score"] = round(bm25_score, 3)
             item["vector_score"] = round(vector_score, 3)
-            item["retrieval_method"] = "hybrid_keyword_vector_embedding"
-            scored.append((score, item))
+            scored_raw.append((float(keyword_score), bm25_score, vector_score, item))
+    max_keyword = max((row[0] for row in scored_raw), default=1.0) or 1.0
+    max_bm25 = max((row[1] for row in scored_raw), default=1.0) or 1.0
+    scored: list[tuple[float, dict[str, Any]]] = []
+    for keyword_score, bm25_score, vector_score, item in scored_raw:
+        keyword_norm = keyword_score / max_keyword
+        bm25_norm = bm25_score / max_bm25
+        vector_norm = max(0.0, min(1.0, (vector_score + 1.0) / 2.0))
+        fused_score = keyword_norm * 0.35 + bm25_norm * 0.2 + vector_norm * 0.45
+        if subject and item["subject"] == subject:
+            fused_score += 0.05
+        item["match_score"] = round(fused_score, 3)
+        item["keyword_norm"] = round(keyword_norm, 3)
+        item["bm25_norm"] = round(bm25_norm, 3)
+        item["vector_norm"] = round(vector_norm, 3)
+        item["retrieval_method"] = "hybrid_bm25_semantic_embedding"
+        item["embedding_model"] = embedding_backend_status()["model"]
+        scored.append((fused_score, item))
     scored.sort(key=lambda pair: (pair[0], pair[1]["id"]), reverse=True)
     return [item for _score, item in scored[:limit]]
+
+
+def _bm25_like_score(terms: list[str], text: str) -> float:
+    if not terms:
+        return 0.1
+    length = max(len(text), 1)
+    score = 0.0
+    for term in terms:
+        count = text.count(term)
+        if count:
+            tf = count / (count + 1.2 + 0.25 * length / 500)
+            score += tf * (1.5 if len(term) >= 2 else 1.0)
+    return score
+
+
+def _negative_scope_terms(query: str) -> list[str]:
+    if not any(marker in query for marker in ("不要", "别", "不能", "不学", "超纲")):
+        return []
+    candidates = ["初中", "有理数", "方程组", "六年级", "分数除法", "竞赛", "奥数"]
+    return [term for term in candidates if term in query]
 
 
 def build_material_coverage(conn: Connection, student_id: int = 1) -> dict[str, Any]:

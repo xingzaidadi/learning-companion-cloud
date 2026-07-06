@@ -25,6 +25,10 @@ def main() -> None:
     admin = read("frontend/admin.html")
     css = read("frontend/static/styles.css")
     combined = child + parent + admin + css
+    button_count = combined.count("<button")
+    aria_button_count = combined.count("aria-label=")
+    child_copy_lengths = [len(text) for text in re.findall(r">([^<>]{6,40})<", child) if re.search(r"[\u4e00-\u9fff]", text)]
+    avg_child_copy_length = sum(child_copy_lengths) / max(len(child_copy_lengths), 1)
 
     checks = {
         "child_focus": [
@@ -48,6 +52,14 @@ def main() -> None:
             ("soft_background", "radial-gradient" in css and "linear-gradient" in css, "页面背景不能是纯白平铺。"),
             ("card_system", ".card" in css and "--radius" in css, "卡片和圆角系统必须统一。"),
             ("responsive", "@media (max-width: 820px)" in css, "必须适配窄屏。"),
+        ],
+        "accessibility_ux": [
+            ("aria_coverage", 'role="main"' in child and 'role="main"' in parent and 'role="main"' in admin and aria_button_count >= 8, "三端主区域和关键按钮必须有无障碍名称。"),
+            ("live_regions", 'aria-live="polite"' in child and 'role="status"' in child, "孩子端当前任务、小测和卡点提示需要状态播报。"),
+            ("touch_target_size", "min-height: 44px" in css and "min-width: 44px" in css, "按钮触控面积至少 44px。"),
+            ("focus_visible", ":focus-visible" in css and "outline" in css, "键盘焦点必须清晰可见。"),
+            ("child_copy_length", avg_child_copy_length <= 18, f"孩子端平均文案长度应适龄，当前 {avg_child_copy_length:.1f}。"),
+            ("contrast_tokens", all(token in css for token in ("--text", "--muted", "--primary-dark", "--danger")), "颜色 token 应支持可读对比度。"),
         ],
         "maintainability": [
             ("no_visible_entities", not re.search(r"&#\d{4,};", child + parent + admin), "页面可见中文不能依赖数字 HTML 实体。"),

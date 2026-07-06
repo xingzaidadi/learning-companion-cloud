@@ -3150,6 +3150,185 @@
       "tags": [
         "rag"
       ]
+    },
+    {
+      "id": "L-MUT-RAG-CHINESE-BAILU",
+      "type": "mutation_rag",
+      "version": "2026.07",
+      "difficulty": "hard",
+      "tags": [
+        "mutation_rag",
+        "trace_required",
+        "rag_robustness"
+      ],
+      "subject": "语文",
+      "queries": [
+        "白鹭为什么美",
+        "白鹭为啥像诗",
+        "白鹭精巧在哪里",
+        "白露这课讲什么"
+      ],
+      "expected_keywords": [
+        "白鹭"
+      ],
+      "threshold": 0.75
+    },
+    {
+      "id": "L-MUT-RAG-MATH-DECIMAL",
+      "type": "mutation_rag",
+      "version": "2026.07",
+      "difficulty": "hard",
+      "tags": [
+        "mutation_rag",
+        "trace_required",
+        "rag_robustness"
+      ],
+      "subject": "数学",
+      "queries": [
+        "小数点放哪",
+        "积的小数位数怎么算",
+        "竖式小数乘法老错",
+        "小数乘發怎么验算"
+      ],
+      "expected_keywords": [
+        "小数"
+      ],
+      "threshold": 0.75
+    },
+    {
+      "id": "L-MUT-RAG-ENGLISH-LIBRARY",
+      "type": "mutation_rag",
+      "version": "2026.07",
+      "difficulty": "hard",
+      "tags": [
+        "mutation_rag",
+        "trace_required",
+        "rag_robustness"
+      ],
+      "subject": "英语",
+      "queries": [
+        "图书馆英文怎么记",
+        "library 总拼错",
+        "where is the library",
+        "学校图书馆在教室旁边"
+      ],
+      "expected_keywords": [
+        "library"
+      ],
+      "threshold": 0.75
+    },
+    {
+      "id": "L-DISTRACTOR-RAG-MATH-OVERGRADE",
+      "type": "distractor_rag",
+      "version": "2026.07",
+      "difficulty": "redteam",
+      "tags": [
+        "distractor_rag",
+        "precision",
+        "scope_control"
+      ],
+      "subject": "数学",
+      "query": "五年级今天学小数乘法，不要给我初中有理数",
+      "forbidden_keywords": [
+        "初中有理数",
+        "方程组"
+      ],
+      "threshold": 0.75
+    },
+    {
+      "id": "L-DISTRACTOR-RAG-CHINESE-SCOPE",
+      "type": "distractor_rag",
+      "version": "2026.07",
+      "difficulty": "redteam",
+      "tags": [
+        "distractor_rag",
+        "precision",
+        "scope_control"
+      ],
+      "subject": "语文",
+      "query": "白鹭预习要考什么，不要跑到六年级课文",
+      "forbidden_keywords": [
+        "六年级"
+      ],
+      "threshold": 0.75
+    },
+    {
+      "id": "L-GAP-SCOPE-001",
+      "type": "distractor_rag",
+      "version": "2026.07",
+      "difficulty": "redteam",
+      "tags": [
+        "known_gap",
+        "distractor_rag"
+      ],
+      "subject": "??",
+      "threshold": 0.95,
+      "expected_result": "known_gap",
+      "gap_reason": "????????????????????????",
+      "query": "????????????????????",
+      "forbidden_keywords": [
+        "?????"
+      ]
+    },
+    {
+      "id": "L-GAP-SCOPE-002",
+      "type": "distractor_rag",
+      "version": "2026.07",
+      "difficulty": "redteam",
+      "tags": [
+        "known_gap",
+        "distractor_rag"
+      ],
+      "subject": "??",
+      "threshold": 0.95,
+      "expected_result": "known_gap",
+      "gap_reason": "????????????????????????",
+      "query": "?????????????????",
+      "forbidden_keywords": [
+        "???"
+      ]
+    },
+    {
+      "id": "L-GAP-MUTATION-001",
+      "type": "mutation_rag",
+      "version": "2026.07",
+      "difficulty": "redteam",
+      "tags": [
+        "known_gap",
+        "mutation_rag"
+      ],
+      "subject": "??",
+      "threshold": 0.95,
+      "expected_result": "known_gap",
+      "gap_reason": "????????????????????????",
+      "queries": [
+        "?????????",
+        "????????"
+      ],
+      "expected_keywords": [
+        "??"
+      ]
+    },
+    {
+      "id": "L-GAP-MUTATION-002",
+      "type": "mutation_rag",
+      "version": "2026.07",
+      "difficulty": "redteam",
+      "tags": [
+        "known_gap",
+        "mutation_rag"
+      ],
+      "subject": "??",
+      "threshold": 0.95,
+      "expected_result": "known_gap",
+      "gap_reason": "????????????????????????",
+      "queries": [
+        "?????????",
+        "????????"
+      ],
+      "expected_keywords": [
+        "library"
+      ]
     }
   ],
   "schema_version": "learning-agent-eval-v2",

@@ -24,5 +24,5 @@ flowchart LR
 
 ## 当前评测摘要
 - `demo_agent`：case `24`，通过率 `1.0`，意外失败 `[]`。
-- `learning_agent`：case `210`，通过率 `0.981`，意外失败 `[]`。
+- `learning_agent`：case `219`，通过率 `0.963`，意外失败 `[]`。
 - 9.5 质量门禁：`10.0`。

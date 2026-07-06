@@ -20,6 +20,8 @@ class LearningAgentAdapter:
         self.client: TestClient | None = None
 
     def reset(self) -> None:
+        self.temp_dir = Path(tempfile.mkdtemp(prefix="learning-agent-eval-"))
+        self.db_path = self.temp_dir / "learning.db"
         if self.db_path.exists():
             self.db_path.unlink()
         os.environ["DATABASE_PATH"] = str(self.db_path)
@@ -28,8 +30,11 @@ class LearningAgentAdapter:
         os.environ["CHILD_PASSWORD"] = ""
         os.environ["PARENT_PASSWORD"] = ""
         os.environ["ADMIN_PASSWORD"] = ""
+        import backend.db as backend_db
         from backend.app import app
         from backend.db import init_db
+
+        backend_db.DB_PATH = self.db_path
 
         init_db()
         self.client = TestClient(app)
@@ -57,6 +62,11 @@ class LearningAgentAdapter:
                 "英语",
                 "Unit 1 My school is cool: library, classroom, teacher, playground are dictation words. "
                 "Sentence pattern: Where is the library? It is next to the classroom. Listening and reading should not leak answers before quiz.",
+            ),
+            (
+                "超纲干扰材料：六年级与初中内容",
+                "数学",
+                "六年级分数乘除法和初中有理数、方程组不是武汉小学五年级上册当天任务范围。检索到这些内容时应降低优先级或拒绝作为五上依据。",
             ),
         ]
         for title, subject, content in fixtures:
@@ -98,6 +108,27 @@ class LearningAgentAdapter:
                 else:
                     issues.append(f"missing keyword: {keyword}")
             metrics["expected_keyword_match"] = matched_keywords / max(len(expected_keywords), 1)
+        elif case_type == "mutation_rag":
+            queries = case.get("queries", [])
+            hits_by_query: list[dict[str, Any]] = []
+            matched = 0
+            for query in queries:
+                hits = self.client.get(f"/api/materials/search?q={query}&subject={case.get('subject', '')}").json()
+                top = hits[:2]
+                hit_text = str(top)
+                ok = all(keyword.lower() in hit_text.lower() for keyword in case.get("expected_keywords", []))
+                matched += 1 if ok else 0
+                hits_by_query.append({"query": query, "ok": ok, "top": top})
+            metrics["recall_robustness"] = matched / max(len(queries), 1)
+            metrics["source_grounded"] = 1.0 if any(item["top"] for item in hits_by_query) else 0.0
+            output = {"mutations": hits_by_query}
+        elif case_type == "distractor_rag":
+            hits = self.client.get(f"/api/materials/search?q={case['query']}&subject={case.get('subject', '')}").json()
+            output = {"hits": hits[:5]}
+            forbidden = case.get("forbidden_keywords", [])
+            hit_text = str(hits[:5])
+            metrics["precision_vs_distractor"] = 0.0 if any(word in hit_text for word in forbidden) else 1.0
+            metrics["safe_scope"] = 1.0 if hits else 0.0
         elif case_type == "planning":
             plan = self.client.post("/api/study-plan/generate", data={"raw_text": case["input"], "student_id": "1"}).json()
             tasks = self.client.post("/api/agent/daily-tasks", json={"student_id": 1, "force_all_sources": True}).json()
@@ -123,6 +154,8 @@ class LearningAgentAdapter:
                 metrics["actionable"] = 1.0 if len(steps) >= 3 else 0.0
                 metrics["no_direct_answer"] = 0.0 if any(word in str(stuck) for word in case.get("forbidden", [])) else 1.0
                 metrics["tool_loop"] = 1.0 if stuck.get("tool_loop", {}).get("mode") == "controlled_tool_loop" else 0.0
+                tool_calls = [step for step in stuck.get("tool_loop", {}).get("steps", []) if step.get("step_type") == "tool_call"]
+                metrics["multi_step_convergence"] = 1.0 if tool_calls and any(step.get("step_type") == "reflect" for step in stuck.get("tool_loop", {}).get("steps", [])) else 0.0
                 trace_quality = trace_completeness(self._latest_trace_steps())
                 metrics["trace_standard"] = trace_quality["score"]
                 output["trace_quality"] = trace_quality

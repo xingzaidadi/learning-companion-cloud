@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <main class="shell parent-shell" data-quality="parent-three-questions parent-action-focus parent-progressive-details">
+    <main class="shell parent-shell" role="main" aria-label="家长看板" data-quality="parent-three-questions parent-action-focus parent-progressive-details parent-accessible">
       <header class="topbar">
         <div class="brand">
           <h1>家长端</h1>
@@ -38,8 +38,8 @@
           <h2>今日操作</h2>
           <div id="report" class="muted">晚上会自动生成日报；也可以现在手动生成。</div>
           <div class="actions">
-            <button id="endDay" class="primary">生成今天日报</button>
-            <button id="weekReport">生成本周周报</button>
+            <button id="endDay" class="primary" aria-label="生成今天学习日报">生成今天日报</button>
+            <button id="weekReport" aria-label="生成本周学习周报">生成本周周报</button>
           </div>
         </aside>
       </section>

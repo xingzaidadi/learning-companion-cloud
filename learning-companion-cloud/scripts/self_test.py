@@ -119,7 +119,8 @@ def run_e2e() -> None:
         assert_true(embedding_count >= 1, "资料索引应同步写入 embedding 表")
         hits = assert_status(client.get("/api/materials/search?q=白鹭 精巧&subject=语文"))
         assert_true(any("白鹭" in hit["chunk_text"] for hit in hits), f"中文 RAG 应命中白鹭资料：{hits}")
-        assert_true(any(hit.get("retrieval_method") == "hybrid_keyword_vector_embedding" for hit in hits), f"RAG 应使用混合检索和 embedding 评分：{hits}")
+        assert_true(any(hit.get("retrieval_method") == "hybrid_bm25_semantic_embedding" for hit in hits), f"RAG 应使用 BM25 + 语义 embedding 融合评分：{hits}")
+        assert_true(any(hit.get("embedding_model") for hit in hits), f"RAG 应返回实际 embedding 模型：{hits}")
 
         tasks = assert_status(client.get("/api/daily-tasks"))
         task = tasks[0]

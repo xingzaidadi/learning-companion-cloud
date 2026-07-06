@@ -158,6 +158,7 @@ def run_controlled_tool_loop(
     fallback_tool: str,
     fallback_arguments: dict[str, Any],
     allow_write: bool = False,
+    max_steps: int = 3,
 ) -> dict[str, Any]:
     """Run a small, controlled tool loop.
 
@@ -210,15 +211,70 @@ def run_controlled_tool_loop(
         arguments = fallback_arguments
         validation = validate_tool_call(tool_name, arguments, allow_write=allow_write)
 
-    observation: Any = None
+    observations: list[Any] = []
+    loop_steps: list[dict[str, Any]] = [
+        {
+            "step_index": 1,
+            "step_type": "goal",
+            "thought": "明确孩子卡住辅导目标，只允许检索资料和给分步提示。",
+            "decision": {"goal": goal, "candidate_tools": candidate_tools, "max_steps": max_steps},
+            "tool_name": "agent_runtime",
+            "status": "ok",
+            "score": 1.0,
+        },
+        {
+            "step_index": 2,
+            "step_type": "decision",
+            "thought": "选择最安全且最相关的只读工具。",
+            "tool_name": tool_name,
+            "arguments": arguments,
+            "decision": {"tool": tool_name, "arguments": arguments},
+            "reason": decision.get("reason", ""),
+            "validation": validation,
+            "status": "ok" if validation.get("ok") else "warn",
+            "score": 1.0 if validation.get("ok") else 0.5,
+        },
+    ]
     status = "ok"
     error = ""
-    try:
-        observation = executors[tool_name](arguments)
-    except Exception as exc:  # pragma: no cover - defensive safety belt
-        status = "error"
-        error = f"{type(exc).__name__}: {str(exc)[:200]}"
-        observation = []
+    current_arguments = dict(arguments)
+    for iteration in range(max(1, max_steps)):
+        observation: Any = None
+        try:
+            observation = executors[tool_name](current_arguments)
+        except Exception as exc:  # pragma: no cover - defensive safety belt
+            status = "error"
+            error = f"{type(exc).__name__}: {str(exc)[:200]}"
+            observation = []
+        observations.append(observation)
+        evidence_enough = not _needs_more_evidence(observation, iteration, max_steps)
+        loop_steps.append(
+            {
+                "step_index": len(loop_steps) + 1,
+                "step_type": "tool_call",
+                "thought": f"第 {iteration + 1} 轮检索教材证据。",
+                "tool_name": tool_name,
+                "args": current_arguments,
+                "observation_preview": _preview_observation(observation),
+                "status": status,
+                "error": error,
+                "score": 1.0 if status == "ok" and observation else 0.4,
+            }
+        )
+        loop_steps.append(
+            {
+                "step_index": len(loop_steps) + 1,
+                "step_type": "reflect",
+                "thought": "反思当前证据是否足够支持孩子一步一步继续学。",
+                "tool_name": "agent_runtime",
+                "decision": {"evidence_enough": evidence_enough, "next_action": "finalize" if evidence_enough else "retry_with_refined_query"},
+                "status": "ok",
+                "score": 1.0 if evidence_enough else 0.7,
+            }
+        )
+        if evidence_enough or status != "ok":
+            break
+        current_arguments = _refine_search_arguments(current_arguments, context, iteration)
 
     return {
         "mode": "controlled_tool_loop",
@@ -226,55 +282,28 @@ def run_controlled_tool_loop(
         "model": meta.get("model", "rule"),
         "status": status if status != "ok" else meta.get("status", "ok"),
         "error": error or meta.get("error", ""),
-        "steps": [
+        "steps": loop_steps
+        + [
             {
-                "step_index": 1,
-                "step_type": "goal",
-                "thought": "明确孩子卡住辅导目标，只允许检索资料和给分步提示。",
-                "decision": {"goal": goal, "candidate_tools": candidate_tools},
-                "status": "ok",
-                "score": 1.0,
-            },
-            {
-                "step_index": 2,
-                "step_type": "decision",
-                "thought": "选择最安全且最相关的只读工具。",
-                "tool_name": tool_name,
-                "arguments": arguments,
-                "decision": {"tool": tool_name, "arguments": arguments},
-                "reason": decision.get("reason", ""),
-                "validation": validation,
-                "status": "ok" if validation.get("ok") else "warn",
-                "score": 1.0 if validation.get("ok") else 0.5,
-            },
-            {
-                "step_index": 3,
-                "step_type": "tool_call",
-                "thought": "执行检索工具并拿到教材依据。",
-                "tool_name": tool_name,
-                "observation_preview": _preview_observation(observation),
-                "status": status,
-                "error": error,
-                "score": 1.0 if status == "ok" else 0.0,
-            },
-            {
-                "step_index": 4,
+                "step_index": len(loop_steps) + 1,
                 "step_type": "evaluate",
-                "thought": "检查是否拿到可用于分步辅导的证据。",
-                "decision": {"has_observation": bool(observation), "used_ai_decision": bool(meta.get("used_ai"))},
+                "thought": "检查多轮检索是否拿到可用于分步辅导的证据。",
+                "tool_name": "agent_runtime",
+                "decision": {"has_observation": any(bool(item) for item in observations), "used_ai_decision": bool(meta.get("used_ai"))},
                 "status": status,
-                "score": 1.0 if observation else 0.6,
+                "score": 1.0 if any(bool(item) for item in observations) else 0.6,
             },
             {
-                "step_index": 5,
+                "step_index": len(loop_steps) + 2,
                 "step_type": "final",
-                "thought": "将检索观察交给卡住辅导生成器。",
-                "observation_preview": _preview_observation(observation),
+                "thought": "将最相关教材观察交给卡住辅导生成器。",
+                "tool_name": "agent_runtime",
+                "observation_preview": _preview_observation(_merge_observations(observations)),
                 "status": status,
                 "score": 1.0 if status == "ok" else 0.5,
             },
         ],
-        "final_observation": observation,
+        "final_observation": _merge_observations(observations),
     }
 
 
@@ -284,6 +313,45 @@ def _preview_observation(observation: Any) -> Any:
     if isinstance(observation, dict):
         return {key: observation[key] for key in list(observation)[:6]}
     return observation
+
+
+def _needs_more_evidence(observation: Any, iteration: int, max_steps: int) -> bool:
+    if iteration >= max_steps - 1:
+        return False
+    if not observation:
+        return True
+    if isinstance(observation, list):
+        if len(observation) < 2:
+            return True
+        top_score = float(observation[0].get("match_score", 0) or 0) if isinstance(observation[0], dict) else 0.0
+        return top_score < 0.55 and iteration == 0
+    return False
+
+
+def _refine_search_arguments(arguments: dict[str, Any], context: dict[str, Any], iteration: int) -> dict[str, Any]:
+    refined = dict(arguments)
+    note = str(context.get("child_note") or "")
+    title = str(context.get("task_title") or "")
+    subject = str(context.get("subject") or refined.get("subject") or "")
+    refined["query"] = " ".join(part for part in [note, title, subject, "易错点 例题 步骤"] if part).strip()
+    refined["limit"] = max(int(refined.get("limit") or 3), 5 if iteration == 0 else 3)
+    return refined
+
+
+def _merge_observations(observations: list[Any]) -> Any:
+    if not observations:
+        return []
+    if all(isinstance(item, list) for item in observations):
+        merged: list[Any] = []
+        seen: set[str] = set()
+        for observation in observations:
+            for row in observation:
+                key = str(row.get("id") if isinstance(row, dict) else row)
+                if key not in seen:
+                    seen.add(key)
+                    merged.append(row)
+        return merged
+    return observations[-1]
 
 
 def _default_evaluate(observation: Any, status: str, error: str) -> dict[str, Any]:
