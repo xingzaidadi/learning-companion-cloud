@@ -200,6 +200,18 @@ button:disabled {
   color: var(--muted);
 }
 
+.now-next-summary {
+  display: inline-flex;
+  max-width: 100%;
+  margin-top: 8px !important;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #243055 !important;
+  font-weight: 900;
+  box-shadow: inset 0 0 0 1px rgba(56, 103, 255, 0.12);
+}
+
 .progress-number {
   font-size: clamp(46px, 10vw, 96px);
   font-weight: 900;

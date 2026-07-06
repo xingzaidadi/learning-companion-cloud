@@ -121,6 +121,13 @@ def run_e2e() -> None:
         assert_true(sum(1 for ok in mixed_markers.values() if ok) >= 4, f"完整长提示词生成的今日任务必须语数英运动穿插：{mixed_markers} {generated['tasks']}")
         math_count = sum(1 for task in generated["tasks"] if any(word in f"{task.get('title', '')} {task.get('description', '')}" for word in ("数学", "口算", "小数")))
         assert_true(math_count <= 3, f"数学任务不能过重堆叠：math_count={math_count} tasks={generated['tasks']}")
+        ket_tasks = [task for task in generated["tasks"] if "KET" in task.get("title", "")]
+        assert_true(ket_tasks and any("词汇 + 听力" in task.get("title", "") for task in ket_tasks), f"KET 周一应生成具体技能轮换任务，而不是泛泛备考：{ket_tasks}")
+        assert_true(any("复习 10 个词" in task.get("description", "") and "听" in task.get("description", "") for task in ket_tasks), f"KET 今日任务应包含可执行步骤：{ket_tasks}")
+        ket_quiz = assert_status(client.get(f"/api/daily-tasks/{ket_tasks[0]['id']}/quiz"))
+        ket_quiz_text = "\n".join(item.get("question", "") for item in ket_quiz.get("items", []))
+        assert_true("KET" in ket_quiz_text or "听力" in ket_quiz_text or "英文" in ket_quiz_text, f"KET 小测应围绕 KET/英语能力：{ket_quiz_text}")
+        assert_true("精确计算" not in ket_quiz_text and "小数" not in ket_quiz_text, f"KET 小测不能被数学资料带偏：{ket_quiz_text}")
         timeline = assert_status(client.get("/api/day-timeline"))
         blocks = timeline.get("blocks", [])
         block_text = "\n".join(f"{block.get('start')}-{block.get('end')} {block.get('kind')} {block.get('title')}" for block in blocks)

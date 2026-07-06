@@ -21,6 +21,13 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         "english_minutes": 25,
         "ket_minutes": 20,
     },
+    "ket_plan": {
+        "level": "standard",
+        "book_mode": "pending",
+        "weekday_minutes": 35,
+        "mock_minutes": 60,
+        "low_score_remedial_minutes": 20,
+    },
     "path_rules": {
         "quiz_pass_score": 0.8,
         "low_score_blocks_new_preview": True,

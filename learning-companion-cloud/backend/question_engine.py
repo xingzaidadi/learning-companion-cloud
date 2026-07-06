@@ -303,6 +303,45 @@ def _build_english_quiz(topic: str, content: str, config: dict[str, Any], versio
     ]
 
 
+def _build_ket_quiz(topic: str, content: str, config: dict[str, Any]) -> list[dict[str, Any]]:
+    normalized = _normalize_text(f"{topic} {content} {config.get('module', '')}")
+    if any(key in normalized for key in ("听力", "听", "listening", "跟读")):
+        return [
+            _short("听力复盘：写出今天材料里的 2 个关键词。", "关键词", "听力不是逐词听懂，先抓场景和关键词。", "english_reading_check"),
+            _choice("KET 听力没听清一处时，最合适的做法是？", ["停住想刚才那句", "继续听后面的关键词", "直接放弃"], "继续听后面的关键词", "考试中要跟上录音节奏。", "choice"),
+            _short("跟读检查：写出或说出你今天跟读最顺的一句英文。", "完整英文句子", "句子要完整，能读清楚更重要。", "english_sentence_make"),
+        ]
+    if any(key in normalized for key in ("阅读", "读", "reading")):
+        return [
+            _short("阅读定位：写出 1 个答案来自原文哪一句或哪几个词。", "原文依据", "KET 阅读要训练定位依据，而不是只凭感觉。", "english_reading_check"),
+            _choice("做 KET 阅读题时，先看什么更稳？", ["先看题干关键词", "直接背全文", "只看选项最长的"], "先看题干关键词", "先找关键词，再回原文定位。", "choice"),
+            _short("词汇复盘：写出今天阅读里 2 个需要复习的词。", "写出词汇", "词汇要回到语境里复习。", "english_word_en_to_cn"),
+        ]
+    if any(key in normalized for key in ("写作", "写", "writing")):
+        return [
+            _short("写作检查：写出今天最满意的一句英文。", "完整英文句子", "检查主语、动词、单复数和标点。", "english_sentence_make"),
+            _choice("KET 写作短句最先保证什么？", ["句子完整", "词越难越好", "越长越好"], "句子完整", "小学阶段先保证完整、准确、清楚。", "choice"),
+            _short("请用 because 或 also 写一个补充句。", "完整英文句子", "进阶孩子可以练习连接词，让表达更完整。", "english_sentence_make"),
+        ]
+    if any(key in normalized for key in ("口语", "口头", "speaking", "话题")):
+        return [
+            _short("口语话题：写出今天你回答的话题。", "写出主题", "先明确话题，再组织句子。", "english_reading_check"),
+            _short("写出一句你可以直接说出口的完整英文回答。", "完整英文句子", "口语回答要用完整句，声音清楚。", "english_sentence_make"),
+            _choice("KET 口语回答更应该像哪一种？", ["只说一个词", "完整句 + 一个理由", "完全背中文"], "完整句 + 一个理由", "能补充理由，表达会更自然。", "choice"),
+        ]
+    if any(key in normalized for key in ("模拟", "周测", "mock")):
+        return [
+            _short("周测复盘：写出今天错得最多的一类题。", "错题类型", "模拟的价值在复盘，不是只看分数。", "english_reading_check"),
+            _short("写出 2 个要进入下周复习的错词。", "写出错词", "错词需要滚动复习。", "english_spelling"),
+            _choice("小模拟后最重要的一步是？", ["马上做下一套", "整理错因和错词", "只看总分"], "整理错因和错词", "错因会决定次日补救任务。", "choice"),
+        ]
+    return [
+        _short("词汇复盘：写出今天记住的 5 个 KET 单词。", "写出单词", "标准/进阶模式可以从 3 个提高到 5 个。", "english_spelling"),
+        _short("任选 1 个词写一个英文短句。", "完整英文句子", "短句要完整、自然。", "english_sentence_make"),
+        _choice("KET 备考最稳的方式是？", ["每天短练并复盘", "一次背很多不复习", "只刷题不整理"], "每天短练并复盘", "持续短练 + 错题复盘更适合孩子。", "choice"),
+    ]
+
+
 def _math_decimal_items(content: str, topic: str) -> list[dict[str, Any]]:
     normalized = _normalize_text(content + topic)
     wants_mul = any(key in normalized for key in ("小数乘", "乘法", "乘整数", "小数乘整数"))
@@ -410,11 +449,13 @@ def build_content_quiz(
         if value
     )
     subject_text = subject + "\n" + content
+    if category == "ket":
+        return _build_ket_quiz(topic, content, config)[:5]
     if "语文" in subject_text:
         return _build_chinese_quiz(topic, content, config, version)[:7]
     if "数学" in subject_text:
         return _build_math_quiz(topic, content, config, version)[:6]
-    if "英语" in subject_text or category == "ket" or re.search(r"\b(unit|school|library|there is)\b", content, re.I):
+    if "英语" in subject_text or re.search(r"\b(unit|school|library|there is)\b", content, re.I):
         return _build_english_quiz(topic, content, config, version)[:7]
     return []
 

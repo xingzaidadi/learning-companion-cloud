@@ -109,11 +109,112 @@ def _is_weekend(today: str) -> bool:
         return False
 
 
+def _weekday(today: str) -> int:
+    try:
+        return datetime.strptime(today, "%Y-%m-%d").date().weekday()
+    except ValueError:
+        return 0
+
+
 def _pick_rotating(candidates: list[Row], day_index: int, used_ids: set[int]) -> Row | None:
     available = [source for source in candidates if int(source["id"]) not in used_ids]
     if not available:
         return None
     return available[day_index % len(available)]
+
+
+def _ket_level(settings: dict[str, Any]) -> str:
+    level = str(settings.get("ket_plan", {}).get("level") or "standard").lower()
+    return level if level in {"light", "standard", "advanced"} else "standard"
+
+
+def _ket_plan_for_day(today: str, settings: dict[str, Any], low_score: bool = False) -> dict[str, Any]:
+    ket_settings = settings.get("ket_plan", {})
+    level = _ket_level(settings)
+    weekday = _weekday(today)
+    if low_score:
+        minutes = int(ket_settings.get("low_score_remedial_minutes") or 20)
+        if level == "advanced":
+            minutes += 10
+        return {
+            "module": "错词错题补救",
+            "minutes": minutes,
+            "steps": ["复盘昨天错词/错题", "重做 1 组同类题", "朗读正确句子", "记录还不稳的点"],
+            "standard": "能说出错因，并把同类题正确完成到 80% 以上。",
+        }
+    base_week = [
+        {
+            "module": "词汇 + 听力",
+            "steps": ["复习 10 个词", "听 1 段材料抓关键词", "跟读 3 句", "记录 2 个没听清的词"],
+            "standard": "能听出场景和关键词，错词已记录。",
+        },
+        {
+            "module": "词汇 + 阅读",
+            "steps": ["复习 10 个词", "读 1 篇短文", "圈定位句", "说出 2 个答案依据"],
+            "standard": "能用原文依据说明答案，不靠猜。",
+        },
+        {
+            "module": "写作短练",
+            "steps": ["复习 8 个可用于写作的词", "写 3–5 句", "检查时态/单复数", "朗读一遍"],
+            "standard": "句子完整，至少 3 句无明显语法错误。",
+        },
+        {
+            "module": "听力 + 跟读",
+            "steps": ["听 1 段材料", "跟读重点句", "模仿语音语调", "复述 1 句意思"],
+            "standard": "能跟读清楚，并说出材料主要内容。",
+        },
+        {
+            "module": "口语表达",
+            "steps": ["准备 1 个小话题", "用完整句回答", "补充 1 个理由", "录音回听一次"],
+            "standard": "能用完整句说 1–2 分钟，声音清楚。",
+        },
+        {
+            "module": "周末小模拟",
+            "steps": ["完成一组听力/阅读小模拟", "核对错题", "整理错词", "选 1 题讲清错因"],
+            "standard": "完成阶段检测，并产出错题/错词清单。",
+        },
+        {
+            "module": "轻复盘",
+            "steps": ["复习本周错词", "重读 1 篇做过的材料", "口头总结本周进步", "整理下周目标"],
+            "standard": "说清本周最不稳的 1 个点和下周改法。",
+        },
+    ]
+    plan = dict(base_week[weekday])
+    if level == "light":
+        plan["minutes"] = 25 if weekday != 5 else 45
+        plan["steps"] = plan["steps"][:3]
+    elif level == "advanced":
+        advanced_extra = {
+            0: "加做 5 个拼写/听写词",
+            1: "加读 1 段同主题短文",
+            2: "扩展到 5–7 句并使用 because/also",
+            3: "增加 1 句口头复述",
+            4: "补充 1 个追问回答",
+            5: "模拟后做 10 分钟错题复盘",
+            6: "选 1 个薄弱点做 10 分钟补强",
+        }[weekday]
+        plan["steps"] = [*plan["steps"], advanced_extra]
+        plan["minutes"] = 45 if weekday != 5 else int(ket_settings.get("mock_minutes") or 75)
+    else:
+        plan["minutes"] = int(ket_settings.get("weekday_minutes") or 35) if weekday != 5 else int(ket_settings.get("mock_minutes") or 60)
+    return plan
+
+
+def _ket_recent_low_score(conn: Connection, student_id: int, source_id: int, pass_score: float) -> bool:
+    row = conn.execute(
+        """
+        SELECT qr.correct, qr.total
+        FROM quiz_results qr
+        JOIN daily_tasks dt ON dt.id = qr.daily_task_id
+        WHERE dt.student_id = ? AND dt.source_id = ? AND qr.total > 0
+        ORDER BY qr.id DESC
+        LIMIT 1
+        """,
+        (student_id, source_id),
+    ).fetchone()
+    if not row:
+        return False
+    return (int(row["correct"]) / max(int(row["total"]), 1)) < pass_score
 
 
 def _select_balanced_sources(sources: list[Row], slots: int, today: str) -> list[Row]:
@@ -174,9 +275,10 @@ def _select_balanced_sources(sources: list[Row], slots: int, today: str) -> list
     return selected
 
 
-def _build_daily_task(source: Row, today: str) -> dict[str, Any]:
+def _build_daily_task(source: Row, today: str, settings: dict[str, Any] | None = None, ket_low_score: bool = False) -> dict[str, Any]:
     category = source["category"]
     config = loads(source["config_json"], {})
+    settings = settings or {}
     remaining = max(int(source["total_units"]) - int(source["completed_units"]), 1)
     configured_daily_units = int(config.get("daily_units") or 0)
     daily_units = configured_daily_units if configured_daily_units > 0 else max(1, ceil(remaining / _days_left(source["deadline"], today)))
@@ -205,10 +307,13 @@ def _build_daily_task(source: Row, today: str) -> dict[str, Any]:
         standard = "能讲出今天学了什么、完成基础练习，并通过小测。"
         check_method = "quiz"
     else:
-        module = config.get("module") or source["subject"] or "综合训练"
-        description = f"KET {module} 短练：按计划完成一组训练。"
-        minutes = int(config.get("estimated_minutes", 20))
-        standard = "完成训练并记录不会的单词、句子或题目。"
+        plan = _ket_plan_for_day(today, settings, low_score=ket_low_score)
+        module = plan["module"]
+        level_text = {"light": "轻量", "standard": "标准", "advanced": "进阶"}[_ket_level(settings)]
+        title = f"KET：{module}"
+        description = f"{level_text}版 KET 训练：{'；'.join(plan['steps'])}。"
+        minutes = int(plan["minutes"])
+        standard = plan["standard"]
         check_method = "quiz"
 
     return {
@@ -287,7 +392,9 @@ def generate_daily_tasks(
     for source in sources:
         if int(source["id"]) in existing_source_ids:
             continue
-        task = _build_daily_task(source, today)
+        pass_score = float(rules.get("quiz_pass_score", 0.8))
+        ket_low_score = source["category"] == "ket" and _ket_recent_low_score(conn, student_id, int(source["id"]), pass_score)
+        task = _build_daily_task(source, today, settings, ket_low_score=ket_low_score)
         cursor = conn.execute(
             """
             INSERT INTO daily_tasks (

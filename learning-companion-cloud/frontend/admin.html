@@ -79,6 +79,22 @@
                 <label>每日最大分钟
                   <input name="max_total_minutes" type="number" min="30" value="120" />
                 </label>
+                <label>每日任务上限
+                  <input name="max_daily_tasks" type="number" min="3" max="12" value="8" />
+                </label>
+                <label>KET 难度
+                  <select name="ket_level">
+                    <option value="standard">标准：稳步备考</option>
+                    <option value="advanced">进阶：英语较好</option>
+                    <option value="light">轻量：保持兴趣</option>
+                  </select>
+                </label>
+                <label>KET 平日分钟
+                  <input name="ket_weekday_minutes" type="number" min="20" max="60" value="35" />
+                </label>
+                <label>KET 周测分钟
+                  <input name="ket_mock_minutes" type="number" min="30" max="120" value="60" />
+                </label>
                 <label>小测通过线
                   <input name="quiz_pass_score" type="number" min="0.5" max="1" step="0.05" value="0.8" />
                 </label>
@@ -414,6 +430,10 @@
         form.math_version.value = data.region.math_version || "北师大版/北京师范大学出版社";
         form.english_version.value = data.region.english_version || "外研社三年级起点/刘兆义";
         form.max_total_minutes.value = data.daily_limits.max_total_minutes || 120;
+        form.max_daily_tasks.value = data.path_rules.max_daily_tasks || 8;
+        form.ket_level.value = data.ket_plan?.level || "standard";
+        form.ket_weekday_minutes.value = data.ket_plan?.weekday_minutes || 35;
+        form.ket_mock_minutes.value = data.ket_plan?.mock_minutes || 60;
         form.quiz_pass_score.value = data.path_rules.quiz_pass_score || 0.8;
         form.api_url.value = data.ai.api_url || "";
         form.model.value = data.ai.model || "";
@@ -482,11 +502,20 @@
             math_version: form.math_version.value,
             english_version: form.english_version.value,
           },
-          daily_limits: { max_total_minutes: Number(form.max_total_minutes.value || 120) },
+          daily_limits: {
+            max_total_minutes: Number(form.max_total_minutes.value || 120),
+            ket_minutes: Number(form.ket_weekday_minutes.value || 35),
+          },
+          ket_plan: {
+            level: form.ket_level.value || "standard",
+            book_mode: "pending",
+            weekday_minutes: Number(form.ket_weekday_minutes.value || 35),
+            mock_minutes: Number(form.ket_mock_minutes.value || 60),
+          },
           path_rules: {
             quiz_pass_score: Number(form.quiz_pass_score.value || 0.8),
             low_score_blocks_new_preview: true,
-            max_daily_tasks: 5,
+            max_daily_tasks: Number(form.max_daily_tasks.value || 8),
           },
           ai: {
             enabled: form.ai_enabled.value === "true",

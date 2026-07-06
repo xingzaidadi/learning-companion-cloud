@@ -24,6 +24,7 @@
             <div class="muted">今日进度</div>
             <h2>先完成当前任务</h2>
             <p><span id="doneCount">0</span>/<span id="totalCount">0</span> 已完成，页面只突出现在最该做的一项。</p>
+            <p id="nowNextSummary" class="now-next-summary">正在读取现在和下一项...</p>
             <div class="thin-progress"><span id="dayProgressBar"></span></div>
           </div>
         </div>
@@ -32,16 +33,6 @@
           <button id="rescheduleDay" type="button" class="quiet-action" aria-label="重新安排今天任务时间">重新排时间</button>
         </div>
       </section>
-
-      <details class="card day-timeline-card" open data-quality="child-full-day-dynamic-schedule">
-        <summary>
-          <span>全天动态安排</span>
-          <small>学习、休息、午餐、运动都会显示；点“重新排时间”会动态更新。</small>
-        </summary>
-        <div id="dayTimeline" class="day-timeline" role="list" aria-label="今日全天动态安排">
-          <p class="muted">正在加载全天安排...</p>
-        </div>
-      </details>
 
       <section class="child-workbench child-focus-layout">
         <section class="card current-task-card" data-quality="child-current-task-only">
@@ -59,6 +50,16 @@
             </div>
           </div>
         </section>
+
+        <details class="card day-timeline-card" data-quality="child-full-day-dynamic-schedule">
+          <summary>
+            <span>全天动态安排</span>
+            <small>想看完整节奏再打开；重新排时间后会动态更新。</small>
+          </summary>
+          <div id="dayTimeline" class="day-timeline" role="list" aria-label="今日全天动态安排">
+            <p class="muted">正在加载全天安排...</p>
+          </div>
+        </details>
 
         <details class="card workspace-card full-workspace-card child-detail-card" data-quality="child-collapsible-workspace">
           <summary>
@@ -178,9 +179,19 @@
       function renderTimeline() {
         const box = document.querySelector("#dayTimeline");
         const blocks = dayTimeline?.blocks || [];
+        const summaryNode = document.querySelector("#nowNextSummary");
         if (!blocks.length) {
           box.innerHTML = '<p class="muted">暂无全天安排。生成今日任务后会自动补齐休息、运动和生活时间。</p>';
+          if (summaryNode) summaryNode.textContent = "生成今日任务后，这里会显示现在和下一项。";
           return;
+        }
+        const primary = primaryAction().task;
+        const currentBlock = primary ? blocks.find((block) => block.task_id === primary.id) : blocks.find((block) => block.is_task);
+        const nextBlock = currentBlock ? blocks.find((block) => block.index > currentBlock.index && block.is_task) : blocks.find((block) => block.is_task);
+        if (summaryNode) {
+          const nowText = currentBlock ? `现在：${currentBlock.start}-${currentBlock.end} ${currentBlock.title}` : "现在：自由安排";
+          const nextText = nextBlock ? `下一项：${nextBlock.start}-${nextBlock.end} ${nextBlock.title}` : "后面没有新的学习任务";
+          summaryNode.textContent = `${nowText}；${nextText}`;
         }
         const summary = dayTimeline.summary || {};
         box.innerHTML = `
