@@ -1512,3 +1512,411 @@ body.large-copy input,
 body.large-copy textarea {
   font-size: 18px;
 }
+
+/* 2026-07 UI polish pass: cleaner focus, lighter cards, calmer density */
+:root {
+  --surface-glass: rgba(255, 255, 255, 0.86);
+  --surface-soft: rgba(248, 251, 255, 0.9);
+  --shadow-soft: 0 14px 38px rgba(36, 48, 85, 0.08);
+  --shadow-focus: 0 22px 54px rgba(56, 103, 255, 0.14);
+}
+
+body {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(124, 58, 237, 0.13), transparent 26%),
+    radial-gradient(circle at 96% 4%, rgba(56, 103, 255, 0.15), transparent 30%),
+    linear-gradient(180deg, #f2f5ff 0%, #f8fbff 340px, #f4f7ff 100%);
+}
+
+.shell {
+  width: min(1120px, calc(100% - 40px));
+  padding-top: 28px;
+}
+
+.topbar {
+  margin-bottom: 18px;
+}
+
+.brand h1 {
+  line-height: 1.05;
+}
+
+.brand p {
+  max-width: 640px;
+  color: #53617d;
+  line-height: 1.65;
+}
+
+.nav a,
+button,
+.button {
+  box-shadow: 0 8px 20px rgba(36, 48, 85, 0.07);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+button:hover,
+.button:hover,
+.nav a:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(36, 48, 85, 0.11);
+}
+
+.card {
+  border-color: rgba(210, 218, 235, 0.72);
+  background: var(--surface-glass);
+  box-shadow: var(--shadow-soft);
+}
+
+.coach-hero {
+  border-radius: 26px;
+  padding: clamp(18px, 2.4vw, 26px);
+}
+
+.hero-progress {
+  gap: 14px;
+}
+
+.hero-progress h2 {
+  margin-top: 0;
+}
+
+.progress-number {
+  color: #243055;
+}
+
+.now-next-summary {
+  width: min(600px, 100%);
+}
+
+.summary-pill {
+  border-color: rgba(56, 103, 255, 0.14);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 8px 18px rgba(36, 48, 85, 0.06);
+}
+
+.summary-pill.active {
+  background:
+    linear-gradient(135deg, rgba(56, 103, 255, 0.13), rgba(124, 58, 237, 0.07)),
+    rgba(255, 255, 255, 0.96);
+}
+
+.big-action {
+  min-width: 210px;
+  box-shadow: 0 16px 34px rgba(56, 103, 255, 0.22);
+}
+
+.quiet-action {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.current-task-card {
+  border-color: rgba(56, 103, 255, 0.12);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(56, 103, 255, 0.10), transparent 32%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(247, 251, 255, 0.92));
+  box-shadow: 0 18px 48px rgba(56, 103, 255, 0.10);
+}
+
+.focus-task-card {
+  border: 1px solid rgba(56, 103, 255, 0.18);
+  border-radius: 26px;
+  padding: clamp(18px, 2.5vw, 30px);
+  box-shadow: var(--shadow-focus);
+}
+
+.focus-task-card::before {
+  width: 7px;
+}
+
+.focus-status {
+  gap: 7px;
+}
+
+.subject-badge,
+.tag {
+  box-shadow: none;
+}
+
+.focus-task-card .task-title {
+  max-width: 880px;
+  font-size: clamp(25px, 3.4vw, 34px);
+}
+
+.focus-description {
+  margin-top: 6px;
+  color: #46556f;
+}
+
+.focus-guidance {
+  border-color: rgba(56, 103, 255, 0.12);
+  background: linear-gradient(135deg, #eef4ff, #fbfdff);
+}
+
+.focus-guidance p {
+  font-size: clamp(16px, 1.7vw, 19px);
+}
+
+.focus-quick-meta > span {
+  background: rgba(244, 247, 252, 0.92);
+}
+
+.timer-tag {
+  background: linear-gradient(135deg, #3154e8, #18359b);
+}
+
+.completion-card {
+  border: 1px solid rgba(245, 159, 0, 0.12);
+  background: linear-gradient(135deg, #fff9ec, #ffffff 70%);
+}
+
+.focus-task-card .actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+}
+
+.focus-task-card .actions button {
+  min-height: 56px;
+  border-radius: 18px;
+}
+
+.focus-task-card .actions button:only-child {
+  grid-column: auto;
+  width: min(360px, 100%);
+  justify-self: start;
+}
+
+.child-detail-card {
+  border: 1px solid rgba(210, 218, 235, 0.68);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.child-detail-card > summary,
+details.card > summary {
+  padding: 17px 20px;
+}
+
+.child-detail-card > summary span,
+details.card > summary {
+  color: #172033;
+}
+
+.child-detail-card summary small {
+  color: #5f6b82;
+}
+
+.day-timeline-card {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(19, 166, 104, 0.09), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 251, 255, 0.86));
+}
+
+.timeline-block {
+  border-color: rgba(210, 218, 235, 0.74);
+  box-shadow: 0 6px 16px rgba(36, 48, 85, 0.04);
+}
+
+.workspace-panel {
+  border-color: rgba(210, 218, 235, 0.7);
+  box-shadow: 0 12px 26px rgba(36, 48, 85, 0.05);
+}
+
+.quiz-panel,
+.assist-panel {
+  min-height: 360px;
+}
+
+.empty-state {
+  border-color: rgba(56, 103, 255, 0.20);
+  background: linear-gradient(135deg, rgba(234, 240, 255, 0.55), rgba(255, 255, 255, 0.72));
+}
+
+.task-card {
+  border-color: rgba(210, 218, 235, 0.78);
+  box-shadow: 0 8px 18px rgba(36, 48, 85, 0.035);
+}
+
+.task-card.active {
+  border-color: rgba(56, 103, 255, 0.42);
+  box-shadow: 0 0 0 3px rgba(56, 103, 255, 0.10), 0 16px 34px rgba(56, 103, 255, 0.10);
+}
+
+.queue-task-card {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.parent-shell {
+  width: min(1080px, calc(100% - 44px));
+}
+
+.parent-status-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 26px;
+  padding: clamp(24px, 3vw, 34px);
+  background:
+    radial-gradient(circle at 90% 0%, rgba(255, 255, 255, 0.28), transparent 32%),
+    linear-gradient(135deg, #315bea 0%, #14b8a6 100%);
+}
+
+.parent-status-card h2 {
+  font-size: clamp(28px, 3.6vw, 40px);
+}
+
+.parent-kpis span {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.parent-layout {
+  grid-template-columns: minmax(0, 1.18fr) minmax(280px, 0.82fr);
+}
+
+.parent-action-card,
+.parent-side-card,
+.parent-detail-grid details.card {
+  border-radius: 22px;
+}
+
+.parent-action-item {
+  border: 1px solid rgba(245, 159, 0, 0.18);
+  border-left: 5px solid var(--ok);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.parent-action-item.warn {
+  border-color: rgba(245, 159, 0, 0.24);
+  background: linear-gradient(135deg, #fffaf0 0%, #ffffff 76%);
+}
+
+.parent-action-item.danger {
+  border-color: rgba(223, 59, 59, 0.20);
+  background: linear-gradient(135deg, #fff1f2 0%, #ffffff 76%);
+}
+
+.parent-side-card .actions,
+.parent-quick-adjust .actions {
+  gap: 10px;
+}
+
+.parent-side-card .actions button,
+.parent-quick-adjust .actions button {
+  box-shadow: none;
+}
+
+.constraint-card {
+  border-color: rgba(210, 218, 235, 0.74);
+  box-shadow: 0 8px 18px rgba(36, 48, 85, 0.04);
+}
+
+.parent-detail-grid details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 18px;
+}
+
+.compact-card {
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+body:has(#goalText) .shell {
+  width: min(1060px, calc(100% - 44px));
+}
+
+body:has(#goalText) .grid {
+  align-items: start;
+}
+
+body:has(#goalText) .card {
+  border-radius: 22px;
+}
+
+body:has(#goalText) textarea#goalText {
+  min-height: 104px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
+}
+
+body:has(#goalText) #tasks .task-card,
+body:has(#goalText) #plans .task-card,
+body:has(#goalText) #materials .task-card,
+body:has(#goalText) #agentRuns .task-card {
+  border-radius: 18px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, #ffffff, #fbfdff);
+}
+
+body:has(#goalText) #tasks .task-card {
+  gap: 12px;
+}
+
+body:has(#goalText) #plans .task-card,
+body:has(#goalText) #tasks .task-card {
+  box-shadow: 0 10px 22px rgba(36, 48, 85, 0.045);
+}
+
+body:has(#goalText) #agentRuns {
+  gap: 14px;
+}
+
+.agent-run-card {
+  border-left-width: 5px;
+  border-color: rgba(56, 103, 255, 0.14);
+  box-shadow: 0 12px 26px rgba(56, 103, 255, 0.06);
+}
+
+.agent-run-raw {
+  margin-top: 4px;
+}
+
+.agent-run-raw summary {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #f1f5ff;
+}
+
+input,
+select,
+textarea {
+  border-color: rgba(210, 218, 235, 0.95);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: rgba(56, 103, 255, 0.46);
+  box-shadow: 0 0 0 4px rgba(56, 103, 255, 0.10);
+  outline: none;
+}
+
+@media (max-width: 820px) {
+  .shell,
+  .parent-shell,
+  body:has(#goalText) .shell {
+    width: min(100% - 24px, 1120px);
+    padding-top: 18px;
+  }
+
+  .coach-hero,
+  .current-task-card,
+  .focus-task-card,
+  .parent-status-card {
+    border-radius: 22px;
+  }
+
+  .focus-task-card .actions {
+    grid-template-columns: 1fr;
+  }
+
+  .focus-task-card .actions button:only-child {
+    width: 100%;
+  }
+
+  .parent-detail-grid details summary {
+    font-size: 17px;
+  }
+}

@@ -130,7 +130,7 @@ def run_child_flow() -> None:
             item_ids = seed_quiz(conn, task1)
 
         child_html = assert_status(client.get("/child"))
-        for needle in ("学习驾驶舱", "今日进度", "开始下一个任务", "当前任务", "timer-tag", "window.__INITIAL_TASKS__"):
+        for needle in ("学习驾驶舱", "今日进度", "开始当前任务", "当前任务", "timer-tag", "window.__INITIAL_TASKS__"):
             assert_true(needle in child_html, f"孩子端页面缺少 {needle}")
         for marker in ("child-one-focus", "child-collapsible-workspace", "child-collapsible-queue"):
             assert_true(marker in child_html, f"child page missing quality marker {marker}")

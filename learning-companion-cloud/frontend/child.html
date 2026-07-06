@@ -32,7 +32,7 @@
           </div>
         </div>
         <div class="actions">
-          <button id="startNext" class="primary big-action" aria-label="开始当前最重要的任务">开始下一个任务</button>
+          <button id="startNext" class="primary big-action" aria-label="开始当前最重要的任务">开始当前任务</button>
           <button id="rescheduleDay" type="button" class="quiet-action" aria-label="重新安排今天任务时间">重新排时间</button>
         </div>
       </section>
@@ -247,7 +247,7 @@
         const paused = tasks.find((task) => task.status === "paused");
         if (paused) return { task: paused, type: "start", label: "继续当前任务" };
         const next = tasks.find((task) => task.status === "not_started");
-        if (next) return { task: next, type: "start", label: "开始下一个任务" };
+        if (next) return { task: next, type: "start", label: "开始当前任务" };
         return { task: null, type: "endDay", label: "生成今日总结" };
       }
 
