@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 from datetime import date, timedelta
 from sqlite3 import Connection
@@ -233,6 +234,31 @@ def _keywords(text: str) -> list[str]:
     return list(dict.fromkeys([word for word in words if word not in stop]))[:12]
 
 
+def _retrieval_vector(text: str) -> dict[str, float]:
+    tokens = [token.lower() for token in re.findall(r"[A-Za-z]+|[\u4e00-\u9fff]", text or "")]
+    features = list(tokens)
+    for index in range(len(tokens) - 1):
+        if re.fullmatch(r"[\u4e00-\u9fff]", tokens[index]) and re.fullmatch(r"[\u4e00-\u9fff]", tokens[index + 1]):
+            features.append(tokens[index] + tokens[index + 1])
+    vector: dict[str, float] = {}
+    for feature in features:
+        vector[feature] = vector.get(feature, 0.0) + 1.0
+    return vector
+
+
+def _cosine_similarity(left: dict[str, float], right: dict[str, float]) -> float:
+    if not left or not right:
+        return 0.0
+    dot = sum(value * right.get(key, 0.0) for key, value in left.items())
+    if dot <= 0:
+        return 0.0
+    left_norm = math.sqrt(sum(value * value for value in left.values()))
+    right_norm = math.sqrt(sum(value * value for value in right.values()))
+    if not left_norm or not right_norm:
+        return 0.0
+    return dot / (left_norm * right_norm)
+
+
 def _split_material_text(text: str) -> list[str]:
     clean = text.strip()
     if not clean:
@@ -346,6 +372,7 @@ def index_material(conn: Connection, material_id: int) -> dict[str, Any]:
 
 def search_material_chunks(conn: Connection, query: str, subject: str = "", student_id: int = 1, limit: int = 8) -> list[dict[str, Any]]:
     terms = _keywords(query)
+    query_vector = _retrieval_vector(query)
     rows = conn.execute(
         """
         SELECT * FROM material_chunks
@@ -355,16 +382,22 @@ def search_material_chunks(conn: Connection, query: str, subject: str = "", stud
         """,
         (student_id, subject, subject),
     ).fetchall()
-    scored: list[tuple[int, dict[str, Any]]] = []
+    scored: list[tuple[float, dict[str, Any]]] = []
     for row in rows:
         item = dict(row)
-        haystack = f"{item['chunk_text']} {' '.join(loads(item['keywords_json'], []))} {item['source_ref']}"
-        score = sum(2 if term in item["chunk_text"] else 1 for term in terms if term in haystack)
+        keywords = loads(item["keywords_json"], [])
+        haystack = f"{item['chunk_text']} {' '.join(keywords)} {item['source_ref']} {item['section']} {item['knowledge_type']}"
+        keyword_score = sum(2 if term in item["chunk_text"] else 1 for term in terms if term in haystack)
+        vector_score = _cosine_similarity(query_vector, _retrieval_vector(haystack))
         if subject and item["subject"] == subject:
-            score += 1
+            keyword_score += 1
+        score = keyword_score + vector_score * 4
         if score > 0 or not terms:
             item["keywords"] = loads(item.pop("keywords_json"), [])
-            item["match_score"] = score
+            item["match_score"] = round(score, 3)
+            item["keyword_score"] = keyword_score
+            item["vector_score"] = round(vector_score, 3)
+            item["retrieval_method"] = "hybrid_keyword_vector"
             scored.append((score, item))
     scored.sort(key=lambda pair: (pair[0], pair[1]["id"]), reverse=True)
     return [item for _score, item in scored[:limit]]

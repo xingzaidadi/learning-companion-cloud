@@ -105,6 +105,7 @@ def run_e2e() -> None:
         assert_true(material["rag_index"]["count"] >= 1, f"资料应建立 RAG 切片：{material}")
         hits = assert_status(client.get("/api/materials/search?q=白鹭 精巧&subject=语文"))
         assert_true(any("白鹭" in hit["chunk_text"] for hit in hits), f"中文 RAG 应命中白鹭资料：{hits}")
+        assert_true(any(hit.get("retrieval_method") == "hybrid_keyword_vector" for hit in hits), f"RAG 应使用混合检索评分：{hits}")
 
         tasks = assert_status(client.get("/api/daily-tasks"))
         task = tasks[0]
@@ -115,6 +116,7 @@ def run_e2e() -> None:
         assert_true("elapsed_seconds" in paused, f"暂停应返回计时信息：{paused}")
         stuck = assert_status(client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "stuck", "note": "不理解题目第一步"}))
         assert_true("assistance" in stuck and "tool_validation" in stuck, f"卡住应返回辅导和工具校验：{stuck}")
+        assert_true(stuck.get("tool_loop", {}).get("mode") == "controlled_tool_loop", f"卡住辅导应经过受控 Tool Loop：{stuck}")
 
         quiz = assert_status(client.get(f"/api/daily-tasks/{task_id}/quiz"))
         assert_true(quiz["items"], "小测不能为空")

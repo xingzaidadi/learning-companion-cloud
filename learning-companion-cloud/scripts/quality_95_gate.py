@@ -38,6 +38,8 @@ def main() -> None:
     css = read("frontend/static/styles.css")
     agent_tools = read("backend/agent_tools.py")
     tool_registry = read("backend/agent_tool_registry.py")
+    agent_runtime = read("backend/agent_runtime.py")
+    agent_core = read("backend/agent_core.py")
     eval_runner = read("eval_harness/runners/eval_runner.py")
     backend_report = read("backend/report.py")
     backend_app = read("backend/app.py")
@@ -86,6 +88,8 @@ def main() -> None:
             ("explainable_run_summary", all(key in agent_tools for key in ("reason", "result", "impact", "next_action", "metrics"))),
             ("function_schema", all(key in tool_registry for key in ("parameters", "required", "output_schema", "side_effect", "idempotent"))),
             ("tool_validation_consumed", "validate_tool_call" in tool_registry and "tool_validation" in backend_agent),
+            ("controlled_tool_loop", "run_controlled_tool_loop" in agent_runtime and "select_tool" in agent_runtime and "controlled_tool_loop" in backend_agent),
+            ("hybrid_rag_scoring", "retrieval_method" in agent_core and "hybrid_keyword_vector" in agent_core and "_cosine_similarity" in agent_core),
             ("trajectory_trace", "agent_trace_steps" in agent_tools and "trace_id" in agent_tools),
             ("multi_agent_eval", "LearningAgentAdapter" in eval_runner and "DemoAgentAdapter" in eval_runner),
             ("eval_known_gaps", "known_gap_cases" in eval_runner and "unexpected_failed_cases" in eval_runner),
@@ -97,6 +101,7 @@ def main() -> None:
             ("senior_qa_gate", (ROOT / "scripts/senior_qa_gate.py").exists()),
             ("ui_click_test", (ROOT / "scripts/ui_click_test.py").exists()),
             ("full_ui_audit", (ROOT / "scripts/full_ui_audit.py").exists()),
+            ("ui_design_rubric", (ROOT / "scripts/ui_design_rubric.py").exists()),
             ("child_flow_test", (ROOT / "scripts/child_flow_integration_test.py").exists()),
             ("db_concurrency_test", (ROOT / "scripts/db_concurrency_test.py").exists()),
             ("eval_cases_80_plus", count_cases("eval_harness/datasets/learning_agent/golden_set.json") + count_cases("eval_harness/datasets/demo_agent/golden_set.json") >= 80),

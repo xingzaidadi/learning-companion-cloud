@@ -20,7 +20,16 @@ TOOLS: dict[str, ToolSpec] = {
     "search_material_chunks": ToolSpec(
         name="search_material_chunks",
         description="检索教材/RAG 切片，用于绑定题目来源和回答依据。",
-        parameters={"type": "object", "required": ["query"], "properties": {"query": {"type": "string"}, "subject": {"type": "string"}}},
+        parameters={
+            "type": "object",
+            "required": ["query"],
+            "properties": {
+                "query": {"type": "string"},
+                "subject": {"type": "string"},
+                "student_id": {"type": "integer"},
+                "limit": {"type": "integer"},
+            },
+        },
         output_schema={"type": "array", "items": {"type": "object"}},
     ),
     "generate_daily_tasks": ToolSpec(

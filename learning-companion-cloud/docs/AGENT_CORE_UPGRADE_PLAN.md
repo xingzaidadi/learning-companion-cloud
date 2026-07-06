@@ -16,6 +16,19 @@
 
 ## 2. 产品边界
 
+### 2.0 已确认硬伤的修复状态
+
+| 问题 | 当前处理 | 剩余边界 |
+|---|---|---|
+| 测评 100% 全绿不可信 | Eval 已引入 `Known Gap`、`unexpected_failed_cases`，learning agent 保留 4 条已知红例，不再追求虚假 100% | 后续应继续增加真实教材 case 和红队 case |
+| `.yaml` 实际是 JSON | golden set 已统一为 `golden_set.json`，runner 不再读取 legacy `.yaml` | 新增数据集必须保持扩展名和格式一致 |
+| ToolSpec 没接入运行链路 | 已新增 `controlled_tool_loop`，卡住辅导会让模型在白名单工具内选择教材检索工具，校验后执行 | 仍不是完全自主 ReAct，只是受控 Tool Loop |
+| 当前是 Workflow，不是完整自主 Agent | 文档和代码都按“受控学习 Agent”定位，避免夸大 | 儿童学习场景不建议放开全自主动作 |
+| RAG 是纯关键词 | `search_material_chunks` 已升级为关键词 + 轻量词向量余弦相似度混合评分 | 还不是 embedding 向量库，后续可接 FAISS/pgvector |
+| `child.html` HTML 实体编码 | 可见中文实体已清理，自测和质量门禁会防回归 | JS 转义中的安全实体不属于可见中文问题 |
+| UI 审计不等于 UI 好看 | 新增 `ui_design_rubric.py`，独立检查聚焦、文案、配色、响应式和可维护性 | 自动化仍不能完全替代人工审美评审 |
+| SQLite 并发风险 | 已启用 `busy_timeout`、WAL、`synchronous=NORMAL`，并新增并发写测试 | SQLite 仍适合本地单家庭使用，不适合高并发 SaaS |
+
 ### 2.1 必须覆盖
 
 | 模块 | 必须能力 | 验收标准 |

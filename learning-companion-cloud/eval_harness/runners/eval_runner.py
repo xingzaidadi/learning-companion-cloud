@@ -26,9 +26,6 @@ def dataset_path(agent: str) -> Path:
     json_path = base / "golden_set.json"
     if json_path.exists():
         return json_path
-    legacy_path = base / "golden_set.yaml"
-    if legacy_path.exists():
-        return legacy_path
     raise FileNotFoundError(f"missing golden set for {agent}")
 
 

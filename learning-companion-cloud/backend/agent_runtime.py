@@ -1,122 +1,117 @@
 from __future__ import annotations
 
-import time
-import uuid
-from contextlib import contextmanager
-from dataclasses import dataclass, field
-from sqlite3 import Connection
-from typing import Any, Iterator
+from collections.abc import Callable
+from typing import Any
 
-from .db import dumps, utc_now
+from .agent_tool_registry import get_tool_spec, validate_tool_call
+from .ai_provider import call_ai_json_with_meta
 
 
-@dataclass
-class RuntimeContext:
-    conn: Connection
-    student_id: int
-    run_type: str
-    input_data: dict[str, Any]
-    trace_id: str = field(default_factory=lambda: uuid.uuid4().hex)
-    run_id: int | None = None
-    step_index: int = 0
+ToolExecutor = Callable[[dict[str, Any]], Any]
 
-    def step(
-        self,
-        step_type: str,
-        tool_name: str = "",
-        args: dict[str, Any] | None = None,
-        observation: dict[str, Any] | list[Any] | None = None,
-        validation: dict[str, Any] | None = None,
-        status: str = "ok",
-        latency_ms: int = 0,
-    ) -> None:
-        self.step_index += 1
-        self.conn.execute(
-            """
-            INSERT INTO agent_trace_steps (
-                run_id, trace_id, step_index, step_type, tool_name,
-                args_json, observation_json, validation_json, latency_ms, status, created_at
+
+def run_controlled_tool_loop(
+    settings: dict[str, Any],
+    *,
+    goal: str,
+    context: dict[str, Any],
+    candidate_tools: list[str],
+    executors: dict[str, ToolExecutor],
+    fallback_tool: str,
+    fallback_arguments: dict[str, Any],
+    allow_write: bool = False,
+) -> dict[str, Any]:
+    """Run a small, controlled tool loop.
+
+    This is intentionally not an unconstrained autonomous Agent loop. The model can
+    choose only from whitelisted tools; every choice is schema-validated before
+    execution; fallback remains deterministic when AI is disabled or invalid.
+    """
+
+    tool_specs = []
+    for name in candidate_tools:
+        spec = get_tool_spec(name)
+        if spec:
+            tool_specs.append(
+                {
+                    "name": spec.name,
+                    "description": spec.description,
+                    "parameters": spec.parameters,
+                    "side_effect": spec.side_effect,
+                    "idempotent": spec.idempotent,
+                }
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                self.run_id,
-                self.trace_id,
-                self.step_index,
-                step_type,
-                tool_name,
-                dumps(args or {}),
-                dumps(observation or {}),
-                dumps(validation or {}),
-                latency_ms,
-                status,
-                utc_now(),
-            ),
-        )
 
-
-@contextmanager
-def agent_run(
-    conn: Connection,
-    student_id: int,
-    run_type: str,
-    input_data: dict[str, Any],
-    model: str = "rule",
-) -> Iterator[RuntimeContext]:
-    trace_id = uuid.uuid4().hex
-    started = time.perf_counter()
-    cursor = conn.execute(
-        """
-        INSERT INTO agent_runs (
-            student_id, run_type, input_json, output_json, model, status, error,
-            confidence, evidence_json, warnings_json, latency_ms, quality_score, trace_id, created_at
-        )
-        VALUES (?, ?, ?, '{}', ?, 'running', '', 0, '[]', '[]', 0, 0, ?, ?)
-        """,
-        (student_id, run_type, dumps(input_data), model, trace_id, utc_now()),
+    fallback_decision = {
+        "tool": fallback_tool,
+        "arguments": fallback_arguments,
+        "reason": "规则兜底选择最安全的工具。",
+    }
+    prompt = (
+        "你是儿童学习陪跑系统的受控 Agent Runtime。\n"
+        "只能从给定 tools 中选择一个工具，不允许编造工具，不允许越权写入。\n"
+        "请只输出 JSON：{\"tool\":\"工具名\",\"arguments\":{},\"reason\":\"选择理由\"}。\n"
+        f"目标：{goal}\n"
+        f"上下文：{context}\n"
+        f"可用工具：{tool_specs}\n"
     )
-    context = RuntimeContext(conn=conn, student_id=student_id, run_type=run_type, input_data=input_data, trace_id=trace_id, run_id=int(cursor.lastrowid))
+    decision, meta = call_ai_json_with_meta(settings, prompt, fallback_decision)
+    if not isinstance(decision, dict):
+        decision = fallback_decision
+    tool_name = str(decision.get("tool") or fallback_tool)
+    arguments = decision.get("arguments")
+    if not isinstance(arguments, dict):
+        arguments = fallback_arguments
+
+    if tool_name not in executors:
+        tool_name = fallback_tool
+        arguments = fallback_arguments
+    validation = validate_tool_call(tool_name, arguments, allow_write=allow_write)
+    if not validation.get("ok"):
+        tool_name = fallback_tool
+        arguments = fallback_arguments
+        validation = validate_tool_call(tool_name, arguments, allow_write=allow_write)
+
+    observation: Any = None
+    status = "ok"
+    error = ""
     try:
-        yield context
-    except Exception as exc:
-        latency_ms = int((time.perf_counter() - started) * 1000)
-        conn.execute(
-            """
-            UPDATE agent_runs
-            SET status = 'error', error = ?, latency_ms = ?
-            WHERE id = ?
-            """,
-            (str(exc), latency_ms, context.run_id),
-        )
-        raise
+        observation = executors[tool_name](arguments)
+    except Exception as exc:  # pragma: no cover - defensive safety belt
+        status = "error"
+        error = f"{type(exc).__name__}: {str(exc)[:200]}"
+        observation = []
+
+    return {
+        "mode": "controlled_tool_loop",
+        "used_ai_decision": bool(meta.get("used_ai")),
+        "model": meta.get("model", "rule"),
+        "status": status if status != "ok" else meta.get("status", "ok"),
+        "error": error or meta.get("error", ""),
+        "steps": [
+            {
+                "step_index": 1,
+                "step_type": "select_tool",
+                "tool_name": tool_name,
+                "arguments": arguments,
+                "reason": decision.get("reason", ""),
+                "validation": validation,
+            },
+            {
+                "step_index": 2,
+                "step_type": "observe",
+                "tool_name": tool_name,
+                "observation_preview": _preview_observation(observation),
+                "status": status,
+            },
+        ],
+        "final_observation": observation,
+    }
 
 
-def finish_agent_run(
-    context: RuntimeContext,
-    output_data: dict[str, Any] | list[Any],
-    status: str = "ok",
-    confidence: float = 0.8,
-    evidence: list[Any] | None = None,
-    warnings: list[str] | None = None,
-    quality_score: float = 0.8,
-) -> None:
-    context.conn.execute(
-        """
-        UPDATE agent_runs
-        SET output_json = ?, status = ?, confidence = ?, evidence_json = ?,
-            warnings_json = ?, quality_score = ?, latency_ms = (
-                SELECT COALESCE(SUM(latency_ms), 0) FROM agent_trace_steps WHERE run_id = ?
-            )
-        WHERE id = ?
-        """,
-        (
-            dumps(output_data),
-            status,
-            confidence,
-            dumps(evidence or []),
-            dumps(warnings or []),
-            quality_score,
-            context.run_id,
-            context.run_id,
-        ),
-    )
+def _preview_observation(observation: Any) -> Any:
+    if isinstance(observation, list):
+        return {"count": len(observation), "items": observation[:2]}
+    if isinstance(observation, dict):
+        return {key: observation[key] for key in list(observation)[:6]}
+    return observation

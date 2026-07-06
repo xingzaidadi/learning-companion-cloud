@@ -20,8 +20,10 @@ from .agent_core import (
     evaluate_quiz_quality,
     open_or_update_tutor_session,
     recommend_daily_adjustments,
+    search_material_chunks,
     update_mastery_from_quiz_result,
 )
+from .agent_runtime import run_controlled_tool_loop
 from .ai_provider import call_ai_json_with_meta
 from .agent_tool_registry import validate_tool_call
 from .db import loads
@@ -126,6 +128,27 @@ def assist_stuck(conn: Connection, task_id: int, note: str = "") -> dict[str, An
     guidance = ensure_task_guidance(conn, task_id)
     fallback = _fallback_stuck_assistance(task, source, note)
     settings = get_settings(conn)
+    subject = (source or {}).get("subject") or task.get("subject") or ""
+    search_query = " ".join(part for part in [task.get("title", ""), task.get("description", ""), note] if part).strip()
+    tool_loop = run_controlled_tool_loop(
+        settings,
+        goal="为孩子卡住辅导检索最相关教材片段，只允许只读检索，不允许直接给答案。",
+        context={"task_id": task_id, "subject": subject, "child_note": note, "task_title": task.get("title", "")},
+        candidate_tools=["search_material_chunks"],
+        executors={
+            "search_material_chunks": lambda args: search_material_chunks(
+                conn,
+                str(args.get("query") or search_query),
+                str(args.get("subject") or subject),
+                int(args.get("student_id") or task.get("student_id") or 1),
+                min(int(args.get("limit") or 3), 5),
+            )
+        },
+        fallback_tool="search_material_chunks",
+        fallback_arguments={"query": search_query, "subject": subject, "student_id": int(task.get("student_id") or 1), "limit": 3},
+        allow_write=False,
+    )
+    material_evidence = tool_loop.get("final_observation") if isinstance(tool_loop.get("final_observation"), list) else []
     if not note.strip():
         ai_result = fallback
         ai_meta = {"used_ai": False, "model": "rule", "status": "rule_fallback", "error": "blank stuck note"}
@@ -137,6 +160,7 @@ def assist_stuck(conn: Connection, task_id: int, note: str = "") -> dict[str, An
                 stuck_context={
                     "task": task,
                     "source": source,
+                    "material_evidence": material_evidence[:3],
                     "existing_guidance": guidance,
                     "child_note": note,
                 },
@@ -153,13 +177,14 @@ def assist_stuck(conn: Connection, task_id: int, note: str = "") -> dict[str, An
         "assistance": assistance,
         "review_action": f"\u5df2\u628a\u201c{assistance['review_focus']}\u201d\u52a0\u5165\u540e\u7eed\u8865\u6f0f\u548c\u590d\u6d4b\u91cd\u70b9\u3002",
         "tool_validation": tool_validation,
+        "tool_loop": {key: tool_loop[key] for key in ("mode", "used_ai_decision", "model", "status", "error", "steps") if key in tool_loop},
     }
     output["tutor_session"] = open_or_update_tutor_session(conn, task, note, assistance)
     log_agent_run(
         conn,
         int(task["student_id"]),
         "stuck_assist",
-        {"task_id": task_id, "note": note, "tool_validation": tool_validation},
+        {"task_id": task_id, "note": note, "tool_validation": tool_validation, "tool_loop": output["tool_loop"]},
         output,
         ai_meta["model"],
         ai_meta["status"],

@@ -18,12 +18,12 @@
     "agent_design": {
       "score": 10.0,
       "failed": [],
-      "total": 9
+      "total": 11
     },
     "tests": {
       "score": 10.0,
       "failed": [],
-      "total": 7
+      "total": 8
     },
     "visual_system": {
       "score": 10.0,
