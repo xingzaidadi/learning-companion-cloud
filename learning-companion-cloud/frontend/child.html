@@ -510,6 +510,53 @@
         document.querySelector(`#tasks .task-card[data-task-id="${taskId}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
       }
 
+      function stuckOptionsForTask(task) {
+        const subject = subjectName(task);
+        if (subject === "数学") return ["题目看不懂", "不知道先算什么", "小数点不会放", "计算总出错"];
+        if (subject === "语文") return ["不认识字", "不懂词语", "不会概括", "不知道怎么写"];
+        if (subject === "英语") return ["单词不会读", "不知道中文意思", "句子不会说", "听力没听清"];
+        return ["不知道第一步", "要求没看懂", "做了一半卡住", "想让家长帮我记录"];
+      }
+
+      function openStuckPanel(taskId) {
+        const task = tasks.find((item) => item.id === taskId);
+        const workspace = document.querySelector(".workspace-card");
+        if (workspace) workspace.open = true;
+        const box = document.querySelector("#assistBox");
+        const options = stuckOptionsForTask(task || {});
+        box.className = "assist-workspace low-type-card";
+        box.innerHTML = `
+          <div class="focus-banner danger">
+            <span class="tag p0">少打字求助</span>
+            <div>
+              <strong>先点一个最像的卡点</strong>
+              <p>不会打字也可以用。下面输入框保留给家长代录或孩子会打字时补充。</p>
+            </div>
+          </div>
+          <div class="quick-choice-grid">
+            ${options.map((option) => `<button type="button" class="quick-choice" data-stuck-choice="${escapeHtml(option)}">${escapeHtml(option)}</button>`).join("")}
+          </div>
+          <label class="optional-note">可选：再补一句
+            <textarea id="stuckNoteInput" placeholder="孩子口述，家长可帮忙记一句；不填也可以。"></textarea>
+          </label>
+          <div class="actions">
+            <button class="primary" id="submitStuckChoice" data-id="${taskId}">提交求助</button>
+            <button type="button" id="cancelStuckChoice">先不求助</button>
+          </div>
+        `;
+      }
+
+      async function submitStuckChoice(taskId) {
+        const selected = document.querySelector(".quick-choice.selected")?.dataset.stuckChoice || "";
+        const extra = document.querySelector("#stuckNoteInput")?.value?.trim() || "";
+        const note = [selected, extra].filter(Boolean).join("：") || "我卡住了，需要一步一步提示";
+        activeTaskId = taskId;
+        const result = await postEvent(taskId, "stuck", note);
+        updateOneTask(taskId, result);
+        showStuckAssistance(result);
+        toast(result.assistant_source === "ai" ? "AI 已给你一个提示，先试 3 分钟" : "已给你一个本地提示，先试 3 分钟");
+      }
+
       async function showQuiz(taskId) {
         const workspace = document.querySelector(".workspace-card");
         if (workspace) workspace.open = true;
@@ -562,6 +609,16 @@
           "math_word_problem",
           "math_variant",
         ]);
+        const paperFriendlyTypes = new Set([
+          "chinese_word_dictation",
+          "chinese_summary",
+          "chinese_expression",
+          "english_reading_check",
+          "english_sentence_make",
+          "math_step_explain",
+          "math_word_problem",
+          "math_variant",
+        ]);
         const placeholders = {
           chinese_word_dictation: "请输入听写词语，注意汉字字形",
           chinese_pinyin: "例如：lù 或 lu4",
@@ -583,6 +640,15 @@
             wrapper.innerHTML = `<label><span class="tag">${label}</span><strong>${escapeHtml(item.question)}</strong><input name="${item.id}" placeholder="${placeholders[item.question_type] || "输入答案"}" /></label>`;
           } else {
             wrapper.innerHTML = `<label><span class="tag">${label}</span><strong>${escapeHtml(item.question)}</strong><textarea name="${item.id}" placeholder="${placeholders[item.question_type] || "写出思路或完整句子"}"></textarea></label>`;
+          }
+          if (!item.options?.length) {
+            const shortcuts = document.createElement("div");
+            shortcuts.className = "answer-shortcuts";
+            shortcuts.innerHTML = `
+              <button type="button" data-fill-answer="${item.id}" data-fill-value="孩子已口述给家长">口述给家长</button>
+              ${paperFriendlyTypes.has(item.question_type) ? `<button type="button" data-fill-answer="${item.id}" data-fill-value="孩子已在纸上完成，家长确认">纸笔完成</button>` : ""}
+            `;
+            wrapper.append(shortcuts);
           }
           form.append(wrapper);
         });
@@ -732,12 +798,9 @@
         if (action === "showQuiz") button.textContent = "正在打开...";
         try {
           if (action === "stuck") {
-            const note = prompt("卡在哪里？写一句话就行：") || "";
-            activeTaskId = taskId;
-            const result = await postEvent(taskId, "stuck", note);
-            updateOneTask(taskId, result);
-            showStuckAssistance(result);
-            toast(result.assistant_source === "ai" ? "AI 已给你一个提示，先试 3 分钟" : "已给你一个本地提示，先试 3 分钟");
+            openStuckPanel(taskId);
+            button.disabled = false;
+            button.textContent = originalText;
           } else if (action === "complete") {
             const result = await postEvent(taskId, "complete");
             updateOneTask(taskId, result);
@@ -762,6 +825,40 @@
       }
 
       document.addEventListener("click", async (event) => {
+        const quickChoice = event.target.closest("[data-stuck-choice]");
+        if (quickChoice) {
+          document.querySelectorAll(".quick-choice.selected").forEach((node) => node.classList.remove("selected"));
+          quickChoice.classList.add("selected");
+          return;
+        }
+        const fillAnswer = event.target.closest("[data-fill-answer]");
+        if (fillAnswer) {
+          const target = document.querySelector(`[name="${fillAnswer.dataset.fillAnswer}"]`);
+          if (target) {
+            target.value = fillAnswer.dataset.fillValue || "孩子已完成";
+            target.closest(".quiz-item")?.classList.remove("missing");
+            fillAnswer.closest(".answer-shortcuts")?.querySelectorAll("button").forEach((node) => node.classList.remove("selected"));
+            fillAnswer.classList.add("selected");
+            toast("已记录，不用打字");
+          }
+          return;
+        }
+        const submitStuck = event.target.closest("#submitStuckChoice");
+        if (submitStuck) {
+          submitStuck.disabled = true;
+          try {
+            await submitStuckChoice(Number(submitStuck.dataset.id));
+          } catch (error) {
+            submitStuck.disabled = false;
+            toast(error.message);
+          }
+          return;
+        }
+        if (event.target.closest("#cancelStuckChoice")) {
+          document.querySelector("#assistBox").className = "empty-state compact";
+          document.querySelector("#assistBox").innerHTML = "<strong>遇到卡点就写一句话</strong><p>系统会按当前任务给解决步骤，学会后再回到任务继续。</p>";
+          return;
+        }
         if (!event.target.closest("#currentTask, #tasks")) return;
         await handleTaskAction(event);
       });

@@ -94,9 +94,6 @@ def run_browser_clicks(base_url: str) -> None:
         page.on("pageerror", lambda error: browser_errors.append(str(error)))
         page.on("console", lambda message: browser_errors.append(message.text) if message.type == "error" else None)
         page.on("response", lambda response: api_responses.append((response.status, response.url)) if "/api/" in response.url else None)
-        stuck_notes = ["不认识鹭这个字", "不理解 school 这个词怎么读"]
-        page.on("dialog", lambda dialog: dialog.accept(stuck_notes.pop(0) if stuck_notes else "卡在第一步"))
-
         page.goto(f"{base_url}/admin")
         page.wait_for_selector("#quickPlanForm")
         quick_plan_text = "寒假作业本，每日一小节；语文书，每日一篇课文"
@@ -122,6 +119,9 @@ def run_browser_clicks(base_url: str) -> None:
         page.click("#startNext")
         page.wait_for_selector("#currentTask .task-card.active")
         page.locator("#currentTask .task-card.active").locator("button[data-action='stuck']").click()
+        page.wait_for_selector("#assistBox .quick-choice")
+        page.locator("#assistBox .quick-choice").first.click()
+        page.click("#submitStuckChoice")
         page.wait_for_function(
             "() => document.querySelector('#assistBox')?.innerText.includes('当前卡住')"
             " && document.querySelector('#assistBox')?.innerText.includes('完成标准')",
@@ -246,9 +246,11 @@ def run_browser_clicks(base_url: str) -> None:
         assert workflow_task_id
         assert "进行中" in workflow_card.inner_text()
         assert "已学 0:00" not in workflow_card.inner_text()
-        stuck_notes.insert(0, "刚才不会读 school，现在会了")
         page.wait_for_function("() => !document.querySelector('#currentTask button[data-action=\"stuck\"]')?.disabled")
         page.click("#currentTask button[data-action='stuck']")
+        page.wait_for_selector("#assistBox .quick-choice")
+        page.locator("#assistBox .quick-choice").first.click()
+        page.click("#submitStuckChoice")
         try:
             page.wait_for_function("() => document.querySelector('#currentTask')?.innerText.includes('我学会了，继续学')")
         except Exception as exc:
@@ -314,10 +316,16 @@ def run_browser_clicks(base_url: str) -> None:
         api_tasks = page.evaluate("async () => await (await fetch('/api/daily-tasks')).json()")
         workflow_task = next(task for task in api_tasks if task["id"] == int(workflow_task_id))
         assert workflow_task["status"] == "checking", f"空答案提交后任务仍应停在检查中：{workflow_task}"
+        assert page.locator("#quizBox [data-fill-answer]").count() >= 1, "小测应提供少打字快捷作答按钮"
+        page.locator("#quizBox [data-fill-answer]").first.click()
         for index in range(page.locator("#quizBox input:not([type='radio'])").count()):
-            page.locator("#quizBox input:not([type='radio'])").nth(index).fill("测试答案")
+            field = page.locator("#quizBox input:not([type='radio'])").nth(index)
+            if not field.input_value():
+                field.fill("测试答案")
         for index in range(page.locator("#quizBox textarea").count()):
-            page.locator("#quizBox textarea").nth(index).fill("测试答案")
+            field = page.locator("#quizBox textarea").nth(index)
+            if not field.input_value():
+                field.fill("测试答案")
         radio_names = page.locator("#quizBox input[type='radio']").evaluate_all(
             "(nodes) => Array.from(new Set(nodes.map((node) => node.name)))"
         )

@@ -532,6 +532,60 @@ details.card[open] > summary::after {
     linear-gradient(180deg, #fffdf8 0%, #ffffff 100%);
 }
 
+.low-type-card {
+  display: grid;
+  gap: 14px;
+}
+
+.quick-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 10px;
+}
+
+.quick-choice,
+.answer-shortcuts button {
+  border: 1px solid rgba(56, 103, 255, 0.16);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff, #f5f8ff);
+  color: #243055;
+  font-weight: 1000;
+  min-height: 46px;
+  box-shadow: 0 8px 18px rgba(36, 48, 85, 0.08);
+}
+
+.quick-choice.selected,
+.answer-shortcuts button.selected {
+  border-color: var(--primary);
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  box-shadow: 0 12px 26px rgba(56, 103, 255, 0.22);
+}
+
+.optional-note {
+  display: grid;
+  gap: 8px;
+  color: #243055;
+  font-weight: 900;
+}
+
+.optional-note textarea {
+  min-height: 74px;
+}
+
+.answer-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.answer-shortcuts button {
+  min-height: 36px;
+  padding: 7px 11px;
+  font-size: 13px;
+}
+
 .empty-state {
   min-height: 190px;
   border: 2px dashed #dbe4ff;

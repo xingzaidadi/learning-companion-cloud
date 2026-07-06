@@ -62,7 +62,7 @@ def run_static_encoding_check() -> None:
 def run_static_button_inventory_check() -> None:
     pages = {
         "admin.html": ["一句话安排学习", "生成计划并生成今日任务", "补齐/同步今日任务", "检查 AI", "学习资料库"],
-        "child.html": ["学习驾驶舱", "今日进度", "当前任务", "检查与求助", "后续任务队列", "我卡住了"],
+        "child.html": ["学习驾驶舱", "今日进度", "当前任务", "检查与求助", "后续任务队列", "我卡住了", "少打字求助", "口述给家长", "纸笔完成"],
         "parent.html": ["你现在只需要看这里", "生成今天日报", "生成本周周报", "明天第一步"],
     }
     for page_name, needles in pages.items():
