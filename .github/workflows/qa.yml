@@ -21,3 +21,4 @@ jobs:
       - run: python scripts/db_concurrency_test.py
       - run: python scripts/child_flow_integration_test.py
       - run: python scripts/ui_design_rubric.py
+      - run: python scripts/simulate_7_day_learning.py

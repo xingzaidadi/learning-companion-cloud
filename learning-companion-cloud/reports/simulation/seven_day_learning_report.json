@@ -1,0 +1,59 @@
+{
+  "status": "SIMULATE_7_DAY_OK",
+  "days": [
+    {
+      "date": "2026-07-06",
+      "task_count": 4,
+      "graded_status": "completed",
+      "score": {}
+    },
+    {
+      "date": "2026-07-07",
+      "task_count": 4,
+      "graded_status": "completed",
+      "score": {}
+    },
+    {
+      "date": "2026-07-08",
+      "task_count": 5,
+      "graded_status": "completed",
+      "score": {}
+    },
+    {
+      "date": "2026-07-09",
+      "task_count": 4,
+      "graded_status": "completed",
+      "score": {}
+    },
+    {
+      "date": "2026-07-10",
+      "task_count": 5,
+      "graded_status": "completed",
+      "score": {}
+    },
+    {
+      "date": "2026-07-11",
+      "task_count": 4,
+      "graded_status": "completed",
+      "score": {}
+    },
+    {
+      "date": "2026-07-12",
+      "task_count": 5,
+      "graded_status": "completed",
+      "score": {}
+    }
+  ],
+  "review_count": 3,
+  "trace_count": 70,
+  "mastery_count": 22,
+  "knowledge_count": 314,
+  "core_coverage": {
+    "total": 336,
+    "by_subject": {
+      "语文": 184,
+      "数学": 60,
+      "英语": 92
+    }
+  }
+}

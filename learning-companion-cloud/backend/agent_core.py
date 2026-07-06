@@ -7,6 +7,7 @@ from sqlite3 import Connection
 from typing import Any
 
 from .db import dumps, loads, utc_now
+from .rag_engine import embedding_score_for_chunk, upsert_chunk_embedding
 
 
 EXAM_TARGET = {'goal': '五年级上册语文、数学、英语阶段性考试稳定 95+',
@@ -343,7 +344,7 @@ def index_material(conn: Connection, material_id: int) -> dict[str, Any]:
         skill = infer_skill(chunk_subject, chunk)
         section = infer_section(chunk_subject, chunk)
         source_ref = f"{material['title']}#{index}"
-        conn.execute(
+        cursor = conn.execute(
             """
             INSERT INTO material_chunks (
                 material_id, student_id, subject, unit, lesson, section, knowledge_type, chunk_text,
@@ -367,6 +368,7 @@ def index_material(conn: Connection, material_id: int) -> dict[str, Any]:
                 now,
             ),
         )
+        upsert_chunk_embedding(conn, int(cursor.lastrowid), chunk)
     return {"material_id": material_id, "count": len(chunks), "status": "indexed", "coverage": coverage}
 
 
@@ -388,7 +390,7 @@ def search_material_chunks(conn: Connection, query: str, subject: str = "", stud
         keywords = loads(item["keywords_json"], [])
         haystack = f"{item['chunk_text']} {' '.join(keywords)} {item['source_ref']} {item['section']} {item['knowledge_type']}"
         keyword_score = sum(2 if term in item["chunk_text"] else 1 for term in terms if term in haystack)
-        vector_score = _cosine_similarity(query_vector, _retrieval_vector(haystack))
+        vector_score = max(_cosine_similarity(query_vector, _retrieval_vector(haystack)), embedding_score_for_chunk(conn, int(item["id"]), query))
         if subject and item["subject"] == subject:
             keyword_score += 1
         score = keyword_score + vector_score * 4
@@ -397,7 +399,7 @@ def search_material_chunks(conn: Connection, query: str, subject: str = "", stud
             item["match_score"] = round(score, 3)
             item["keyword_score"] = keyword_score
             item["vector_score"] = round(vector_score, 3)
-            item["retrieval_method"] = "hybrid_keyword_vector"
+            item["retrieval_method"] = "hybrid_keyword_vector_embedding"
             scored.append((score, item))
     scored.sort(key=lambda pair: (pair[0], pair[1]["id"]), reverse=True)
     return [item for _score, item in scored[:limit]]

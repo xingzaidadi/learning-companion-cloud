@@ -78,6 +78,7 @@ def run_e2e() -> None:
     from backend.agent import _targeted_stuck_help
     from backend.app import app
     from backend.db import get_conn
+    from backend.knowledge_schema import coverage_summary
 
     with TestClient(app) as client:
         assert_true(assert_status(client.get("/api/health"))["status"] == "ok", "health should be ok")
@@ -89,6 +90,8 @@ def run_e2e() -> None:
         assert_true(settings["region"]["city"] == "武汉", "默认城市应为武汉")
         saved_settings = assert_status(client.post("/api/settings", json={"daily_limits": {"max_total_minutes": 100}, "ai": {"enabled": False}}))
         assert_true(saved_settings["daily_limits"]["max_total_minutes"] == 100, "设置保存失败")
+        core_coverage = coverage_summary()
+        assert_true(core_coverage["total"] >= 300 and all(core_coverage["by_subject"].get(subject, 0) >= 60 for subject in ("语文", "数学", "英语")), f"结构化知识库覆盖不足：{core_coverage}")
         english_stuck = _targeted_stuck_help("英语", "不认识这个单词", "英语预习 Unit 1")
         assert_true(
             english_stuck and "英语单词" in english_stuck["review_focus"] and "生字" not in english_stuck["review_focus"],
@@ -111,9 +114,12 @@ def run_e2e() -> None:
             "content_text": "白鹭：精巧、适宜、色素、身段是生字听写重点。语文园地包含日积月累和交流平台。",
         }))
         assert_true(material["rag_index"]["count"] >= 1, f"资料应建立 RAG 切片：{material}")
+        with get_conn() as conn:
+            embedding_count = conn.execute("SELECT COUNT(*) AS count FROM material_embeddings").fetchone()["count"]
+        assert_true(embedding_count >= 1, "资料索引应同步写入 embedding 表")
         hits = assert_status(client.get("/api/materials/search?q=白鹭 精巧&subject=语文"))
         assert_true(any("白鹭" in hit["chunk_text"] for hit in hits), f"中文 RAG 应命中白鹭资料：{hits}")
-        assert_true(any(hit.get("retrieval_method") == "hybrid_keyword_vector" for hit in hits), f"RAG 应使用混合检索评分：{hits}")
+        assert_true(any(hit.get("retrieval_method") == "hybrid_keyword_vector_embedding" for hit in hits), f"RAG 应使用混合检索和 embedding 评分：{hits}")
 
         tasks = assert_status(client.get("/api/daily-tasks"))
         task = tasks[0]
@@ -129,6 +135,9 @@ def run_e2e() -> None:
         quiz = assert_status(client.get(f"/api/daily-tasks/{task_id}/quiz"))
         assert_true(quiz["items"], "小测不能为空")
         assert_true(all("answer" not in item and "explanation" not in item for item in quiz["items"]), "孩子端小测不能泄露答案")
+        with get_conn() as conn:
+            rubric_rows = conn.execute("SELECT grading_rubric_json FROM quiz_items WHERE daily_task_id = ?", (task_id,)).fetchall()
+        assert_true(all(row["grading_rubric_json"] and row["grading_rubric_json"] != "{}" for row in rubric_rows), "每道题应有评分 rubric")
         answers = {str(item["id"]): "测试答案" for item in quiz["items"]}
         graded = assert_status(client.post(f"/api/daily-tasks/{task_id}/quiz", json={"answers": answers}))
         assert_true("tool_validation" in graded and "target_95_mastery_update" in graded, f"批改应写入工具校验和掌握度：{graded}")

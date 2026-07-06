@@ -36,6 +36,8 @@ class LearningAgentAdapter:
 
     def _seed_materials(self) -> None:
         assert self.client
+        from backend.knowledge_schema import render_subject_material
+
         fixtures = [
             (
                 "五上语文真实考点片段",
@@ -60,6 +62,17 @@ class LearningAgentAdapter:
             self.client.post(
                 "/api/materials",
                 data={"title": title, "subject": subject, "material_type": "notes", "content_text": content, "student_id": "1"},
+            )
+        for subject in ("语文", "数学", "英语"):
+            self.client.post(
+                "/api/materials",
+                data={
+                    "title": f"五上{subject}结构化知识库",
+                    "subject": subject,
+                    "material_type": "notes",
+                    "content_text": render_subject_material(subject),
+                    "student_id": "1",
+                },
             )
         self.client.post("/api/knowledge/rebuild?student_id=1")
 
@@ -86,22 +99,29 @@ class LearningAgentAdapter:
             metrics["expected_keyword_match"] = matched_keywords / max(len(expected_keywords), 1)
         elif case_type == "planning":
             plan = self.client.post("/api/study-plan/generate", data={"raw_text": case["input"], "student_id": "1"}).json()
-            tasks = self.client.post("/api/daily-tasks/generate").json()
+            tasks = self.client.post("/api/agent/daily-tasks", json={"student_id": 1, "force_all_sources": True}).json()
             output = {"plan": plan, "tasks": tasks}
             metrics["task_success"] = 1.0 if tasks.get("count", 0) >= case.get("min_tasks", 1) else 0.0
             metrics["schedule_present"] = 1.0 if all(task.get("planned_start") for task in tasks.get("tasks", [])) else 0.0
         elif case_type == "stuck":
             self.client.post("/api/study-plan/generate", data={"raw_text": case.get("plan", "ket, English daily unit, English, 8"), "student_id": "1"})
-            tasks = self.client.post("/api/daily-tasks/generate").json()["tasks"]
-            task_id = tasks[0]["id"]
-            stuck = self.client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "stuck", "note": case["note"]}).json()
-            output = stuck
-            steps = stuck.get("assistance", {}).get("steps", [])
-            metrics["actionable"] = 1.0 if len(steps) >= 3 else 0.0
-            metrics["no_direct_answer"] = 0.0 if any(word in str(stuck) for word in case.get("forbidden", [])) else 1.0
+            tasks = self.client.post("/api/agent/daily-tasks", json={"student_id": 1, "force_all_sources": True}).json()["tasks"]
+            if not tasks:
+                output = {"tasks": []}
+                metrics["actionable"] = 0.0
+                metrics["no_direct_answer"] = 1.0
+                issues.append("no task generated for stuck case")
+            else:
+                task_id = tasks[0]["id"]
+                stuck = self.client.post(f"/api/daily-tasks/{task_id}/event", json={"event_type": "stuck", "note": case["note"]}).json()
+                output = stuck
+                steps = stuck.get("assistance", {}).get("steps", [])
+                metrics["actionable"] = 1.0 if len(steps) >= 3 else 0.0
+                metrics["no_direct_answer"] = 0.0 if any(word in str(stuck) for word in case.get("forbidden", [])) else 1.0
+                metrics["tool_loop"] = 1.0 if stuck.get("tool_loop", {}).get("mode") == "controlled_tool_loop" else 0.0
         elif case_type == "quiz":
             self.client.post("/api/study-plan/generate", data={"raw_text": case.get("plan", "preview, English daily unit, English, 8"), "student_id": "1"})
-            tasks = self.client.post("/api/daily-tasks/generate").json().get("tasks", [])
+            tasks = self.client.post("/api/agent/daily-tasks", json={"student_id": 1, "force_all_sources": True}).json().get("tasks", [])
             if not tasks:
                 output = {"tasks": []}
                 metrics["min_items"] = 0.0

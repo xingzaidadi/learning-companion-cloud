@@ -341,6 +341,17 @@ def init_db() -> None:
                 created_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS material_embeddings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                chunk_id INTEGER NOT NULL REFERENCES material_chunks(id) ON DELETE CASCADE,
+                model TEXT NOT NULL DEFAULT 'local-hash-v1',
+                dim INTEGER NOT NULL DEFAULT 64,
+                vector_json TEXT NOT NULL DEFAULT '[]',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE(chunk_id, model)
+            );
+
             CREATE TABLE IF NOT EXISTS tutor_sessions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 daily_task_id INTEGER NOT NULL REFERENCES daily_tasks(id) ON DELETE CASCADE,

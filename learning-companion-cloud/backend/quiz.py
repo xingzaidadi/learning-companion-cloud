@@ -7,6 +7,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from .db import dumps, loads, utc_now
+from .grading_rubrics import rubric_for_item
 from .ai_provider import call_ai_json_with_meta, generate_ai_questions
 from .curriculum import find_curriculum_context
 from .question_engine import build_content_quiz, build_variant_questions
@@ -358,9 +359,9 @@ def ensure_quiz_for_task(conn: Connection, task: dict[str, Any]) -> list[dict[st
             """
             INSERT INTO quiz_items (
                 daily_task_id, question_type, question, options_json,
-                answer, explanation, subject, skill, source_ref, quality_score, created_at
+                answer, explanation, subject, skill, source_ref, quality_score, grading_rubric_json, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 task["id"],
@@ -373,6 +374,7 @@ def ensure_quiz_for_task(conn: Connection, task: dict[str, Any]) -> list[dict[st
                 skill,
                 source_ref,
                 quality_score,
+                dumps(rubric_for_item(item.get("question_type", ""), subject)),
                 now,
             ),
         )

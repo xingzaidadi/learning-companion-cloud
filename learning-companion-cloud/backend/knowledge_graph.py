@@ -10,7 +10,26 @@ from .db import utc_now
 
 def _points_from_text(text: str) -> list[str]:
     candidates = re.findall(r"[A-Za-z][A-Za-z ]{2,24}|[\u4e00-\u9fff]{2,12}", text)
-    stop = {"学习任务", "完成标准", "今日任务", "课文", "练习", "知识点", "资料", "小学", "五年级", "上册"}
+    stop = {
+        "学习任务",
+        "完成标准",
+        "今日任务",
+        "课文",
+        "练习",
+        "知识点",
+        "资料",
+        "小学",
+        "五年级",
+        "上册",
+        "五年级上册",
+        "结构化知识库",
+        "能力",
+        "难度",
+        "权重",
+        "单元",
+        "板块",
+        "样例",
+    }
     points: list[str] = []
     for item in candidates:
         item = item.strip(" ：:，,。.；;")
