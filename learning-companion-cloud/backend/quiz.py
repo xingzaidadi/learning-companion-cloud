@@ -11,7 +11,7 @@ from .grading_rubrics import rubric_for_item
 from .ai_provider import call_ai_json_with_meta, generate_ai_questions
 from .curriculum import find_curriculum_context
 from .question_engine import build_content_quiz, build_variant_questions
-from .review import create_review_item
+from .review import close_related_review_items, create_review_item
 from .rewards import add_reward
 from .settings import get_settings
 
@@ -684,18 +684,19 @@ def grade_quiz(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[
                     "grading_source": grading_source,
                 }
             )
-            for days_later in (1, 3, 7, 14):
-                create_review_item(
-                    conn,
-                    int(task["student_id"]),
-                    task_id,
-                    item["question"],
-                    expected,
-                    item["explanation"],
-                    _review_reason(question_type, error_type),
-                    days_later,
-                    f"D{days_later}",
-                )
+            if task["check_method"] != "review_quiz":
+                for days_later in (1, 3, 7, 14):
+                    create_review_item(
+                        conn,
+                        int(task["student_id"]),
+                        task_id,
+                        item["question"],
+                        expected,
+                        item["explanation"],
+                        _review_reason(question_type, error_type),
+                        days_later,
+                        f"D{days_later}",
+                    )
 
     total = len(items)
     ratio = correct / total if total else 0
@@ -746,10 +747,7 @@ def grade_quiz(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[
             (task_id,),
         ).fetchone()
         if link and link["note"].isdigit():
-            conn.execute(
-                "UPDATE review_items SET status = 'done', last_result = 'passed', updated_at = ? WHERE id = ?",
-                (now, int(link["note"])),
-            )
+            close_related_review_items(conn, int(link["note"]), "passed")
     if is_new_completion:
         add_reward(conn, int(task["student_id"]), 10, "小测通过", f"{task['title']} 小测 {correct}/{total}")
     conn.execute(

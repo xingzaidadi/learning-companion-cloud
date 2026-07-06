@@ -1,6 +1,6 @@
 # Agent Eval Report
 
-- Generated at: `2026-07-06T15:15:02`
+- Generated at: `2026-07-06T15:34:35`
 - Agents: `demo_agent, learning_agent`
 - Note: `known_gap_cases` are intentional diagnostic red cases; CI fails only on unexpected failures.
 
@@ -53,9 +53,9 @@
 
 ## Regression Trend
 
-- Previous avg score: `0.989`
+- Previous avg score: `0.994`
 - Current avg score: `0.994`
-- Delta: `0.005`
+- Delta: `0.0`
 
 ## Failed Case Details
 

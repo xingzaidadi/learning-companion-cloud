@@ -222,6 +222,26 @@ def run_child_flow() -> None:
                     utc_now(),
                 ),
             ).lastrowid
+            duplicate_review_id = conn.execute(
+                """
+                INSERT INTO review_items (
+                    student_id, source_task_id, question, answer, explanation,
+                    reason, due_date, status, review_stage, created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 'D1', ?, ?)
+                """,
+                (
+                    1,
+                    task1,
+                    "D1 补漏：拼写：中译英：错因/来源",
+                    "stuck",
+                    "同一个错点的重复补漏，不能继续卡住孩子。",
+                    "wrong_english_spelling",
+                    date.today().isoformat(),
+                    utc_now(),
+                    utc_now(),
+                ),
+            ).lastrowid
         review_tasks = assert_status(client.post("/api/daily-tasks/generate"))["tasks"]
         review_task = next(task for task in review_tasks if str(task["check_method"]) == "review_quiz")
         review_task_id = int(review_task["id"])
@@ -241,7 +261,19 @@ def run_child_flow() -> None:
         assert_true(review_pass["status"] == "completed", f"补漏复测正确答案应能通过：{review_pass}")
         with get_conn() as conn:
             review_status = conn.execute("SELECT status FROM review_items WHERE id = ?", (review_id,)).fetchone()[0]
+            duplicate_review_status = conn.execute("SELECT status FROM review_items WHERE id = ?", (duplicate_review_id,)).fetchone()[0]
+            duplicate_open_tasks = conn.execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM daily_tasks dt
+                JOIN task_progress tp ON tp.daily_task_id = dt.id AND tp.event_type = 'review_item'
+                WHERE tp.note = ? AND dt.status != 'completed'
+                """,
+                (str(duplicate_review_id),),
+            ).fetchone()["count"]
         assert_true(review_status == "done", f"补漏复测通过后 review_item 应完成，实际 {review_status}")
+        assert_true(duplicate_review_status == "done", f"同源重复补漏应一起关闭，实际 {duplicate_review_status}")
+        assert_true(duplicate_open_tasks == 0, "同源重复补漏通过后不应继续出现在今日待做队列")
 
         with get_conn() as conn:
             conn.execute("DELETE FROM daily_tasks")

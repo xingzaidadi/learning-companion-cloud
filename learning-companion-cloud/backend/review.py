@@ -1,11 +1,20 @@
 from __future__ import annotations
 
+import re
 from datetime import date, timedelta
 from sqlite3 import Connection
 from typing import Any
 
 from .db import utc_now
 from .question_engine import build_variant_questions
+
+
+def normalize_review_question(question: str) -> str:
+    text = re.sub(r"\s+", " ", (question or "").strip())
+    for _ in range(3):
+        text = re.sub(r"^D\d+\s*补漏[:：]\s*", "", text).strip()
+        text = re.sub(r"^补漏[:：]\s*", "", text).strip()
+    return text[:120]
 
 
 def create_review_item(
@@ -22,6 +31,21 @@ def create_review_item(
     now = utc_now()
     due_date = (date.today() + timedelta(days=days_later)).isoformat()
     stage = review_stage or f"D{days_later}"
+    normalized_question = normalize_review_question(question)
+    candidates = conn.execute(
+        """
+        SELECT id, question, status FROM review_items
+        WHERE student_id = ?
+          AND COALESCE(source_task_id, 0) = COALESCE(?, 0)
+          AND review_stage = ?
+          AND status IN ('pending', 'scheduled', 'done')
+        ORDER BY id
+        """,
+        (student_id, source_task_id, stage),
+    ).fetchall()
+    for candidate in candidates:
+        if normalize_review_question(candidate["question"]) == normalized_question:
+            return int(candidate["id"])
     cursor = conn.execute(
         """
         INSERT INTO review_items (
@@ -41,11 +65,68 @@ def due_review_items(conn: Connection, student_id: int, target_date: str) -> lis
         SELECT * FROM review_items
         WHERE student_id = ? AND status = 'pending' AND due_date <= ?
         ORDER BY due_date, id
-        LIMIT 3
+        LIMIT 20
         """,
         (student_id, target_date),
     ).fetchall()
-    return [dict(row) for row in rows]
+    deduped: list[dict[str, Any]] = []
+    seen: set[tuple[int, str, str]] = set()
+    for row in rows:
+        item = dict(row)
+        key = (
+            int(item.get("source_task_id") or 0),
+            item.get("review_stage") or "",
+            normalize_review_question(item.get("question", "")),
+        )
+        if key in seen:
+            conn.execute(
+                "UPDATE review_items SET status = 'done', last_result = 'deduped', updated_at = ? WHERE id = ?",
+                (utc_now(), item["id"]),
+            )
+            continue
+        seen.add(key)
+        deduped.append(item)
+        if len(deduped) >= 3:
+            break
+    return deduped
+
+
+def close_related_review_items(conn: Connection, review_item_id: int, result: str = "passed") -> None:
+    current = conn.execute("SELECT * FROM review_items WHERE id = ?", (review_item_id,)).fetchone()
+    if not current:
+        return
+    normalized_question = normalize_review_question(current["question"])
+    now = utc_now()
+    rows = conn.execute(
+        """
+        SELECT id, question FROM review_items
+        WHERE student_id = ?
+          AND COALESCE(source_task_id, 0) = COALESCE(?, 0)
+          AND review_stage = ?
+          AND status IN ('pending', 'scheduled')
+        """,
+        (current["student_id"], current["source_task_id"], current["review_stage"]),
+    ).fetchall()
+    related_ids = [int(row["id"]) for row in rows if normalize_review_question(row["question"]) == normalized_question]
+    if related_ids:
+        placeholders = ",".join("?" for _ in related_ids)
+        conn.execute(
+            f"UPDATE review_items SET status = 'done', last_result = ?, updated_at = ? WHERE id IN ({placeholders})",
+            (result, now, *related_ids),
+        )
+        conn.execute(
+            f"""
+            UPDATE daily_tasks
+            SET status = 'completed', updated_at = ?
+            WHERE check_method = 'review_quiz'
+              AND status IN ('not_started', 'in_progress', 'checking', 'needs_revision')
+              AND id IN (
+                  SELECT daily_task_id FROM task_progress
+                  WHERE event_type = 'review_item' AND note IN ({placeholders})
+              )
+            """,
+            (now, *[str(value) for value in related_ids]),
+        )
 
 
 def create_review_tasks(conn: Connection, student_id: int, target_date: str) -> list[dict[str, Any]]:
