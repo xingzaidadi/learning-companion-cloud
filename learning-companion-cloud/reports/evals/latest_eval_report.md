@@ -1,6 +1,6 @@
 # Agent Eval Report
 
-- Generated at: `2026-07-06T08:04:21`
+- Generated at: `2026-07-06T08:15:44`
 - Agents: `demo_agent, learning_agent`
 - Note: `known_gap_cases` are intentional diagnostic red cases; CI fails only on unexpected failures.
 
