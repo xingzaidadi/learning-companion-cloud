@@ -767,6 +767,32 @@ details.card[open] > summary::after {
   justify-content: flex-start;
 }
 
+.parent-quick-adjust {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.parent-quick-adjust h3 {
+  margin: 0 0 10px;
+}
+
+.parent-quick-adjust .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.parent-quick-adjust .actions button {
+  min-height: 40px;
+}
+
+.mini-action {
+  margin-top: 8px;
+  min-height: 32px;
+  padding: 6px 10px;
+}
+
 .task-head {
   display: flex;
   align-items: flex-start;

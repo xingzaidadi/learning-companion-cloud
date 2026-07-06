@@ -114,14 +114,17 @@ def arrange_daily_schedule(conn: Connection, student_id: int = 1, target_date: s
     for task in pending:
         minutes = max(10, min(int(task.get("estimated_minutes") or 20), 60))
         subject = infer_subject_from_task(task)
-        candidates = sorted(
-            windows,
-            key=lambda window: (
-                0 if subject in window["best_for"] else 1,
-                1 if subject == last_subject else 0,
-                window["cursor"],
-            ),
-        )
+        if task.get("status") in {"checking", "needs_revision", "stuck"}:
+            candidates = sorted(windows, key=lambda window: window["cursor"])
+        else:
+            candidates = sorted(
+                windows,
+                key=lambda window: (
+                    0 if subject in window["best_for"] else 1,
+                    1 if subject == last_subject else 0,
+                    window["cursor"],
+                ),
+            )
         selected = None
         for window in candidates:
             if window["cursor"] + timedelta(minutes=minutes) <= window["end_time"]:

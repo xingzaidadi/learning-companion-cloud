@@ -159,6 +159,7 @@ def run_child_flow() -> None:
 
         stuck = assert_status(client.post(f"/api/daily-tasks/{task1}/event", json={"event_type": "stuck", "note": "不会判断小数点位置"}))
         assert_true(stuck["status"] == "stuck" and stuck["timer_state"] == "stopped", f"卡住状态错误：{stuck}")
+        assert_true(stuck.get("dynamic_adjustment", {}).get("applied") is True, f"卡住后应自动动态重排：{stuck}")
         assistance = stuck.get("assistance", {})
         for key in ("encouragement", "hint_1", "try_again", "review_focus"):
             assert_true(bool(assistance.get(key)), f"卡住辅导缺少 {key}：{assistance}")

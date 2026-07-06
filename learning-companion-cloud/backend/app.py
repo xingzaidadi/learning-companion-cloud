@@ -49,6 +49,7 @@ try:
     from .learning_strategy import build_dynamic_strategy
     from .material_importer import create_material_from_import, extract_local_file, extract_public_url
     from .notifier import notify
+    from .plan_adjuster import adjust_today_plan, apply_ket_level, auto_adjust_after_event, ket_difficulty_suggestion
     from .plan_generator import generate_plan_from_text
     from .planner import generate_daily_tasks, seed_demo_sources
     from .quiz import ensure_quiz_for_task, grade_quiz, missing_required_answers, regenerate_quiz_for_task
@@ -89,6 +90,7 @@ except ImportError:
     from learning_strategy import build_dynamic_strategy
     from material_importer import create_material_from_import, extract_local_file, extract_public_url
     from notifier import notify
+    from plan_adjuster import adjust_today_plan, apply_ket_level, auto_adjust_after_event, ket_difficulty_suggestion
     from plan_generator import generate_plan_from_text
     from planner import generate_daily_tasks, seed_demo_sources
     from quiz import ensure_quiz_for_task, grade_quiz, missing_required_answers, regenerate_quiz_for_task
@@ -1082,8 +1084,10 @@ def task_event(task_id: int, data: dict[str, Any], _: str = Depends(require_chil
                 1,
             )
             notify(conn, task["student_id"], "stuck", "孩子卡住了", f"{task['title']}\n\n说明：{note or '未填写'}")
-            return {"task_id": task_id, **assistance, "status": status_map[event_type], **_task_time_stats(conn, task_id, status_map[event_type])}
-        return {"task_id": task_id, "status": status_map[event_type], **_task_time_stats(conn, task_id, status_map[event_type])}
+            dynamic_adjustment = auto_adjust_after_event(conn, task_id, event_type)
+            return {"task_id": task_id, **assistance, "status": status_map[event_type], "dynamic_adjustment": dynamic_adjustment, **_task_time_stats(conn, task_id, status_map[event_type])}
+        dynamic_adjustment = auto_adjust_after_event(conn, task_id, event_type)
+        return {"task_id": task_id, "status": status_map[event_type], "dynamic_adjustment": dynamic_adjustment, **_task_time_stats(conn, task_id, status_map[event_type])}
 
 
 @app.get("/api/daily-tasks/{task_id}/quiz")
@@ -1152,6 +1156,34 @@ def end_day(
 ) -> dict[str, object]:
     with get_conn() as conn:
         return agent_daily_report(conn, student_id, target_date or date.today().isoformat())
+
+
+@app.post("/api/day/adjust")
+def adjust_day(
+    data: dict[str, Any],
+    _: str = Depends(require_parent_or_admin_auth),
+) -> dict[str, object]:
+    student_id = int(data.get("student_id", 1))
+    target_date = data.get("target_date") or date.today().isoformat()
+    mode = str(data.get("mode") or "rebalance")
+    with get_conn() as conn:
+        result = adjust_today_plan(conn, student_id, target_date, mode)
+        tasks = _annotate_tasks(conn, result.pop("tasks", []))
+        return {**result, "tasks": tasks, "timeline": build_day_timeline(tasks)}
+
+
+@app.get("/api/ket/difficulty")
+def ket_difficulty(student_id: int = 1, _: str = Depends(require_parent_or_admin_auth)) -> dict[str, object]:
+    with get_conn() as conn:
+        return ket_difficulty_suggestion(conn, student_id)
+
+
+@app.post("/api/ket/difficulty")
+def update_ket_difficulty(data: dict[str, Any], _: str = Depends(require_parent_or_admin_auth)) -> dict[str, object]:
+    level = str(data.get("level") or "standard")
+    student_id = int(data.get("student_id", 1))
+    with get_conn() as conn:
+        return apply_ket_level(conn, level, student_id)
 
 
 @app.post("/api/agent/daily-report")

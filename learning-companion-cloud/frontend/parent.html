@@ -41,6 +41,15 @@
             <button id="endDay" class="primary" aria-label="生成今天学习日报">生成今天日报</button>
             <button id="weekReport" aria-label="生成本周学习周报">生成本周周报</button>
           </div>
+          <div class="parent-quick-adjust">
+            <h3>一键调节今天</h3>
+            <div class="actions">
+              <button data-adjust="lighter" aria-label="今天轻松一点">轻松一点</button>
+              <button data-adjust="harder" aria-label="英语加点挑战">英语加挑战</button>
+              <button data-adjust="catch_up" class="warn" aria-label="先补救卡点和订正">先补救</button>
+            </div>
+            <p id="ketSuggestion" class="muted">正在分析 KET 难度...</p>
+          </div>
         </aside>
       </section>
 
@@ -320,12 +329,29 @@
         `;
       }
 
+      async function renderKetSuggestion() {
+        const box = document.querySelector("#ketSuggestion");
+        try {
+          const data = await api("/api/ket/difficulty");
+          const levelText = { light: "轻量", standard: "标准", advanced: "进阶" };
+          const actionText = data.action === "increase" ? "建议升难度" : data.action === "decrease" ? "建议先降强度" : "当前合适";
+          box.innerHTML = `
+            <strong>KET：${levelText[data.level] || data.level} · ${actionText}</strong><br />
+            ${data.reason || "继续观察。"}
+            ${data.action !== "keep" ? `<button class="mini-action" data-ket-level="${data.suggested_level}">应用建议</button>` : ""}
+          `;
+        } catch (error) {
+          box.textContent = `KET 难度分析失败：${error.message}`;
+        }
+      }
+
       async function loadDashboard() {
         const data = await api("/api/parent/dashboard");
         renderSummary(data);
         renderActions(data);
         renderReport(data);
         renderDetails(data);
+        await renderKetSuggestion();
       }
 
       document.querySelector("#endDay").addEventListener("click", async () => {
@@ -338,6 +364,40 @@
         const report = await api("/api/week/report", { method: "POST" });
         toast(report.summary);
         await loadDashboard();
+      });
+
+      document.addEventListener("click", async (event) => {
+        const adjustButton = event.target.closest("[data-adjust]");
+        if (adjustButton) {
+          adjustButton.disabled = true;
+          try {
+            const result = await api("/api/day/adjust", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ mode: adjustButton.dataset.adjust, student_id: 1 }),
+            });
+            toast(result.message || "已调整今天计划");
+            await loadDashboard();
+          } finally {
+            adjustButton.disabled = false;
+          }
+          return;
+        }
+        const ketButton = event.target.closest("[data-ket-level]");
+        if (ketButton) {
+          ketButton.disabled = true;
+          try {
+            const result = await api("/api/ket/difficulty", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ level: ketButton.dataset.ketLevel, student_id: 1 }),
+            });
+            toast(`KET 已调整为 ${result.ket_plan?.level || ketButton.dataset.ketLevel}`);
+            await loadDashboard();
+          } finally {
+            ketButton.disabled = false;
+          }
+        }
       });
 
       loadDashboard().catch((error) => toast(error.message));

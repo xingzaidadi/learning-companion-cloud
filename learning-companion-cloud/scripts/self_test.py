@@ -136,6 +136,11 @@ def run_e2e() -> None:
         assert_true(any("午餐" in block.get("title", "") for block in blocks), f"全天安排应展示午餐午休：{block_text}")
         assert_true(any("晚餐" in block.get("title", "") for block in blocks), f"全天安排应展示晚餐放松：{block_text}")
         assert_true(any(block.get("kind") == "movement" for block in blocks), f"全天安排应展示运动块：{block_text}")
+        ket_difficulty = assert_status(client.get("/api/ket/difficulty"))
+        assert_true(ket_difficulty.get("suggested_level") in {"light", "standard", "advanced"}, f"KET 难度建议应可用：{ket_difficulty}")
+        adjusted = assert_status(client.post("/api/day/adjust", json={"mode": "lighter", "student_id": 1}))
+        assert_true(adjusted.get("timeline", {}).get("blocks"), f"一键调整后应返回新的全天表：{adjusted}")
+        assert_true(adjusted.get("mode") == "lighter", f"一键调整模式应生效：{adjusted}")
 
         material = assert_status(client.post("/api/materials", data={
             "student_id": "1",
