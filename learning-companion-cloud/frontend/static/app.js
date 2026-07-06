@@ -54,7 +54,16 @@ async function api(path, options = {}) {
   const response = await fetch(path, options);
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || response.statusText);
+    let message = text || response.statusText;
+    try {
+      const payload = JSON.parse(text);
+      if (typeof payload.detail === "string") message = payload.detail;
+      else if (payload.detail?.message) message = payload.detail.message;
+      else if (payload.message) message = payload.message;
+    } catch (_) {
+      // Keep the original text for non-JSON errors.
+    }
+    throw new Error(message);
   }
   return response.json();
 }

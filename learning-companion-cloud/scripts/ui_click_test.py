@@ -308,6 +308,14 @@ def run_browser_clicks(base_url: str) -> None:
         assert workflow_task["status"] == "checking", f"检查中点击顶部按钮不应重新开始任务：{workflow_task}"
         workflow_card.locator("button[data-action='showQuiz']").click(force=True)
         page.wait_for_selector("#quizBox form")
+        page.click("#quizBox form button.primary")
+        page.wait_for_selector("#quizBox .form-error:not([hidden])")
+        assert "没填" in page.locator("#quizBox .form-error").inner_text(), "空答案提交必须被前端拦截并提示"
+        api_tasks = page.evaluate("async () => await (await fetch('/api/daily-tasks')).json()")
+        workflow_task = next(task for task in api_tasks if task["id"] == int(workflow_task_id))
+        assert workflow_task["status"] == "checking", f"空答案提交后任务仍应停在检查中：{workflow_task}"
+        for index in range(page.locator("#quizBox input:not([type='radio'])").count()):
+            page.locator("#quizBox input:not([type='radio'])").nth(index).fill("测试答案")
         for index in range(page.locator("#quizBox textarea").count()):
             page.locator("#quizBox textarea").nth(index).fill("测试答案")
         radio_names = page.locator("#quizBox input[type='radio']").evaluate_all(

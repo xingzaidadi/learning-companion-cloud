@@ -15,7 +15,7 @@
 </head>
 <body>
   <h1>Agent Eval Dashboard</h1>
-  <p>生成时间：2026-07-06T15:34:35；趋势点：10</p>
+  <p>生成时间：2026-07-06T15:52:04；趋势点：11</p>
   <section class="grid">
             <article class="card">
               <h2>demo_agent</h2>
@@ -40,8 +40,8 @@
   <h2>回归趋势</h2>
   <canvas id="trend" width="900" height="240" aria-label="Eval avg score trend"></canvas>
   <script>
-    const values = [0.994,0.994,0.994,0.988,0.988,0.989,0.989,0.989,0.994,0.994];
-    const labels = ["07-06T10:42","07-06T10:45","07-06T10:48","07-06T11:40","07-06T11:44","07-06T11:47","07-06T14:40","07-06T14:53","07-06T15:15","07-06T15:34"];
+    const values = [0.994,0.994,0.994,0.988,0.988,0.989,0.989,0.989,0.994,0.994,0.994];
+    const labels = ["07-06T10:42","07-06T10:45","07-06T10:48","07-06T11:40","07-06T11:44","07-06T11:47","07-06T14:40","07-06T14:53","07-06T15:15","07-06T15:34","07-06T15:52"];
     const canvas = document.getElementById('trend');
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);

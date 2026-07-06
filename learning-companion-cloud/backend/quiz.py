@@ -625,6 +625,26 @@ def _latest_quiz_result(conn: Connection, task_id: int) -> dict[str, Any] | None
     }
 
 
+def missing_required_answers(conn: Connection, task_id: int, answers: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT id, question_type, question FROM quiz_items WHERE daily_task_id = ? ORDER BY id",
+        (task_id,),
+    ).fetchall()
+    missing: list[dict[str, Any]] = []
+    for index, row in enumerate(rows, start=1):
+        value = answers.get(str(row["id"]), "")
+        if value is None or str(value).strip() == "":
+            missing.append(
+                {
+                    "id": row["id"],
+                    "index": index,
+                    "question_type": row["question_type"],
+                    "question": row["question"],
+                }
+            )
+    return missing
+
+
 def grade_quiz(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[str, Any]:
     task = conn.execute("SELECT * FROM daily_tasks WHERE id = ?", (task_id,)).fetchone()
     if not task:

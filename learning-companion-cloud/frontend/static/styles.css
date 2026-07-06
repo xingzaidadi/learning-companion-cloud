@@ -1009,6 +1009,25 @@ textarea {
   line-height: 1.45;
 }
 
+.quiz-workspace .quiz-item.missing {
+  border: 2px solid rgba(239, 68, 68, 0.55);
+  background: #fff7f7;
+  box-shadow: 0 14px 28px rgba(239, 68, 68, 0.12);
+}
+
+.form-error {
+  padding: 14px 16px;
+  border-radius: 16px;
+  color: #991b1b;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  font-weight: 900;
+}
+
+.form-error[hidden] {
+  display: none;
+}
+
 .quiz-workspace input,
 .quiz-workspace textarea {
   margin-top: 10px;

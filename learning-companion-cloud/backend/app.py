@@ -50,7 +50,7 @@ try:
     from .notifier import notify
     from .plan_generator import generate_plan_from_text
     from .planner import generate_daily_tasks, seed_demo_sources
-    from .quiz import ensure_quiz_for_task, grade_quiz, regenerate_quiz_for_task
+    from .quiz import ensure_quiz_for_task, grade_quiz, missing_required_answers, regenerate_quiz_for_task
     from .report import build_daily_report, build_weekly_report
     from .rewards import today_rewards
     from .review import create_review_item, review_book
@@ -89,7 +89,7 @@ except ImportError:
     from notifier import notify
     from plan_generator import generate_plan_from_text
     from planner import generate_daily_tasks, seed_demo_sources
-    from quiz import ensure_quiz_for_task, grade_quiz, regenerate_quiz_for_task
+    from quiz import ensure_quiz_for_task, grade_quiz, missing_required_answers, regenerate_quiz_for_task
     from report import build_daily_report, build_weekly_report
     from rewards import today_rewards
     from review import create_review_item, review_book
@@ -1096,17 +1096,37 @@ def regenerate_quiz(task_id: int, _: str = Depends(require_admin_auth)) -> dict[
 @app.post("/api/daily-tasks/{task_id}/quiz")
 def submit_quiz(task_id: int, data: dict[str, Any], _: str = Depends(require_child_or_admin_auth)) -> dict[str, object]:
     answers = data.get("answers", {})
+    if not isinstance(answers, dict):
+        raise HTTPException(status_code=400, detail={"message": "答案格式不正确，请重新填写小测。"})
     with get_conn() as conn:
         task = conn.execute("SELECT * FROM daily_tasks WHERE id = ?", (task_id,)).fetchone()
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
+        missing = missing_required_answers(conn, task_id, answers)
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail={"message": "请先完成所有小测题，再提交。", "missing": missing},
+            )
         return grade_submission(conn, task_id, answers)
 
 
 @app.post("/api/agent/grade/{task_id}")
 def agent_grade(task_id: int, data: dict[str, Any], _: str = Depends(require_child_or_admin_auth)) -> dict[str, object]:
+    answers = data.get("answers", {})
+    if not isinstance(answers, dict):
+        raise HTTPException(status_code=400, detail={"message": "答案格式不正确，请重新填写小测。"})
     with get_conn() as conn:
-        return grade_submission(conn, task_id, data.get("answers", {}))
+        task = conn.execute("SELECT * FROM daily_tasks WHERE id = ?", (task_id,)).fetchone()
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+        missing = missing_required_answers(conn, task_id, answers)
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail={"message": "请先完成所有小测题，再提交。", "missing": missing},
+            )
+        return grade_submission(conn, task_id, answers)
 
 
 @app.post("/api/day/end")

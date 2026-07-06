@@ -142,6 +142,9 @@ def run_e2e() -> None:
         quiz = assert_status(client.get(f"/api/daily-tasks/{task_id}/quiz"))
         assert_true(quiz["items"], "小测不能为空")
         assert_true(all("answer" not in item and "explanation" not in item for item in quiz["items"]), "孩子端小测不能泄露答案")
+        blank_answers = {str(item["id"]): "" for item in quiz["items"]}
+        blank_result = assert_status(client.post(f"/api/daily-tasks/{task_id}/quiz", json={"answers": blank_answers}), 400)
+        assert_true("missing" in blank_result["detail"], f"空答案必须被拒绝，不能进入批改：{blank_result}")
         with get_conn() as conn:
             rubric_rows = conn.execute("SELECT grading_rubric_json FROM quiz_items WHERE daily_task_id = ?", (task_id,)).fetchall()
             standard_answers = {

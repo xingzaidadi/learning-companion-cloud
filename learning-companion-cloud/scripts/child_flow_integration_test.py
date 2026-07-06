@@ -170,7 +170,10 @@ def run_child_flow() -> None:
         quiz_text = "\n".join(item["question"].lower() for item in quiz["items"])
         assert_true("there __ a library" not in quiz_text and "there ___ a library" not in quiz_text, "小测题干不应用句型题泄露 library")
 
-        wrong_answers = {str(item_id): "" for item_id in item_ids}
+        blank_answers = {str(item_id): "" for item_id in item_ids}
+        blank_response = assert_status(client.post(f"/api/daily-tasks/{task1}/quiz", json={"answers": blank_answers}), 400)
+        assert_true("missing" in blank_response["detail"], f"空答案必须被拒绝，不能进入批改：{blank_response}")
+        wrong_answers = {str(item_id): "不会" for item_id in item_ids}
         revision = assert_status(client.post(f"/api/daily-tasks/{task1}/quiz", json={"answers": wrong_answers}))
         assert_true(revision["status"] == "needs_revision" and revision["wrong_items"], f"低分应需订正：{revision}")
         start_while_revision = assert_status(client.post(f"/api/daily-tasks/{task1}/event", json={"event_type": "start"}))
@@ -325,7 +328,10 @@ def run_child_flow() -> None:
         published_quiz = assert_status(client.get(f"/api/daily-tasks/{published_task_id}/quiz"))
         assert_true(len(published_quiz["items"]) >= 3, f"后端发布任务应生成小测：{published_quiz}")
         assert_true(all("answer" not in item for item in published_quiz["items"]), "后端发布任务的小测不能向孩子暴露答案")
-        wrong_published_answers = {str(item["id"]): "" for item in published_quiz["items"]}
+        blank_published_answers = {str(item["id"]): "" for item in published_quiz["items"]}
+        blank_published = assert_status(client.post(f"/api/daily-tasks/{published_task_id}/quiz", json={"answers": blank_published_answers}), 400)
+        assert_true("missing" in blank_published["detail"], f"后端发布任务空答案必须被拒绝：{blank_published}")
+        wrong_published_answers = {str(item["id"]): "不会" for item in published_quiz["items"]}
         published_revision = assert_status(client.post(f"/api/daily-tasks/{published_task_id}/quiz", json={"answers": wrong_published_answers}))
         assert_true(published_revision["status"] == "needs_revision", f"后端发布任务答错应进入订正：{published_revision}")
 

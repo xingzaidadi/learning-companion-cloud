@@ -506,16 +506,36 @@
         submit.className = "primary";
         submit.textContent = "提交小测";
         submit.setAttribute("aria-label", "提交小测答案");
+        const validation = document.createElement("div");
+        validation.className = "form-error";
+        validation.setAttribute("role", "alert");
+        validation.setAttribute("aria-live", "assertive");
+        validation.hidden = true;
+        form.append(validation);
         form.append(submit);
         form.addEventListener("submit", async (event) => {
           event.preventDefault();
           if (submit.disabled) return;
-          submit.disabled = true;
-          submit.textContent = "正在检查...";
           const answers = {};
           new FormData(form).forEach((value, key) => {
-            answers[key] = value;
+            answers[key] = String(value || "").trim();
           });
+          const missing = data.items.filter((item) => !answers[String(item.id)]);
+          form.querySelectorAll(".quiz-item.missing").forEach((node) => node.classList.remove("missing"));
+          validation.hidden = true;
+          validation.textContent = "";
+          if (missing.length) {
+            const firstMissing = missing[0];
+            const input = form.querySelector(`[name="${firstMissing.id}"]`);
+            input?.closest(".quiz-item")?.classList.add("missing");
+            validation.textContent = `还有 ${missing.length} 道题没填。先完成所有小测题，再提交。`;
+            validation.hidden = false;
+            input?.focus();
+            toast(validation.textContent);
+            return;
+          }
+          submit.disabled = true;
+          submit.textContent = "正在检查...";
           try {
             const result = await api(`/api/daily-tasks/${taskId}/quiz`, {
               method: "POST",
