@@ -63,7 +63,7 @@ def run_static_button_inventory_check() -> None:
     pages = {
         "admin.html": ["一句话安排学习", "生成计划并生成今日任务", "补齐/同步今日任务", "检查 AI", "学习资料库"],
         "child.html": ["学习驾驶舱", "今日进度", "当前任务", "检查与求助", "后续任务队列", "我卡住了", "少打字求助", "口述给家长", "纸笔完成"],
-        "parent.html": ["你现在只需要看这里", "生成今天日报", "生成本周周报", "明天第一步"],
+        "parent.html": ["你现在只需要看这里", "生成今天日报", "生成本周周报", "明天第一步", "系统约束与遗漏提醒"],
     }
     for page_name, needles in pages.items():
         text = (ROOT / "frontend" / page_name).read_text(encoding="utf-8")
@@ -141,6 +141,11 @@ def run_e2e() -> None:
         adjusted = assert_status(client.post("/api/day/adjust", json={"mode": "lighter", "student_id": 1}))
         assert_true(adjusted.get("timeline", {}).get("blocks"), f"一键调整后应返回新的全天表：{adjusted}")
         assert_true(adjusted.get("mode") == "lighter", f"一键调整模式应生效：{adjusted}")
+        constraints = assert_status(client.get("/api/system-constraints"))
+        for key in ("material_trust", "workload", "calibration", "review_loop", "parent_intervention"):
+            assert_true(key in constraints and constraints[key].get("status"), f"系统约束缺少 {key}：{constraints}")
+        parent_dashboard = assert_status(client.get("/api/parent/dashboard"))
+        assert_true(parent_dashboard.get("system_constraints", {}).get("workload", {}).get("status"), f"家长端应返回系统约束：{parent_dashboard}")
 
         material = assert_status(client.post("/api/materials", data={
             "student_id": "1",

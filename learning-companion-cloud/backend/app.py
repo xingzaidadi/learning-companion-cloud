@@ -59,6 +59,7 @@ try:
     from .scheduler import start_scheduler
     from .settings import get_settings, save_settings
     from .study_schedule import arrange_daily_schedule
+    from .system_constraints import build_system_constraints
 except ImportError:
     from agent import (
         assist_stuck as agent_assist_stuck,
@@ -100,6 +101,7 @@ except ImportError:
     from scheduler import start_scheduler
     from settings import get_settings, save_settings
     from study_schedule import arrange_daily_schedule
+    from system_constraints import build_system_constraints
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -1168,8 +1170,19 @@ def adjust_day(
     mode = str(data.get("mode") or "rebalance")
     with get_conn() as conn:
         result = adjust_today_plan(conn, student_id, target_date, mode)
+        notify(conn, student_id, "parent_adjust", "家长调整了今日计划", f"模式：{mode}；结果：{result.get('message', '')}")
         tasks = _annotate_tasks(conn, result.pop("tasks", []))
         return {**result, "tasks": tasks, "timeline": build_day_timeline(tasks)}
+
+
+@app.get("/api/system-constraints")
+def system_constraints(
+    student_id: int = 1,
+    target_date: str | None = None,
+    _: str = Depends(require_parent_or_admin_auth),
+) -> dict[str, object]:
+    with get_conn() as conn:
+        return build_system_constraints(conn, student_id, target_date or date.today().isoformat())
 
 
 @app.get("/api/ket/difficulty")
@@ -1366,6 +1379,7 @@ def parent_dashboard(
         agent_overview_data = get_agent_overview(conn, student_id)
         target_insights = build_target_insights(conn, student_id)
         adjustment = recommend_daily_adjustments(conn, student_id, today)
+        constraints = build_system_constraints(conn, student_id, today)
         return {
             "date": today,
             "total": len(tasks),
@@ -1383,4 +1397,5 @@ def parent_dashboard(
             "notifications": [_sanitize_notification_for_display(item) for item in notifications],
             "target_95": target_insights,
             "daily_adjustment": adjustment,
+            "system_constraints": constraints,
         }

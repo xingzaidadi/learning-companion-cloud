@@ -841,6 +841,36 @@ details.card[open] > summary::after {
   min-height: 40px;
 }
 
+.constraint-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.constraint-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(230, 232, 239, 0.9);
+  border-radius: 18px;
+  padding: 14px;
+  background: linear-gradient(180deg, #ffffff, #f8faff);
+}
+
+.constraint-card.warn {
+  border-color: rgba(245, 159, 0, 0.28);
+  background: linear-gradient(180deg, #fffaf0, #ffffff);
+}
+
+.constraint-card.ok {
+  border-color: rgba(19, 166, 104, 0.22);
+  background: linear-gradient(180deg, #f0fdf7, #ffffff);
+}
+
+.constraint-card strong {
+  color: #172033;
+  line-height: 1.45;
+}
+
 .mini-action {
   margin-top: 8px;
   min-height: 32px;

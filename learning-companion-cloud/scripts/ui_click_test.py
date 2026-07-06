@@ -137,6 +137,7 @@ def run_browser_clicks(base_url: str) -> None:
         page.wait_for_selector("#tasks .task-card", state="attached")
         parent_body = page.locator("body").inner_text()
         assert "寒假作业本" in parent_body and ("白鹭" in parent_body or "语文" in parent_body)
+        assert "系统约束与遗漏提醒" in parent_body and "资料可信度" in parent_body, "家长端应展示系统约束看板"
 
         page.goto(f"{base_url}/admin")
         page.wait_for_selector("#quickPlanForm")

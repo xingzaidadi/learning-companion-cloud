@@ -59,6 +59,11 @@
           <div id="tasks" class="task-list compact-list"></div>
         </details>
 
+        <details class="card" open>
+          <summary>系统约束与遗漏提醒</summary>
+          <div id="systemConstraints" class="constraint-grid"></div>
+        </details>
+
         <details class="card">
           <summary>小测与掌握度</summary>
           <div id="quizResults" class="task-list compact-list"></div>
@@ -109,6 +114,7 @@
         const failedQuiz = (data.quiz_results || []).filter((item) => item.status !== "completed");
         const weak = (data.target_95?.weak_points || []).slice(0, 2);
         const adjustment = data.daily_adjustment || {};
+        const constraints = data.system_constraints || {};
 
         if (!total) {
           actions.push({
@@ -140,6 +146,30 @@
             title: adjustment.should_slow_down ? "明天建议放慢" : "节奏正常",
             body: adjustment.recommendation,
             next: adjustment.first_step || "按今日计划继续。",
+          });
+        }
+        if (constraints.material_trust?.status === "warn") {
+          actions.push({
+            level: "warn",
+            title: "资料可信度不足",
+            body: constraints.material_trust.headline,
+            next: "优先补 KET 书、语数英课本/作业本照片或页码，临时计划不要当精准计划。",
+          });
+        }
+        if (["warn", "danger"].includes(constraints.review_loop?.status)) {
+          actions.push({
+            level: constraints.review_loop.status === "danger" ? "danger" : "warn",
+            title: "补漏复习要先处理",
+            body: constraints.review_loop.headline,
+            next: "先完成 D1/D3/D7 到期补漏，再推进新内容。",
+          });
+        }
+        if (constraints.parent_intervention?.status === "warn") {
+          actions.push({
+            level: "warn",
+            title: "家长介入偏多",
+            body: constraints.parent_intervention.headline,
+            next: "只问问题，不直接讲答案；让孩子先说题目要求和第一步。",
           });
         }
         weak.forEach((item) => {
@@ -272,6 +302,8 @@
           tasks.append(card);
         });
 
+        renderSystemConstraints(data.system_constraints || {});
+
         const quizBox = document.querySelector("#quizResults");
         quizBox.innerHTML = data.quiz_results.length ? "<h3>小测结果</h3>" : '<p class="muted">暂无小测。</p>';
         data.quiz_results.forEach((result) => {
@@ -327,6 +359,73 @@
             <p class="muted">准备度：${target.readiness_score ?? "--"}；薄弱点 ${(target.weak_points || []).length} 个。</p>
           </article>
         `;
+      }
+
+      function constraintStatusText(status) {
+        return {
+          ok: "正常",
+          stable: "稳定",
+          watch: "观察",
+          initial: "初始",
+          warn: "注意",
+          needs_adjustment: "需调整",
+          danger: "优先处理",
+        }[status] || status || "观察";
+      }
+
+      function constraintTagClass(status) {
+        return ["danger", "needs_adjustment", "warn"].includes(status) ? "warn" : ["ok", "stable"].includes(status) ? "ok" : "";
+      }
+
+      function renderSystemConstraints(constraints) {
+        const box = document.querySelector("#systemConstraints");
+        const material = constraints.material_trust || {};
+        const workload = constraints.workload || {};
+        const calibration = constraints.calibration || {};
+        const review = constraints.review_loop || {};
+        const parent = constraints.parent_intervention || {};
+        const cards = [
+          {
+            title: "资料可信度",
+            status: material.status,
+            body: material.headline || "等待任务和资料。",
+            meta: `精准 ${material.counts?.precise || 0} · 半精准 ${material.counts?.semi || 0} · 临时 ${material.counts?.temporary || 0}`,
+          },
+          {
+            title: "每日负荷",
+            status: workload.status,
+            body: workload.action || "等待今日任务。",
+            meta: `${workload.total_minutes || 0}/${workload.max_minutes || "--"} 分钟；剩余 ${workload.remaining_minutes || 0} 分钟`,
+          },
+          {
+            title: "3天校准",
+            status: calibration.status,
+            body: calibration.headline || "真实使用满 3 天后更准确。",
+            meta: `数据天数 ${calibration.window?.days_with_data || 0}；完成率 ${percent(calibration.task_completion_rate || 0)}`,
+          },
+          {
+            title: "D1/D3/D7补漏",
+            status: review.status,
+            body: review.headline || "暂无补漏数据。",
+            meta: `D1 ${review.by_stage?.D1 || 0} · D3 ${review.by_stage?.D3 || 0} · D7 ${review.by_stage?.D7 || 0} · 逾期 ${review.overdue || 0}`,
+          },
+          {
+            title: "家长介入边界",
+            status: parent.status,
+            body: parent.headline || "暂无介入数据。",
+            meta: `近3天介入 ${parent.total_interventions || 0} 次`,
+          },
+        ];
+        box.innerHTML = cards.map((item) => `
+          <article class="constraint-card ${constraintTagClass(item.status)}">
+            <div class="task-meta">
+              <span class="tag ${constraintTagClass(item.status)}">${constraintStatusText(item.status)}</span>
+              <span class="tag">${item.title}</span>
+            </div>
+            <strong>${item.body}</strong>
+            <p class="muted">${item.meta}</p>
+          </article>
+        `).join("");
       }
 
       async function renderKetSuggestion() {
