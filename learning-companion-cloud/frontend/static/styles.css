@@ -201,15 +201,75 @@ button:disabled {
 }
 
 .now-next-summary {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 10px;
   max-width: 100%;
-  margin-top: 8px !important;
-  border-radius: 999px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.78);
-  color: #243055 !important;
-  font-weight: 900;
-  box-shadow: inset 0 0 0 1px rgba(56, 103, 255, 0.12);
+  width: min(720px, 100%);
+  margin-top: 12px !important;
+}
+
+.summary-pill {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid rgba(56, 103, 255, 0.12);
+  border-radius: 18px;
+  padding: 12px 14px 12px 42px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 10px 22px rgba(36, 48, 85, 0.08);
+}
+
+.summary-pill::before {
+  content: "→";
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  background: #edf2ff;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 1000;
+}
+
+.summary-pill.active {
+  border-color: rgba(56, 103, 255, 0.24);
+  background:
+    linear-gradient(135deg, rgba(56, 103, 255, 0.14), rgba(124, 58, 237, 0.08)),
+    rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 26px rgba(56, 103, 255, 0.14);
+}
+
+.summary-pill.active::before {
+  content: "▶";
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+}
+
+.summary-pill small {
+  overflow: hidden;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 1000;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary-pill strong {
+  overflow: hidden;
+  color: #172033;
+  font-size: 15px;
+  font-weight: 1000;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .progress-number {
@@ -1394,6 +1454,11 @@ textarea {
 
   .hero-progress {
     align-items: flex-start;
+  }
+
+  .now-next-summary {
+    grid-template-columns: 1fr;
+    width: 100%;
   }
 
   .progress-orb {
