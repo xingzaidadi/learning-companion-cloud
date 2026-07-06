@@ -3261,13 +3261,13 @@
         "known_gap",
         "distractor_rag"
       ],
-      "subject": "??",
+      "subject": "数学",
       "threshold": 0.95,
       "expected_result": "known_gap",
-      "gap_reason": "????????????????????????",
-      "query": "????????????????????",
+      "gap_reason": "超纲干扰项需要更强的年级边界控制，避免把初中内容混入五年级任务。",
+      "query": "五年级小数乘法预习时，不要混入初中方程组内容",
       "forbidden_keywords": [
-        "?????"
+        "方程组"
       ]
     },
     {
@@ -3279,13 +3279,13 @@
         "known_gap",
         "distractor_rag"
       ],
-      "subject": "??",
+      "subject": "语文",
       "threshold": 0.95,
       "expected_result": "known_gap",
-      "gap_reason": "????????????????????????",
-      "query": "?????????????????",
+      "gap_reason": "语文检索需要更强的教材版本和册次边界控制，避免跨年级课文污染。",
+      "query": "五年级上册白鹭预习，不要引用六年级课文",
       "forbidden_keywords": [
-        "???"
+        "六年级"
       ]
     },
     {
@@ -3297,16 +3297,16 @@
         "known_gap",
         "mutation_rag"
       ],
-      "subject": "??",
+      "subject": "语文",
       "threshold": 0.95,
       "expected_result": "known_gap",
-      "gap_reason": "????????????????????????",
+      "gap_reason": "错别字和口语化查询仍需要更强的语义召回，不能只依赖关键词。",
       "queries": [
-        "?????????",
-        "????????"
+        "白露这课为什么写得像诗",
+        "白鹭精巧美在哪里"
       ],
       "expected_keywords": [
-        "??"
+        "白鹭"
       ]
     },
     {
@@ -3318,13 +3318,13 @@
         "known_gap",
         "mutation_rag"
       ],
-      "subject": "??",
+      "subject": "英语",
       "threshold": 0.95,
       "expected_result": "known_gap",
-      "gap_reason": "????????????????????????",
+      "gap_reason": "中英混合和拼写近似查询需要更稳的英语语义检索。",
       "queries": [
-        "?????????",
-        "????????"
+        "图书馆英文老拼错怎么办",
+        "libary 应该怎么记"
       ],
       "expected_keywords": [
         "library"

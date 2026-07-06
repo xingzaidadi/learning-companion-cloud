@@ -45,6 +45,7 @@ def run_static_encoding_check() -> None:
         ROOT / "frontend" / "child.html",
         ROOT / "frontend" / "admin.html",
         ROOT / "frontend" / "parent.html",
+        ROOT / "eval_harness" / "datasets" / "learning_agent" / "golden_set.json",
     ]
     offenders: list[str] = []
     for path in files:
@@ -143,9 +144,13 @@ def run_e2e() -> None:
         assert_true(all("answer" not in item and "explanation" not in item for item in quiz["items"]), "孩子端小测不能泄露答案")
         with get_conn() as conn:
             rubric_rows = conn.execute("SELECT grading_rubric_json FROM quiz_items WHERE daily_task_id = ?", (task_id,)).fetchall()
+            standard_answers = {
+                str(row["id"]): row["answer"]
+                for row in conn.execute("SELECT id, answer FROM quiz_items WHERE daily_task_id = ?", (task_id,)).fetchall()
+            }
         assert_true(all(row["grading_rubric_json"] and row["grading_rubric_json"] != "{}" for row in rubric_rows), "每道题应有评分 rubric")
-        answers = {str(item["id"]): "测试答案" for item in quiz["items"]}
-        graded = assert_status(client.post(f"/api/daily-tasks/{task_id}/quiz", json={"answers": answers}))
+        graded = assert_status(client.post(f"/api/daily-tasks/{task_id}/quiz", json={"answers": standard_answers}))
+        assert_true(graded["correct"] == graded["total"], f"提交题库标准答案必须全对，不能出现答案与判分规则打架：{graded}")
         assert_true("tool_validation" in graded and "target_95_mastery_update" in graded, f"批改应写入工具校验和掌握度：{graded}")
 
         report = assert_status(client.post("/api/day/end"))
