@@ -142,6 +142,7 @@ def _has_precise_material(conn: Connection, task: dict[str, Any], subject: str) 
         ).fetchone()
         if row and int(row["count"] or 0) > 0:
             return True
+        return False
     row = conn.execute(
         """
         SELECT COUNT(*) AS count
@@ -186,7 +187,7 @@ def _evidence_check_quiz(title: str, standard: str) -> list[dict[str, Any]]:
             "这项任务的完成标准是哪一个？",
             ["写完就行", "完成并自行检查一遍，错题做标记", "只做会做的题"],
             "完成并自行检查一遍，错题做标记",
-            standard,
+            f"{standard}。没有原题时，这题只核验完成标准，不杜撰题干。",
         ),
     ]
 
@@ -417,10 +418,12 @@ def ensure_quiz_for_task(conn: Connection, task: dict[str, Any]) -> list[dict[st
     subject = context.get("subject") or ""
     for item in items:
         source_ref, chunk_skill = _best_source_ref(conn, task, subject, item.get("question", ""))
-        if source_ref == "规则兜底" and any(mark in item.get("explanation", "") for mark in ("不杜撰题干", "不能假装知道题目")):
+        is_evidence_check = any(mark in item.get("explanation", "") for mark in ("不杜撰题干", "不能假装知道题目", "过程证据"))
+        if is_evidence_check:
             source_ref = "过程核验：未录入原题"
+            chunk_skill = ""
         skill = chunk_skill or _infer_quiz_skill(subject, item.get("question", ""))
-        quality_score = 0.92 if source_ref != "规则兜底" else 0.78
+        quality_score = 0.72 if is_evidence_check else 0.92 if source_ref != "规则兜底" else 0.78
         conn.execute(
             """
             INSERT INTO quiz_items (

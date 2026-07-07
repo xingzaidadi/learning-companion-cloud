@@ -428,6 +428,17 @@ def run_schedule_and_grounding_checks() -> None:
                 (today, source_id, priority, title, description, minutes, now, now),
             )
             inserted.append(int(conn.execute("SELECT last_insert_rowid()").fetchone()[0]))
+        conn.execute(
+            """
+            INSERT INTO learning_materials (
+                student_id, source_id, subject, material_type, title,
+                content_text, file_path, config_json, source_type, trust_level, created_at, updated_at
+            )
+            VALUES (1, NULL, '数学', 'notes', '同科教材资料但不是作业本原题',
+                    '小数乘法：2.4 × 3 = 7.2。', '', '{}', 'manual', 'reference', ?, ?)
+            """,
+            (now, now),
+        )
 
         arranged = arrange_daily_schedule(conn, 1, today)
         math_evening = [
