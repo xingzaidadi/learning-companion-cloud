@@ -30,10 +30,11 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 copy .env.example .env
-uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000
+uvicorn backend.app:app --reload --host 127.0.0.1 --port 8000
 ```
 
-默认 `.env` 不设置密码，便于本地首次试用；部署到公网前请填写 `CHILD_PASSWORD`、`PARENT_PASSWORD` 和 `ADMIN_PASSWORD`。
+默认 `.env` 不设置密码，便于本机首次试用；不要用空密码绑定 `0.0.0.0`。
+如果要给局域网或公网访问，请先填写 `CHILD_PASSWORD`、`PARENT_PASSWORD` 和 `ADMIN_PASSWORD`，并设置 `APP_HOST=0.0.0.0` 或 `PUBLIC_DEPLOY=true`。系统会在公网/局域网绑定且密码缺失时拒绝启动。
 
 打开：
 
@@ -52,6 +53,14 @@ docker compose up -d --build
 ## 本地一键启动
 
 ```powershell
+.\scripts\start_local.ps1
+```
+
+一键启动默认只监听 `127.0.0.1`。如需局域网访问：
+
+```powershell
+$env:APP_HOST="0.0.0.0"
+# 同时必须在 .env 中配置 CHILD_PASSWORD / PARENT_PASSWORD / ADMIN_PASSWORD
 .\scripts\start_local.ps1
 ```
 

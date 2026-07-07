@@ -134,6 +134,7 @@ app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="stati
 
 @app.on_event("startup")
 def startup() -> None:
+    _assert_deploy_auth_safe()
     init_db()
     app.state.scheduler = start_scheduler()
 
@@ -409,11 +410,30 @@ def _check_basic(
 
 
 def _local_auth_disabled() -> bool:
+    if _public_bind_requires_auth():
+        return False
     return not (
         os.getenv("CHILD_PASSWORD", "")
         or os.getenv("PARENT_PASSWORD", "")
         or os.getenv("ADMIN_PASSWORD", "")
     )
+
+
+def _public_bind_requires_auth() -> bool:
+    host = os.getenv("APP_HOST", os.getenv("HOST", "127.0.0.1")).strip()
+    public_mode = os.getenv("PUBLIC_DEPLOY", "").strip().lower() in {"1", "true", "yes", "on"}
+    return public_mode or host in {"0.0.0.0", "::"}
+
+
+def _assert_deploy_auth_safe() -> None:
+    if not _public_bind_requires_auth():
+        return
+    missing = [name for name in ("CHILD_PASSWORD", "PARENT_PASSWORD", "ADMIN_PASSWORD") if not os.getenv(name, "")]
+    if missing:
+        raise RuntimeError(
+            "公网/局域网绑定必须配置登录密码，缺少：" + ", ".join(missing) + "。"
+            "本机自用请用 APP_HOST=127.0.0.1；需要局域网访问请设置三类密码。"
+        )
 
 
 def _auth_failed(detail: str = "需要认证") -> None:

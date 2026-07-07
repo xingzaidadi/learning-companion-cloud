@@ -463,10 +463,38 @@ def run_schedule_and_grounding_checks() -> None:
         assert_true("过程核验：未录入原题" in quiz_text, f"无资料作业题应标记过程核验来源：{quiz_text}")
 
 
+def run_deploy_auth_guard_check() -> None:
+    from backend.app import _assert_deploy_auth_safe
+
+    previous = {key: os.environ.get(key) for key in ("APP_HOST", "PUBLIC_DEPLOY", "CHILD_PASSWORD", "PARENT_PASSWORD", "ADMIN_PASSWORD")}
+    try:
+        os.environ["APP_HOST"] = "0.0.0.0"
+        os.environ["PUBLIC_DEPLOY"] = "false"
+        os.environ["CHILD_PASSWORD"] = ""
+        os.environ["PARENT_PASSWORD"] = ""
+        os.environ["ADMIN_PASSWORD"] = ""
+        try:
+            _assert_deploy_auth_safe()
+            raise AssertionError("公网/局域网绑定且空密码时应拒绝启动")
+        except RuntimeError as exc:
+            assert_true("必须配置登录密码" in str(exc), f"部署安全错误信息应明确：{exc}")
+        os.environ["CHILD_PASSWORD"] = "child-pass"
+        os.environ["PARENT_PASSWORD"] = "parent-pass"
+        os.environ["ADMIN_PASSWORD"] = "admin-pass"
+        _assert_deploy_auth_safe()
+    finally:
+        for key, value in previous.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
 def main() -> None:
     try:
         run_child_flow()
         run_schedule_and_grounding_checks()
+        run_deploy_auth_guard_check()
     finally:
         cleanup()
     print("CHILD_FLOW_INTEGRATION_OK")

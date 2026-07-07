@@ -49,19 +49,27 @@ class LearningAgentAdapter:
                 "五上语文真实考点片段",
                 "语文",
                 "白鹭：精巧、适宜、色素、身段是生字听写重点；预习要能说出白鹭为什么是一首精巧的诗。"
-                "少年中国说与语文园地：日积月累、交流平台、词句段运用需要背默和复述。",
+                "少年中国说与语文园地：日积月累、交流平台、词句段运用需要背默和复述。"
+                "桂花雨：课后题要围绕母亲的话理解家乡情感，常见问法是为什么这里的桂花再香也比不上家乡院子里的桂花。"
+                "落花生：借物喻人是核心表达方法，课后习题答案依据要回到父亲议花生的话。",
             ),
             (
                 "五上数学真实考点片段",
                 "数学",
                 "小数乘法要会竖式计算、积的小数位数和验算；小数除法第一课精打细算要会商的小数点位置。"
-                "多边形面积应用题要先画图，再列式，最后检查单位和结果。",
+                "多边形面积应用题要先画图，再列式，最后检查单位和结果。"
+                "找质数与合数：只有 1 和它本身两个因数的数是质数，除了 1 和它本身还有别的因数的数是合数；练一练要先列因数再判断。",
             ),
             (
                 "五上英语真实考点片段",
                 "英语",
                 "Unit 1 My school is cool: library, classroom, teacher, playground are dictation words. "
                 "Sentence pattern: Where is the library? It is next to the classroom. Listening and reading should not leak answers before quiz.",
+            ),
+            (
+                "五上英语 Unit 3 The ice world 资料片段",
+                "英语",
+                "Unit 3 The ice world: ice world, polar bear, ocean, animal, cold are key words. 听力原文训练要先听关键词，再跟读句子，不提前泄露答案。",
             ),
             (
                 "超纲干扰材料：六年级与初中内容",

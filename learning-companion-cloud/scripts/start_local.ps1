@@ -8,4 +8,5 @@ if (!(Test-Path ".env")) {
 }
 
 python -m pip install -r requirements.txt
-python -m uvicorn backend.app:app --host 0.0.0.0 --port 8000
+$env:APP_HOST = if ($env:APP_HOST) { $env:APP_HOST } else { "127.0.0.1" }
+python -m uvicorn backend.app:app --host $env:APP_HOST --port 8000

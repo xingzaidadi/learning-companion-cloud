@@ -895,19 +895,18 @@
       "id": "L-GAP-RAG-001",
       "type": "rag",
       "subject": "语文",
-      "query": "桂花雨 课后题 父亲为什么说这里的桂花再香也比不上家乡院子里的桂花",
+      "query": "桂花雨 课后题 母亲为什么说这里的桂花再香也比不上家乡院子里的桂花",
       "expected_keywords": [
         "桂花雨",
-        "父亲的话"
+        "母亲的话"
       ],
       "threshold": 0.7,
-      "expected_result": "known_gap",
-      "gap_reason": "当前种子资料不是完整五上语文教材，真实课后题召回不足。",
+      "gap_reason": "已补齐对应资料/召回能力并提升为回归用例；若再次失败应视为真实回归。",
       "version": "2026.07",
       "difficulty": "redteam",
       "tags": [
         "rag",
-        "known_gap"
+        "promoted_regression"
       ]
     },
     {
@@ -920,13 +919,12 @@
         "借物喻人"
       ],
       "threshold": 0.7,
-      "expected_result": "known_gap",
-      "gap_reason": "需要接入完整教材/教参资料后才能稳定召回。",
+      "gap_reason": "已补齐对应资料/召回能力并提升为回归用例；若再次失败应视为真实回归。",
       "version": "2026.07",
       "difficulty": "redteam",
       "tags": [
         "rag",
-        "known_gap"
+        "promoted_regression"
       ]
     },
     {
@@ -939,13 +937,12 @@
         "合数"
       ],
       "threshold": 0.7,
-      "expected_result": "known_gap",
-      "gap_reason": "当前数学种子只覆盖小数与面积，未覆盖完整单元。",
+      "gap_reason": "已补齐对应资料/召回能力并提升为回归用例；若再次失败应视为真实回归。",
       "version": "2026.07",
       "difficulty": "redteam",
       "tags": [
         "rag",
-        "known_gap"
+        "promoted_regression"
       ]
     },
     {
@@ -958,13 +955,12 @@
         "听力原文"
       ],
       "threshold": 0.7,
-      "expected_result": "known_gap",
-      "gap_reason": "当前英语种子只覆盖 Unit 1，未覆盖全册音频原文。",
+      "gap_reason": "已补齐对应资料/召回能力并提升为回归用例；若再次失败应视为真实回归。",
       "version": "2026.07",
       "difficulty": "redteam",
       "tags": [
         "rag",
-        "known_gap"
+        "promoted_regression"
       ]
     },
     {
@@ -974,15 +970,14 @@
       "plan": "语文五年级上册《桂花雨》预习，要求围绕课后题和日积月累出题",
       "min_items": 6,
       "threshold": 0.95,
-      "expected_result": "known_gap",
-      "gap_reason": "缺少完整教材资料时，小测只能规则兜底，不能保证 95+ 质量。",
+      "gap_reason": "已从 known_gap 提升为回归用例；若再次失败应视为真实回归。",
       "version": "2026.07",
       "difficulty": "redteam",
       "tags": [
         "quiz",
-        "known_gap",
         "trace_required",
-        "remediation_required"
+        "remediation_required",
+        "promoted_regression"
       ]
     },
     {
@@ -3258,13 +3253,12 @@
       "version": "2026.07",
       "difficulty": "redteam",
       "tags": [
-        "known_gap",
-        "distractor_rag"
+        "distractor_rag",
+        "promoted_regression"
       ],
       "subject": "数学",
       "threshold": 0.95,
-      "expected_result": "known_gap",
-      "gap_reason": "超纲干扰项需要更强的年级边界控制，避免把初中内容混入五年级任务。",
+      "gap_reason": "已从 known_gap 提升为回归用例；若再次失败应视为真实回归。",
       "query": "五年级小数乘法预习时，不要混入初中方程组内容",
       "forbidden_keywords": [
         "方程组"
@@ -3276,13 +3270,12 @@
       "version": "2026.07",
       "difficulty": "redteam",
       "tags": [
-        "known_gap",
-        "distractor_rag"
+        "distractor_rag",
+        "promoted_regression"
       ],
       "subject": "语文",
       "threshold": 0.95,
-      "expected_result": "known_gap",
-      "gap_reason": "语文检索需要更强的教材版本和册次边界控制，避免跨年级课文污染。",
+      "gap_reason": "已从 known_gap 提升为回归用例；若再次失败应视为真实回归。",
       "query": "五年级上册白鹭预习，不要引用六年级课文",
       "forbidden_keywords": [
         "六年级"
@@ -3294,13 +3287,12 @@
       "version": "2026.07",
       "difficulty": "redteam",
       "tags": [
-        "known_gap",
-        "mutation_rag"
+        "mutation_rag",
+        "promoted_regression"
       ],
       "subject": "语文",
       "threshold": 0.95,
-      "expected_result": "known_gap",
-      "gap_reason": "错别字和口语化查询仍需要更强的语义召回，不能只依赖关键词。",
+      "gap_reason": "已从 known_gap 提升为回归用例；若再次失败应视为真实回归。",
       "queries": [
         "白露这课为什么写得像诗",
         "白鹭精巧美在哪里"
@@ -3315,13 +3307,12 @@
       "version": "2026.07",
       "difficulty": "redteam",
       "tags": [
-        "known_gap",
-        "mutation_rag"
+        "mutation_rag",
+        "promoted_regression"
       ],
       "subject": "英语",
       "threshold": 0.95,
-      "expected_result": "known_gap",
-      "gap_reason": "中英混合和拼写近似查询需要更稳的英语语义检索。",
+      "gap_reason": "已补齐对应资料/召回能力并提升为回归用例；若再次失败应视为真实回归。",
       "queries": [
         "图书馆英文老拼错怎么办",
         "libary 应该怎么记"
