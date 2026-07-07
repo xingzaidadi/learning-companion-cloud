@@ -377,9 +377,85 @@ def run_child_flow() -> None:
         assert_true(task_by_id(final_tasks, published_task_id)["status"] == "completed", f"后端发布任务最终应完成：{final_tasks}")
 
 
+def run_schedule_and_grounding_checks() -> None:
+    from backend.db import get_conn, utc_now
+    from backend.quiz import ensure_quiz_for_task
+    from backend.study_schedule import arrange_daily_schedule
+    from backend.day_timeline import build_day_timeline
+
+    today = date.today().isoformat()
+    with get_conn() as conn:
+        conn.execute("DELETE FROM quiz_items")
+        conn.execute("DELETE FROM daily_tasks")
+        conn.execute("DELETE FROM task_sources")
+        now = utc_now()
+        task_rows = [
+            ("P0", "暑假作业：数学暑假作业本", "完成数学第 4 小节，先做会的，难题做标记。", 25, "summer_homework"),
+            ("P0", "暑假作业：数学口算", "完成数学口算第 1 页。", 12, "summer_homework"),
+            ("P0", "暑假作业：数学每日一练", "完成数学每日一练第 1 页。", 25, "summer_homework"),
+            ("P0", "暑假作业：一本", "完成语文一本第 1 个。", 20, "summer_homework"),
+            ("P1", "英语预习：Unit 1 My school is cool", "听音频跟读，复习 10 个词。", 30, "preview"),
+            ("P1", "英语预习：Unit 1 单词跟读", "听读 teacher/library/classroom。", 25, "preview"),
+            ("P2", "KET：词汇 + 听力", "复习 10 个词，听 1 段材料。", 35, "ket"),
+            ("P2", "KET：口语轻练", "口头说 1 个话题。", 25, "ket"),
+            ("P2", "阅读：一千零一夜", "阅读 20 分钟，讲一个情节。", 20, "summer_homework"),
+            ("P2", "阅读：中国民间故事", "阅读 20 分钟，说出一个人物。", 20, "summer_homework"),
+            ("P3", "语文日积月累轻复盘", "背诵并口头解释一句。", 15, "preview"),
+            ("P3", "语文诵读轻复盘", "朗读并圈出一个好词。", 15, "preview"),
+        ]
+        inserted: list[int] = []
+        for priority, title, description, minutes, category in task_rows:
+            cursor = conn.execute(
+                """
+                INSERT INTO task_sources (
+                    student_id, category, title, subject, total_units, completed_units,
+                    deadline, config_json, status, created_at, updated_at
+                )
+                VALUES (1, ?, ?, ?, 10, 0, ?, '{}', 'active', ?, ?)
+                """,
+                (category, title, "英语" if "英语" in title or "KET" in title else "数学" if "数学" in title else "语文", "2026-08-31", now, now),
+            )
+            source_id = int(cursor.lastrowid)
+            conn.execute(
+                """
+                INSERT INTO daily_tasks (
+                    student_id, date, source_id, priority, title, description,
+                    estimated_minutes, completion_standard, check_method, status,
+                    created_at, updated_at
+                )
+                VALUES (1, ?, ?, ?, ?, ?, ?, '完成并自行检查，错题做标记。', 'quiz', 'not_started', ?, ?)
+                """,
+                (today, source_id, priority, title, description, minutes, now, now),
+            )
+            inserted.append(int(conn.execute("SELECT last_insert_rowid()").fetchone()[0]))
+
+        arranged = arrange_daily_schedule(conn, 1, today)
+        math_evening = [
+            task
+            for task in arranged
+            if "数学" in task["title"] and str(task.get("planned_start", "")) >= "19:00"
+        ]
+        assert_true(not math_evening, f"晚上不应安排数学硬任务：{math_evening}")
+        evening_light = [
+            task
+            for task in arranged
+            if str(task.get("planned_start", "")) >= "19:00"
+        ]
+        assert_true(all(any(word in task["title"] for word in ("KET", "英语", "阅读", "复盘", "语文")) for task in evening_light), f"晚上只应安排轻复盘/听说/阅读：{evening_light}")
+        timeline = build_day_timeline(arranged)
+        assert_true(any(block["kind"] == "winddown" and block["start"] == "20:40" for block in timeline["blocks"]), f"时间轴应有睡前收尾：{timeline}")
+
+        homework_task = dict(conn.execute("SELECT * FROM daily_tasks WHERE id = ?", (inserted[0],)).fetchone())
+        quiz_items = ensure_quiz_for_task(conn, homework_task)
+        quiz_text = "\n".join(f"{item['question']} {item['explanation']} {item.get('source_ref', '')}" for item in quiz_items)
+        assert_true("不杜撰题干" in quiz_text or "不能假装知道题目" in quiz_text, f"无资料作业应明确不杜撰：{quiz_text}")
+        assert_true("过程核验：未录入原题" in quiz_text, f"无资料作业题应标记过程核验来源：{quiz_text}")
+
+
 def main() -> None:
     try:
         run_child_flow()
+        run_schedule_and_grounding_checks()
     finally:
         cleanup()
     print("CHILD_FLOW_INTEGRATION_OK")

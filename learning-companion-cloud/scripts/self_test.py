@@ -122,8 +122,8 @@ def run_e2e() -> None:
         math_count = sum(1 for task in generated["tasks"] if any(word in f"{task.get('title', '')} {task.get('description', '')}" for word in ("数学", "口算", "小数")))
         assert_true(math_count <= 3, f"数学任务不能过重堆叠：math_count={math_count} tasks={generated['tasks']}")
         ket_tasks = [task for task in generated["tasks"] if "KET" in task.get("title", "")]
-        assert_true(ket_tasks and any("词汇 + 听力" in task.get("title", "") for task in ket_tasks), f"KET 周一应生成具体技能轮换任务，而不是泛泛备考：{ket_tasks}")
-        assert_true(any("复习 10 个词" in task.get("description", "") and "听" in task.get("description", "") for task in ket_tasks), f"KET 今日任务应包含可执行步骤：{ket_tasks}")
+        assert_true(ket_tasks and any(any(skill in task.get("title", "") for skill in ("词汇 + 听力", "词汇 + 阅读", "口语", "写作")) for task in ket_tasks), f"KET 应生成具体技能轮换任务，而不是泛泛备考：{ket_tasks}")
+        assert_true(any("复习 10 个词" in task.get("description", "") and any(step in task.get("description", "") for step in ("听", "读", "口头", "写")) for task in ket_tasks), f"KET 今日任务应包含可执行步骤：{ket_tasks}")
         ket_quiz = assert_status(client.get(f"/api/daily-tasks/{ket_tasks[0]['id']}/quiz"))
         ket_quiz_text = "\n".join(item.get("question", "") for item in ket_quiz.get("items", []))
         assert_true("KET" in ket_quiz_text or "听力" in ket_quiz_text or "英文" in ket_quiz_text, f"KET 小测应围绕 KET/英语能力：{ket_quiz_text}")
@@ -135,6 +135,7 @@ def run_e2e() -> None:
         assert_true(any(block.get("kind") == "break" for block in blocks), f"全天安排应显式展示休息块：{block_text}")
         assert_true(any("午餐" in block.get("title", "") for block in blocks), f"全天安排应展示午餐午休：{block_text}")
         assert_true(any("晚餐" in block.get("title", "") for block in blocks), f"全天安排应展示晚餐放松：{block_text}")
+        assert_true(any(block.get("kind") == "winddown" and "睡前收尾" in block.get("title", "") for block in blocks), f"全天安排应展示 20:40 后睡前收尾：{block_text}")
         assert_true(any(block.get("kind") == "movement" for block in blocks), f"全天安排应展示运动块：{block_text}")
         ket_difficulty = assert_status(client.get("/api/ket/difficulty"))
         assert_true(ket_difficulty.get("suggested_level") in {"light", "standard", "advanced"}, f"KET 难度建议应可用：{ket_difficulty}")

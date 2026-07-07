@@ -506,7 +506,8 @@ details.card[open] > summary::after {
 
 .timeline-break,
 .timeline-buffer,
-.timeline-meal {
+.timeline-meal,
+.timeline-winddown {
   background: rgba(248, 250, 252, 0.76);
 }
 
@@ -520,6 +521,10 @@ details.card[open] > summary::after {
 
 .timeline-meal .timeline-dot::after {
   background: #f59f00;
+}
+
+.timeline-winddown .timeline-dot::after {
+  background: #64748b;
 }
 
 .timeline-ket .timeline-dot::after,

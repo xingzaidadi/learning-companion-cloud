@@ -9,6 +9,7 @@ DAY_END = "21:00"
 FIXED_BLOCKS = [
     {"start": "11:30", "end": "14:00", "kind": "meal", "title": "午餐 + 午休", "description": "吃饭、午休、护眼，下午再进入练习。"},
     {"start": "18:00", "end": "19:00", "kind": "meal", "title": "晚餐 + 放松", "description": "吃饭、聊天、整理桌面，不安排硬学习。"},
+    {"start": "20:40", "end": "21:00", "kind": "winddown", "title": "睡前收尾", "description": "收书包、整理桌面、洗漱放松，不再加新题。"},
 ]
 
 

@@ -125,6 +125,72 @@ def _best_source_ref(conn: Connection, task: dict[str, Any], subject: str, quest
     return best["source_ref"], best["knowledge_type"]
 
 
+CONTENT_DEPENDENT_CATEGORIES = {"summer_homework", "exercise_book", "workbook", "reading_book"}
+
+
+def _has_precise_material(conn: Connection, task: dict[str, Any], subject: str) -> bool:
+    source_id = task.get("source_id") or 0
+    if source_id:
+        row = conn.execute(
+            """
+            SELECT COUNT(*) AS count
+            FROM learning_materials
+            WHERE student_id = ? AND source_id = ?
+              AND trim(COALESCE(content_text, '')) != ''
+            """,
+            (task["student_id"], source_id),
+        ).fetchone()
+        if row and int(row["count"] or 0) > 0:
+            return True
+    row = conn.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM learning_materials
+        WHERE student_id = ?
+          AND (? = '' OR subject = ?)
+          AND trim(COALESCE(content_text, '')) != ''
+        """,
+        (task["student_id"], subject, subject),
+    ).fetchone()
+    return bool(row and int(row["count"] or 0) > 0)
+
+
+def _content_dependent_without_material(category: str, task: dict[str, Any], subject: str, has_material: bool) -> bool:
+    if has_material:
+        return False
+    text = f"{task.get('title', '')} {task.get('description', '')}"
+    if category in CONTENT_DEPENDENT_CATEGORIES:
+        return True
+    return any(word in text for word in ("暑假作业", "每日一练", "口算", "一本", "练习册", "作业本", "阅读书目"))
+
+
+def _evidence_check_quiz(title: str, standard: str) -> list[dict[str, Any]]:
+    return [
+        _short(
+            f"请从「{title}」里挑 1 道你刚做过或最不确定的题，写清题号/页码。",
+            "写出题号或页码",
+            "系统没有这本作业的原题内容，所以只核验你是否能定位真实题目，不杜撰题干。",
+        ),
+        _short(
+            "请用自己的话写出这道题的解题思路、订正步骤或你卡住的位置。",
+            "写出思路或卡点",
+            "没有原题时，检查重点是过程证据：题号、思路、错因、订正动作。",
+        ),
+        _choice(
+            "如果系统没有作业本原题，最可靠的检查方式是？",
+            ["让系统随便编一道类似题", "上传/录入题目或写清题号和卡点", "直接算通过"],
+            "上传/录入题目或写清题号和卡点",
+            "真实作业必须基于真实题目检查；没有资料时不能假装知道题目。",
+        ),
+        _choice(
+            "这项任务的完成标准是哪一个？",
+            ["写完就行", "完成并自行检查一遍，错题做标记", "只做会做的题"],
+            "完成并自行检查一遍，错题做标记",
+            standard,
+        ),
+    ]
+
+
 def _short(question: str, answer: str, explanation: str = "需包含关键概念、步骤或依据；只写无关内容不得分。") -> dict[str, Any]:
     return {
         "question_type": "short",
@@ -170,6 +236,7 @@ def _templates(conn: Connection, task: dict[str, Any]) -> list[dict[str, Any]]:
     subject = context["subject"]
     config = dict(context["config"])
     materials_context = _materials_context(conn, task, subject)
+    has_precise_material = _has_precise_material(conn, task, subject)
     if materials_context:
         config["materials_context"] = materials_context
     settings = get_settings(conn)
@@ -203,6 +270,8 @@ def _templates(conn: Connection, task: dict[str, Any]) -> list[dict[str, Any]]:
     scope = ""
     if curriculum_context:
         scope = f"{curriculum_context.get('unit')}；知识点：{'、'.join(curriculum_context.get('points', []))}；范围限制：{curriculum_context.get('scope_note')}"
+    if _content_dependent_without_material(category, task, subject, has_precise_material):
+        return _evidence_check_quiz(title, standard)
     ai_items = generate_ai_questions(settings, scope, content_text)
     content_items = build_content_quiz(
         category=category,
@@ -234,12 +303,7 @@ def _templates(conn: Connection, task: dict[str, Any]) -> list[dict[str, Any]]:
         ]
 
     if category == "summer_homework":
-        return [
-            _short(f"从「{title}」中选 1 道你觉得最难的题，写出解题思路。", "写出思路"),
-            _choice("遇到不会的暑假作业题，最合适的处理方式是？", ["空着不管", "标记题号并写出卡点", "抄答案"], "标记题号并写出卡点", "标记卡点方便晚间订正。"),
-            _short("请写出今天检查后发现的 1 个易错点；如果没有，就写“暂无”。", "暂无"),
-            _choice("暑假作业完成标准是哪一个？", ["写完就行", "完成并自行检查一遍", "只做简单题"], "完成并自行检查一遍", standard),
-        ]
+        return _evidence_check_quiz(title, standard)
 
     if category == "preview":
         topic = config.get("topic") or title
@@ -353,6 +417,8 @@ def ensure_quiz_for_task(conn: Connection, task: dict[str, Any]) -> list[dict[st
     subject = context.get("subject") or ""
     for item in items:
         source_ref, chunk_skill = _best_source_ref(conn, task, subject, item.get("question", ""))
+        if source_ref == "规则兜底" and any(mark in item.get("explanation", "") for mark in ("不杜撰题干", "不能假装知道题目")):
+            source_ref = "过程核验：未录入原题"
         skill = chunk_skill or _infer_quiz_skill(subject, item.get("question", ""))
         quality_score = 0.92 if source_ref != "规则兜底" else 0.78
         conn.execute(

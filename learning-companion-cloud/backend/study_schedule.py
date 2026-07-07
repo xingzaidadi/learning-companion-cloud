@@ -6,11 +6,11 @@ from typing import Any
 
 
 DEFAULT_WINDOWS = [
-    {"block": "上午深度学习", "start": "08:30", "end": "10:10", "best_for": ["数学", "语文"], "max_minutes": 100},
-    {"block": "上午轻输入", "start": "10:30", "end": "11:30", "best_for": ["英语", "语文"], "max_minutes": 60},
-    {"block": "下午练习巩固", "start": "14:00", "end": "15:40", "best_for": ["数学", "英语", "综合"], "max_minutes": 100},
-    {"block": "下午运动阅读", "start": "16:00", "end": "18:00", "best_for": ["体育", "语文", "综合"], "max_minutes": 120},
-    {"block": "晚上轻复盘", "start": "19:00", "end": "21:00", "best_for": ["英语", "语文", "综合"], "max_minutes": 120},
+    {"block": "上午深度学习", "start": "08:30", "end": "10:10", "best_for": ["数学", "语文"], "max_minutes": 100, "mode": "deep"},
+    {"block": "上午轻输入", "start": "10:30", "end": "11:30", "best_for": ["英语", "语文"], "max_minutes": 60, "mode": "light"},
+    {"block": "下午练习巩固", "start": "14:00", "end": "15:40", "best_for": ["数学", "英语", "综合"], "max_minutes": 100, "mode": "practice"},
+    {"block": "下午运动阅读", "start": "16:00", "end": "18:00", "best_for": ["体育", "语文", "综合"], "max_minutes": 120, "mode": "active"},
+    {"block": "晚上轻复盘", "start": "19:00", "end": "20:40", "best_for": ["英语", "语文", "综合"], "max_minutes": 100, "mode": "evening"},
 ]
 
 BREAK_MINUTES = 10
@@ -77,7 +77,41 @@ def _schedule_reason(task: dict[str, Any], block: str) -> str:
         return "上午注意力较稳定，适合数学计算、语文理解等高认知任务。"
     if subject == "英语":
         return "英语安排在较轻时段，适合听读、跟读、词汇复现。"
+    if "晚上" in block:
+        return "晚上只做轻复盘、订正、阅读或听说，不安排新的高强度内容，20:40 后进入收尾。"
     return "按任务优先级和学科交替安排，避免同类任务连续消耗注意力。"
+
+
+def _is_evening_fit(task: dict[str, Any]) -> bool:
+    text = f"{task.get('title', '')} {task.get('description', '')} {task.get('completion_standard', '')}"
+    subject = infer_subject_from_task(task)
+    kind = _task_kind(task)
+    if task.get("status") in {"checking", "needs_revision", "stuck"}:
+        return True
+    if kind == "补漏复习":
+        return True
+    if any(word in text for word in ("KET", "听力", "口语", "跟读", "单词", "阅读", "诵读", "背诵", "日积月累", "订正", "错题", "复盘")):
+        return True
+    if subject in {"英语", "语文", "综合"} and int(task.get("estimated_minutes") or 20) <= 35:
+        return True
+    return False
+
+
+def _window_score(task: dict[str, Any], window: dict[str, Any], last_subject: str) -> tuple[int, int, datetime]:
+    subject = infer_subject_from_task(task)
+    mode = window.get("mode", "")
+    if mode == "evening" and not _is_evening_fit(task):
+        return (9, 9, window["cursor"])
+    if task.get("status") in {"checking", "needs_revision", "stuck"}:
+        return (0 if mode in {"evening", "light", "practice"} else 1, 0, window["cursor"])
+    if _task_kind(task) == "补漏复习":
+        return (0 if mode in {"deep", "light", "evening"} else 1, 0, window["cursor"])
+    fit_rank = 0 if subject in window["best_for"] else 2
+    if mode == "evening":
+        fit_rank = 0 if _is_evening_fit(task) else 9
+    subject_repeat_penalty = 1 if subject == last_subject else 0
+    deep_penalty = 2 if mode == "evening" and subject == "数学" else 0
+    return (fit_rank + deep_penalty, subject_repeat_penalty, window["cursor"])
 
 
 def arrange_daily_schedule(conn: Connection, student_id: int = 1, target_date: str = "", respect_existing_order: bool = False) -> list[dict[str, Any]]:
@@ -119,11 +153,7 @@ def arrange_daily_schedule(conn: Connection, student_id: int = 1, target_date: s
         else:
             candidates = sorted(
                 windows,
-                key=lambda window: (
-                    0 if subject in window["best_for"] else 1,
-                    1 if subject == last_subject else 0,
-                    window["cursor"],
-                ),
+                key=lambda window: _window_score(task, window, last_subject),
             )
         selected = None
         for window in candidates:
