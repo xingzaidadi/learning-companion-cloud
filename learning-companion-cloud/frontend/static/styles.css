@@ -2594,3 +2594,73 @@ body:has(#startNext) .answer-shortcuts button.selected {
 body:has(#startNext) .thin-progress span {
   background: linear-gradient(100deg, #38bdf8 0%, #60a5fa 38%, #8b5cf6 78%, #c084fc 100%) !important;
 }
+
+.photo-upload-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid rgba(96, 165, 250, 0.36);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(224, 242, 254, 0.86), rgba(237, 233, 254, 0.86));
+}
+
+.photo-upload-card strong {
+  color: #172033;
+  font-size: 18px;
+}
+
+.photo-upload-card p {
+  margin: 0;
+  color: #526178;
+  font-weight: 800;
+}
+
+.photo-upload-button {
+  display: inline-grid;
+  justify-self: start;
+  min-height: 44px;
+  place-items: center;
+  border-radius: 16px;
+  padding: 0 16px;
+  color: white;
+  background: linear-gradient(100deg, #38bdf8, #60a5fa, #8b5cf6);
+  font-weight: 1000;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(96, 165, 250, 0.22);
+}
+
+.photo-upload-button input {
+  display: none;
+}
+
+.camera-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.photo-upload-button.secondary-photo {
+  color: #1e3a8a;
+  background: linear-gradient(100deg, #e0f2fe, #dbeafe, #ede9fe) !important;
+  border: 1px solid rgba(96, 165, 250, 0.40);
+}
+
+.stuck-camera-box {
+  display: grid;
+  gap: 10px;
+}
+
+.stuck-camera-box[hidden] {
+  display: none;
+}
+
+#stuckCameraPreview {
+  width: min(100%, 680px);
+  max-height: 420px;
+  border: 2px solid rgba(96, 165, 250, 0.42);
+  border-radius: 18px;
+  background: #0f172a;
+  box-shadow: 0 12px 28px rgba(36, 48, 85, 0.12);
+  object-fit: contain;
+}

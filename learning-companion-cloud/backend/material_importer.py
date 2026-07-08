@@ -18,6 +18,7 @@ except ImportError:  # pragma: no cover - direct script import fallback
 
 
 ALLOWED_FILE_SUFFIXES = {".txt", ".md", ".pdf"}
+ALLOWED_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".heic", ".heif"}
 ALLOWED_URL_SCHEMES = {"http", "https"}
 MAX_IMPORT_CHARS = 180_000
 HTTP_TIMEOUT_SECONDS = 12
@@ -74,6 +75,42 @@ def _read_pdf_by_ocr(path: Path, max_pages: int = 140) -> tuple[str, dict[str, A
     if len(text) < 80:
         raise ValueError("OCR 后仍未提取到足够文本，可能图片质量过低或需要人工处理。")
     return text, {"ocr_pages": len(page_texts), "ocr_engine": "rapidocr_onnxruntime"}
+
+
+def _read_image_by_ocr(path: Path) -> tuple[str, dict[str, Any]]:
+    try:
+        import numpy as np
+        from PIL import Image, ImageOps
+        from rapidocr_onnxruntime import RapidOCR
+    except ImportError as exc:  # pragma: no cover - depends on optional OCR install
+        raise ValueError("当前环境缺少图片 OCR 组件；请安装 Pillow 和 rapidocr_onnxruntime 后重试。") from exc
+
+    image = Image.open(path)
+    image = ImageOps.exif_transpose(image).convert("RGB")
+    ocr = RapidOCR()
+    result, _elapsed = ocr(np.array(image))
+    lines = [str(item[1]).strip() for item in (result or []) if len(item) > 1 and str(item[1]).strip()]
+    text = _clean_text("\n".join(lines))
+    if len(text) < 5:
+        raise ValueError("图片里没有识别到清晰文字；请靠近题目、拍正、保证光线充足后重试。")
+    return text, {"ocr_engine": "rapidocr_onnxruntime", "suffix": path.suffix.lower(), "chars": len(text)}
+
+
+def extract_image_file(path_value: str) -> dict[str, Any]:
+    path = Path(path_value).expanduser()
+    if not path.exists() or not path.is_file():
+        raise ValueError(f"文件不存在：{path_value}")
+    suffix = path.suffix.lower()
+    if suffix not in ALLOWED_IMAGE_SUFFIXES:
+        raise ValueError("只支持 JPG、PNG、WEBP、BMP、HEIC 图片")
+    text, meta = _read_image_by_ocr(path)
+    return {
+        "title": path.stem,
+        "content_text": text[:MAX_IMPORT_CHARS],
+        "file_path": str(path),
+        "source_type": "uploaded_image",
+        "meta": meta,
+    }
 
 
 def extract_local_file(path_value: str) -> dict[str, Any]:

@@ -12,7 +12,7 @@ import os
 import secrets
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Form, HTTPException, Request, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -47,7 +47,7 @@ try:
     from .importer import import_task_sources
     from .knowledge_graph import rebuild_knowledge_points, weakest_knowledge_points
     from .learning_strategy import build_dynamic_strategy
-    from .material_importer import create_material_from_import, extract_local_file, extract_public_url
+    from .material_importer import create_material_from_import, extract_image_file, extract_local_file, extract_public_url
     from .notifier import notify
     from .plan_adjuster import adjust_today_plan, apply_ket_level, auto_adjust_after_event, ket_difficulty_suggestion
     from .plan_generator import generate_plan_from_text
@@ -89,7 +89,7 @@ except ImportError:
     from importer import import_task_sources
     from knowledge_graph import rebuild_knowledge_points, weakest_knowledge_points
     from learning_strategy import build_dynamic_strategy
-    from material_importer import create_material_from_import, extract_local_file, extract_public_url
+    from material_importer import create_material_from_import, extract_image_file, extract_local_file, extract_public_url
     from notifier import notify
     from plan_adjuster import adjust_today_plan, apply_ket_level, auto_adjust_after_event, ket_difficulty_suggestion
     from plan_generator import generate_plan_from_text
@@ -901,6 +901,56 @@ def import_material_url(
         )
         result["knowledge_graph"] = rebuild_knowledge_points(conn, student_id)
         return result
+
+
+@app.post("/api/daily-tasks/{task_id}/stuck-photo")
+async def upload_stuck_photo(
+    task_id: int,
+    file: UploadFile = File(...),
+    student_id: Annotated[int, Form()] = 1,
+    _: str = Depends(require_child_or_admin_auth),
+) -> dict[str, object]:
+    suffix = Path(file.filename or "question.jpg").suffix.lower() or ".jpg"
+    if suffix not in {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".heic", ".heif"}:
+        raise HTTPException(status_code=400, detail="只支持拍照图片：JPG、PNG、WEBP、BMP、HEIC")
+    upload_dir = BASE_DIR / "data" / "uploads" / "stuck"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", Path(file.filename or f"task-{task_id}{suffix}").name)
+    target = upload_dir / f"task-{task_id}-{datetime.now().strftime('%Y%m%d%H%M%S')}-{safe_name}"
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="图片为空，请重新拍照上传。")
+    if len(raw) > 12 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="图片太大，请压缩到 12MB 以内。")
+    target.write_bytes(raw)
+    try:
+        extracted = extract_image_file(str(target))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    with get_conn() as conn:
+        task = conn.execute("SELECT * FROM daily_tasks WHERE id = ? AND student_id = ?", (task_id, student_id)).fetchone()
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+        title = f"题目拍照：{task['title']}"
+        result = create_material_from_import(
+            conn,
+            student_id=student_id,
+            subject="",
+            material_type="notes",
+            title=title,
+            content_text=sanitize_material_text(extracted["content_text"]),
+            file_path=extracted["file_path"],
+            source_id=int(task["source_id"] or 0),
+            source_type="uploaded_stuck_photo",
+            extra_config={"task_id": task_id, **extracted["meta"]},
+        )
+        return {
+            "task_id": task_id,
+            "material_id": result["id"],
+            "file_path": str(target),
+            "text": extracted["content_text"],
+            "chars": len(extracted["content_text"]),
+        }
 
 
 @app.post("/api/task-sources/seed")

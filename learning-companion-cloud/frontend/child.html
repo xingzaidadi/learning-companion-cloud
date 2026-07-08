@@ -117,6 +117,7 @@
       let dayTimeline = null;
       let activeTaskId = null;
       let timerHandle = null;
+      let stuckCameraStream = null;
       const pendingActions = new Set();
 
       async function loadTasks() {
@@ -601,6 +602,30 @@
           <div class="quick-choice-grid">
             ${options.map((option) => `<button type="button" class="quick-choice" data-stuck-choice="${escapeHtml(option)}">${escapeHtml(option)}</button>`).join("")}
           </div>
+          <div class="photo-upload-card">
+            <strong>电脑摄像头拍题</strong>
+            <p>优先用电脑摄像头直接拍不会的题；也可以上传已有照片。</p>
+            <div class="camera-actions">
+              <button type="button" class="photo-upload-button" id="openStuckCamera" data-task-id="${taskId}">打开电脑摄像头</button>
+              <label class="photo-upload-button secondary-photo">上传已有图片
+                <input id="stuckPhotoInput" type="file" accept="image/*" data-task-id="${taskId}" />
+              </label>
+            </div>
+            <div id="stuckCameraBox" class="stuck-camera-box" hidden>
+              <video id="stuckCameraPreview" playsinline autoplay muted></video>
+              <canvas id="stuckCameraCanvas" hidden></canvas>
+              <div class="camera-actions">
+                <button type="button" class="photo-upload-button" id="captureStuckPhoto" data-task-id="${taskId}">拍下题目并识别</button>
+                <button type="button" id="closeStuckCamera">关闭摄像头</button>
+              </div>
+            </div>
+            <noscript>
+              <label class="photo-upload-button">上传题目图片
+              <input id="stuckPhotoInput" type="file" accept="image/*" capture="environment" data-task-id="${taskId}" />
+              </label>
+            </noscript>
+            <div id="stuckPhotoStatus" class="muted" role="status" aria-live="polite">支持拍整页或单题，尽量拍正、拍清楚。</div>
+          </div>
           <label class="optional-note">家长帮忙记录题目 / 孩子口述也可以（强烈建议填写）
             <textarea id="stuckQuestionInput" placeholder="孩子可以直接说给家长听，家长把题目关键条件、选项或原句记在这里，例如：第3题，已知……求……。"></textarea>
           </label>
@@ -945,7 +970,109 @@
         }
       }
 
+      async function uploadStuckPhoto(input) {
+        const file = input.files?.[0];
+        if (!file) return;
+        const taskId = Number(input.dataset.taskId || 0);
+        await uploadStuckPhotoBlob(file, taskId, file.name || "question.jpg", input);
+      }
+
+      async function uploadStuckPhotoBlob(blob, taskId, filename = "question.jpg", control = null) {
+        const status = document.querySelector("#stuckPhotoStatus");
+        const questionInput = document.querySelector("#stuckQuestionInput");
+        const form = new FormData();
+        form.append("file", blob, filename);
+        form.append("student_id", "1");
+        if (control) control.disabled = true;
+        if (status) status.textContent = "正在识别图片文字...";
+        try {
+          const result = await api(`/api/daily-tasks/${taskId}/stuck-photo`, { method: "POST", body: form });
+          const text = String(result.text || "").trim();
+          if (questionInput && text) {
+            questionInput.value = questionInput.value.trim() ? `${questionInput.value.trim()}\n\n${text}` : text;
+          }
+          if (status) status.textContent = `已识别 ${result.chars || text.length} 个字，已自动填入题目原文。`;
+          toast("题目图片已识别");
+        } catch (error) {
+          if (status) status.textContent = error.message || "识别失败，请换清晰图片或手动输入。";
+          toast(error.message || "识别失败");
+        } finally {
+          if (control) control.disabled = false;
+          if (control && "value" in control) control.value = "";
+        }
+      }
+
+      async function openStuckCamera(taskId) {
+        const status = document.querySelector("#stuckPhotoStatus");
+        const box = document.querySelector("#stuckCameraBox");
+        const video = document.querySelector("#stuckCameraPreview");
+        if (!navigator.mediaDevices?.getUserMedia) {
+          if (status) status.textContent = "当前浏览器不支持直接调用摄像头，请用上传图片。";
+          toast("浏览器不支持摄像头");
+          return;
+        }
+        stopStuckCamera();
+        if (status) status.textContent = "正在打开电脑摄像头...";
+        try {
+          stuckCameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false,
+          });
+          if (video) video.srcObject = stuckCameraStream;
+          if (box) box.hidden = false;
+          if (status) status.textContent = "把题目放到摄像头前，尽量占满画面，然后点“拍下题目并识别”。";
+        } catch (error) {
+          if (status) status.textContent = "摄像头打开失败：请允许浏览器使用摄像头，或改用上传图片。";
+          toast("摄像头打开失败");
+        }
+      }
+
+      function stopStuckCamera() {
+        if (stuckCameraStream) {
+          stuckCameraStream.getTracks().forEach((track) => track.stop());
+          stuckCameraStream = null;
+        }
+        const video = document.querySelector("#stuckCameraPreview");
+        if (video) video.srcObject = null;
+        const box = document.querySelector("#stuckCameraBox");
+        if (box) box.hidden = true;
+      }
+
+      async function captureStuckPhoto(button) {
+        const taskId = Number(button.dataset.taskId || 0);
+        const video = document.querySelector("#stuckCameraPreview");
+        const canvas = document.querySelector("#stuckCameraCanvas");
+        const status = document.querySelector("#stuckPhotoStatus");
+        if (!video || !canvas || !video.videoWidth) {
+          if (status) status.textContent = "摄像头还没准备好，请等画面出现后再拍。";
+          return;
+        }
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+        if (!blob) {
+          if (status) status.textContent = "拍照失败，请重试或上传图片。";
+          return;
+        }
+        await uploadStuckPhotoBlob(blob, taskId, `stuck-question-${Date.now()}.jpg`, button);
+      }
+
       document.addEventListener("click", async (event) => {
+        const openCamera = event.target.closest("#openStuckCamera");
+        if (openCamera) {
+          await openStuckCamera(Number(openCamera.dataset.taskId || 0));
+          return;
+        }
+        const capturePhoto = event.target.closest("#captureStuckPhoto");
+        if (capturePhoto) {
+          await captureStuckPhoto(capturePhoto);
+          return;
+        }
+        if (event.target.closest("#closeStuckCamera")) {
+          stopStuckCamera();
+          return;
+        }
         const quickChoice = event.target.closest("[data-stuck-choice]");
         if (quickChoice) {
           document.querySelectorAll(".quick-choice.selected").forEach((node) => node.classList.remove("selected"));
@@ -976,12 +1103,19 @@
           return;
         }
         if (event.target.closest("#cancelStuckChoice")) {
+          stopStuckCamera();
           document.querySelector("#assistBox").className = "empty-state compact";
           document.querySelector("#assistBox").innerHTML = "<strong>遇到卡点就写一句话</strong><p>系统会按当前任务给解决步骤，学会后再回到任务继续。</p>";
           return;
         }
         if (!event.target.closest("#currentTask, #tasks")) return;
         await handleTaskAction(event);
+      });
+
+      document.addEventListener("change", async (event) => {
+        if (event.target?.matches?.("#stuckPhotoInput")) {
+          await uploadStuckPhoto(event.target);
+        }
       });
 
       if (tasks.length) {
