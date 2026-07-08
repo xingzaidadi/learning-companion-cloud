@@ -14,6 +14,8 @@ DEFAULT_WINDOWS = [
 ]
 
 BREAK_MINUTES = 10
+MORNING_END = "11:30"
+MAX_START_IDLE_MINUTES = 30
 
 
 def infer_subject_from_task(task: dict[str, Any]) -> str:
@@ -65,6 +67,37 @@ def _format_time(value: datetime) -> str:
     return value.strftime("%H:%M")
 
 
+def _has_morning_task(arranged: list[dict[str, Any]]) -> bool:
+    morning_end = _parse_time(MORNING_END)
+    for task in arranged:
+        planned_start = task.get("planned_start")
+        if planned_start and _parse_time(str(planned_start)) < morning_end:
+            return True
+    return False
+
+
+def _morning_anchor_rank(
+    window: dict[str, Any],
+    subject: str,
+    arranged: list[dict[str, Any]],
+    urgent: bool,
+) -> tuple[int, ...]:
+    earliest_start = _parse_time(DEFAULT_WINDOWS[0]["start"])
+    idle_minutes = int((window["cursor"] - earliest_start).total_seconds() // 60)
+    would_leave_large_initial_gap = not arranged and idle_minutes > MAX_START_IDLE_MINUTES
+    needs_morning_anchor = not arranged or not _has_morning_task(arranged)
+    is_morning_window = window["cursor"] < _parse_time(MORNING_END)
+
+    if urgent:
+        return (0 if is_morning_window else 1, idle_minutes, 0 if subject in window["best_for"] else 1, 0)
+    return (
+        1 if would_leave_large_initial_gap else 0,
+        0 if (needs_morning_anchor and is_morning_window) else 1,
+        idle_minutes,
+        0 if subject in window["best_for"] else 1,
+    )
+
+
 def _schedule_reason(task: dict[str, Any], block: str) -> str:
     subject = infer_subject_from_task(task)
     kind = _task_kind(task)
@@ -97,21 +130,23 @@ def _is_evening_fit(task: dict[str, Any]) -> bool:
     return False
 
 
-def _window_score(task: dict[str, Any], window: dict[str, Any], last_subject: str) -> tuple[int, int, datetime]:
+def _window_score(task: dict[str, Any], window: dict[str, Any], last_subject: str, arranged: list[dict[str, Any]]) -> tuple[Any, ...]:
     subject = infer_subject_from_task(task)
     mode = window.get("mode", "")
+    urgent = task.get("status") in {"checking", "needs_revision", "stuck"}
+    anchor_rank = _morning_anchor_rank(window, subject, arranged, urgent)
     if mode == "evening" and not _is_evening_fit(task):
-        return (9, 9, window["cursor"])
-    if task.get("status") in {"checking", "needs_revision", "stuck"}:
-        return (0 if mode in {"evening", "light", "practice"} else 1, 0, window["cursor"])
+        return (*anchor_rank, 9, 9, window["cursor"])
+    if urgent:
+        return (*anchor_rank, 0 if mode in {"evening", "light", "practice"} else 1, 0, window["cursor"])
     if _task_kind(task) == "补漏复习":
-        return (0 if mode in {"deep", "light", "evening"} else 1, 0, window["cursor"])
+        return (*anchor_rank, 0 if mode in {"deep", "light", "evening"} else 1, 0, window["cursor"])
     fit_rank = 0 if subject in window["best_for"] else 2
     if mode == "evening":
         fit_rank = 0 if _is_evening_fit(task) else 9
     subject_repeat_penalty = 1 if subject == last_subject else 0
     deep_penalty = 2 if mode == "evening" and subject == "数学" else 0
-    return (fit_rank + deep_penalty, subject_repeat_penalty, window["cursor"])
+    return (*anchor_rank, fit_rank + deep_penalty, subject_repeat_penalty, window["cursor"])
 
 
 def arrange_daily_schedule(conn: Connection, student_id: int = 1, target_date: str = "", respect_existing_order: bool = False) -> list[dict[str, Any]]:
@@ -148,13 +183,7 @@ def arrange_daily_schedule(conn: Connection, student_id: int = 1, target_date: s
     for task in pending:
         minutes = max(10, min(int(task.get("estimated_minutes") or 20), 60))
         subject = infer_subject_from_task(task)
-        if task.get("status") in {"checking", "needs_revision", "stuck"}:
-            candidates = sorted(windows, key=lambda window: window["cursor"])
-        else:
-            candidates = sorted(
-                windows,
-                key=lambda window: _window_score(task, window, last_subject),
-            )
+        candidates = sorted(windows, key=lambda window: _window_score(task, window, last_subject, arranged))
         selected = None
         for window in candidates:
             if window["cursor"] + timedelta(minutes=minutes) <= window["end_time"]:

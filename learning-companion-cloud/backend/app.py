@@ -52,7 +52,7 @@ try:
     from .plan_adjuster import adjust_today_plan, apply_ket_level, auto_adjust_after_event, ket_difficulty_suggestion
     from .plan_generator import generate_plan_from_text
     from .planner import generate_daily_tasks, seed_demo_sources
-    from .quiz import ensure_quiz_for_task, grade_quiz, missing_required_answers, regenerate_quiz_for_task
+    from .quiz import ensure_quiz_for_task, grade_quiz, missing_required_answers, parent_confirm_quiz, regenerate_quiz_for_task
     from .report import build_daily_report, build_weekly_report
     from .rewards import today_rewards
     from .review import create_review_item, review_book
@@ -94,7 +94,7 @@ except ImportError:
     from plan_adjuster import adjust_today_plan, apply_ket_level, auto_adjust_after_event, ket_difficulty_suggestion
     from plan_generator import generate_plan_from_text
     from planner import generate_daily_tasks, seed_demo_sources
-    from quiz import ensure_quiz_for_task, grade_quiz, missing_required_answers, regenerate_quiz_for_task
+    from quiz import ensure_quiz_for_task, grade_quiz, missing_required_answers, parent_confirm_quiz, regenerate_quiz_for_task
     from report import build_daily_report, build_weekly_report
     from rewards import today_rewards
     from review import create_review_item, review_book
@@ -122,6 +122,14 @@ def sanitize_material_text(text: str) -> str:
         clean = pattern.sub("[REDACTED_SECRET]", clean)
     return clean
 security = HTTPBasic(auto_error=False)
+
+
+def _is_movement_task(task: dict[str, Any] | Any) -> bool:
+    getter = task.get if isinstance(task, dict) else task.__getitem__
+    text = " ".join(str(getter(key) or "") for key in ("title", "description", "completion_standard", "check_method"))
+    return any(word in text for word in ("运动", "体育", "跳绳", "拉伸", "慢跑"))
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -946,6 +954,7 @@ def list_daily_tasks(
             SELECT * FROM daily_tasks
             WHERE student_id = ? AND date = ?
             ORDER BY
+                CASE WHEN planned_start IS NULL OR planned_start = '' THEN '99:99' ELSE planned_start END,
                 CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END,
                 priority,
                 id
@@ -965,6 +974,7 @@ def list_daily_tasks(
                 SELECT * FROM daily_tasks
                 WHERE student_id = ? AND date = ?
                 ORDER BY
+                    CASE WHEN planned_start IS NULL OR planned_start = '' THEN '99:99' ELSE planned_start END,
                     CASE WHEN sort_order = 0 THEN 999999 ELSE sort_order END,
                     priority,
                     id
@@ -1085,6 +1095,17 @@ def task_event(task_id: int, data: dict[str, Any], _: str = Depends(require_chil
             return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "blocked": True}
         if event_type == "complete" and current_status in {"checking", "completed"}:
             return {"task_id": task_id, "status": current_status, **_task_time_stats(conn, task_id, current_status), "already_applied": True}
+        if event_type == "complete" and _is_movement_task(task):
+            conn.execute(
+                "UPDATE daily_tasks SET status = 'completed', updated_at = ? WHERE id = ?",
+                (now, task_id),
+            )
+            conn.execute(
+                "INSERT INTO task_progress (daily_task_id, event_type, note, created_at) VALUES (?, 'complete', ?, ?)",
+                (task_id, note or "运动打卡完成", now),
+            )
+            dynamic_adjustment = auto_adjust_after_event(conn, task_id, "complete")
+            return {"task_id": task_id, "status": "completed", "movement_completed": True, "dynamic_adjustment": dynamic_adjustment, **_task_time_stats(conn, task_id, "completed")}
         conn.execute(
             "UPDATE daily_tasks SET status = ?, updated_at = ? WHERE id = ?",
             (status_map[event_type], now, task_id),
@@ -1143,6 +1164,9 @@ def submit_quiz(task_id: int, data: dict[str, Any], _: str = Depends(require_chi
         task = conn.execute("SELECT * FROM daily_tasks WHERE id = ?", (task_id,)).fetchone()
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
+        if data.get("parent_confirmed") is True or answers.get("__parent_confirmed__") == "true":
+            method = str(data.get("confirmation_method") or answers.get("__confirmation_method__") or "oral")
+            return parent_confirm_quiz(conn, task_id, method)
         missing = missing_required_answers(conn, task_id, answers)
         if missing:
             raise HTTPException(

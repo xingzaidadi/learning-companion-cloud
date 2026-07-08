@@ -39,7 +39,7 @@ from .prompts import (
     REPORT_PROMPT,
     STUCK_ASSIST_PROMPT,
 )
-from .quiz import ensure_quiz_for_task, grade_quiz, regenerate_quiz_for_task
+from .quiz import ensure_quiz_for_task, grade_quiz, parent_confirm_quiz, regenerate_quiz_for_task
 from .report import build_daily_report
 from .review import create_review_item
 from .settings import get_settings
@@ -160,6 +160,19 @@ def grade_submission(conn: Connection, task_id: int, answers: dict[str, str]) ->
     task = get_task(conn, task_id)
     if not task:
         return {"task_id": task_id, "status": "not_found", "wrong_items": [], "tool_validation": tool_validation}
+    if answers.get("__parent_confirmed__") == "true":
+        rule_result = parent_confirm_quiz(conn, task_id, answers.get("__confirmation_method__", "oral"))
+        output = {**rule_result, "diagnosis": {"summary": "家长已确认本次小测通过。"}, "target_95_mastery_update": {}, "tool_validation": tool_validation}
+        log_agent_run(
+            conn,
+            int(task["student_id"]),
+            "grade_quiz",
+            {"task_id": task_id, "answers": answers, "tool_validation": tool_validation},
+            output,
+            trace_steps=[],
+            quality_score=1.0,
+        )
+        return output
     if task.get("status") != "completed":
         save_submissions(conn, task_id, answers)
     rule_result = grade_quiz(conn, task_id, answers)
@@ -465,6 +478,10 @@ def _fallback_stuck_assistance(task: dict[str, Any], source: dict[str, Any] | No
     blocker = note.strip()
     if not blocker:
         return _blank_stuck_help(subject, title, standard)
+    if _has_problem_context(blocker):
+        return _problem_context_help(subject, title, standard, blocker)
+    if _needs_problem_text(blocker):
+        return _need_problem_text_help(subject, title, blocker)
     targeted = _targeted_stuck_help(subject, blocker, title)
     if targeted:
         return targeted
@@ -478,6 +495,95 @@ def _fallback_stuck_assistance(task: dict[str, Any], source: dict[str, Any] | No
         "if_still_stuck": "不要耗着；把具体卡点补充清楚，系统继续给下一步。",
         "review_focus": _review_focus_for_subject(subject, blocker),
         "parent_note": "孩子已触发卡住辅导；建议先让孩子说题目要求和第一步，不要直接讲完整答案。",
+    }
+
+
+def _needs_problem_text(note: str) -> bool:
+    lower = note.lower()
+    has_problem_text = any(marker in note for marker in ("题目原文：", "原题：", "题目：", "已知", "求", "第")) or any(marker in lower for marker in ("question:", "problem:"))
+    has_child_work = any(marker in note for marker in ("孩子已写：", "我列", "我选", "答案", "算到"))
+    vague_markers = ("题目看不懂", "不知道先算什么", "计算总出错", "不会做", "不知道怎么写", "要求没看懂", "做了一半卡住")
+    return not has_problem_text and not has_child_work and any(marker in note for marker in vague_markers)
+
+
+def _has_problem_context(note: str) -> bool:
+    return any(marker in note for marker in ("题目原文：", "原题：", "题目：", "孩子已写：", "我列", "我选", "算到"))
+
+
+def _extract_labeled_text(note: str, label: str) -> str:
+    for line in note.splitlines():
+        if line.startswith(label):
+            return line[len(label) :].strip()
+    return ""
+
+
+def _problem_context_help(subject: str, title: str, standard: str, note: str) -> dict[str, str]:
+    problem = _extract_labeled_text(note, "题目原文：") or _extract_labeled_text(note, "原题：") or _extract_labeled_text(note, "题目：")
+    child_work = _extract_labeled_text(note, "孩子已写：")
+    if "数学" in subject:
+        hint = "先不要算最终答案：圈出每个数量表示什么，再判断是几个相同数量合起来，还是平均分。"
+        if child_work:
+            hint = f"先检查你写的“{child_work}”：它有没有表示“几个相同数量”。如果题目是每份一样多、买几份，通常要写成重复加法或乘法。"
+        return {
+            "encouragement": "可以，这次有题目了，我能按这道题帮你拆第一步。",
+            "likely_blocker": f"你卡在把题目条件转成算式。题目是：{problem or '已补充题目'}。",
+            "hint_1": hint,
+            "guiding_question": "题目里哪个数表示“每份多少”，哪个数表示“有几份”？",
+            "mini_example": "例：每盒12支，买3盒，不先写12+3；先想成3个12合起来，也就是12+12+12，再自己算。",
+            "try_again": "现在重新写一行：每份是____，有____份，所以算式是____。",
+            "if_still_stuck": "如果还不会，把题目的完整数字、单位和你写的算式再发一次。",
+            "review_focus": "数学审题列式：每份数和份数",
+            "parent_note": "孩子已有题干和尝试答案，建议追问“每份是多少、有几份”，不要直接报最终答案。",
+        }
+    if "英语" in subject:
+        return {
+            "encouragement": "有原句就能具体拆，不用整段都怕。",
+            "likely_blocker": f"你卡在这句/这题：{problem or note[:60]}。",
+            "hint_1": "先找主语和动词，再圈不认识的1个关键词；不要先翻译整段。",
+            "guiding_question": "这句话里谁在做动作？动作词是哪一个？",
+            "mini_example": "例：The library is next to the classroom. 先找 library，再找 is next to，最后补 classroom。",
+            "try_again": "现在写：主语是____，动作/关系是____，我不懂的词是____。",
+            "if_still_stuck": "把不会的英文单词单独发出来，我再按读音、意思、原句拆。",
+            "review_focus": "英语原句拆解：主语、动作和关键词",
+            "parent_note": "孩子已补充原句，先让孩子找主语/动词/关键词，再处理整句意思。",
+        }
+    if "语文" in subject:
+        return {
+            "encouragement": "有题干后，可以先找依据句，不用凭感觉答。",
+            "likely_blocker": f"你卡在这道阅读/语文题：{problem or note[:60]}。",
+            "hint_1": "先圈题目里的关键词，再回原文找含有同样关键词或意思相近的一句话。",
+            "guiding_question": "这题是在问原因、意思、概括，还是人物/景物特点？",
+            "mini_example": "例：问“为什么”，答案通常要回原文找前后原因句，再用自己的话说。",
+            "try_again": "现在先写：题目关键词是____，原文依据句是____。",
+            "if_still_stuck": "把原文相关段落再粘出来，我再帮你找依据句。",
+            "review_focus": "语文阅读：题干关键词和依据句",
+            "parent_note": "孩子已补题干，建议先找原文依据句，避免家长直接口述答案。",
+        }
+    return {
+        "encouragement": "这次信息更具体了，可以按题目一步一步拆。",
+        "likely_blocker": f"你卡在：{problem or note[:60]}。",
+        "hint_1": f"先对照完成标准：{standard}，找出题目要求交付什么。",
+        "guiding_question": "这道题最后要你写出什么结果？",
+        "mini_example": "先把题目拆成：条件、要求、第一步。",
+        "try_again": "现在写：条件是____，要求是____，第一步是____。",
+        "if_still_stuck": "补充你已经写的答案或步骤，我再继续拆。",
+        "review_focus": "具体题目拆解",
+        "parent_note": f"孩子在《{title}》已补充题目，建议按条件—要求—第一步追问。",
+    }
+
+
+def _need_problem_text_help(subject: str, title: str, note: str) -> dict[str, str]:
+    first_line = note.splitlines()[0][:40]
+    return {
+        "encouragement": "可以帮，但现在还缺最关键的信息：具体题目是什么。",
+        "likely_blocker": f"你只说了“{first_line}”，我不知道是哪一道题、有哪些条件，所以不能直接判断解法。",
+        "hint_1": "请把题目原文粘进“题目原文”框；数学题至少要有已知条件和问题，语文/英语要有原句或题干。",
+        "guiding_question": "这道题完整问了什么？你已经写了哪一步或选了哪个答案？",
+        "mini_example": "示例：题目原文：小明买了3盒彩笔，每盒12支，求一共多少支？孩子已写：3+12，不知道对不对。",
+        "try_again": "补充题目原文和孩子已写答案后，再点提交求助，我会按这道题一步一步拆。",
+        "if_still_stuck": "如果不会打字，家长可以先用手机/电脑识别图片文字，再复制到题目原文框。",
+        "review_focus": f"{subject}具体题目补充",
+        "parent_note": f"孩子在《{title}》卡住，但缺少题干。请先补充题目原文、选项、孩子已写步骤，再让系统答疑。",
     }
 
 

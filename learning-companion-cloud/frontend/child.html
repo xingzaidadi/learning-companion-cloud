@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>孩子端 - 暑假自主学习陪跑</title>
-    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/styles.css?v=all-crystal-gradient-20260707" />
   </head>
   <body>
     <main class="shell" role="main" aria-label="孩子学习端" data-quality="child-one-focus child-light-progress child-progressive-disclosure child-accessible child-age-copy">
@@ -99,13 +99,14 @@
           </div>
         </details>
 
-        <details class="card task-column queue-card child-detail-card" data-quality="child-collapsible-queue">
-          <summary>
-            <span>后续任务队列</span>
-            <small>只做完当前一项后再看。</small>
-          </summary>
+        <section class="card task-column queue-card queue-full-card" data-quality="child-full-queue">
+          <div class="queue-full-head">
+            <h2>今日全部任务</h2>
+            <small id="queueSummary">严格按时间顺序：从早到晚。</small>
+          </div>
+          <div id="queueStats" class="queue-stats" aria-live="polite"></div>
           <div id="tasks" class="task-list compact-task-list" role="list" aria-label="后续任务队列"><p class="muted">正在加载今日任务...</p></div>
-        </details>
+        </section>
       </section>
     </main>
     <div class="toast"></div>
@@ -128,15 +129,26 @@
         dayTimeline = await api(`/api/day-timeline?_=${Date.now()}`, { cache: "no-store" });
         renderTasks();
         renderTimeline();
-        const checkTask = tasks.find((task) => ["checking", "needs_revision"].includes(task.status));
+        const checkTask = tasks.find((task) => ["checking", "needs_revision"].includes(task.status) && subjectName(task) !== "运动" && task.check_method !== "checkin");
         if (checkTask) await showQuiz(checkTask.id);
       }
 
       function renderTasks() {
         const done = tasks.filter((task) => task.status === "completed").length;
+        const unfinished = tasks.length - done;
         document.querySelector("#doneCount").textContent = done;
         document.querySelector("#totalCount").textContent = tasks.length;
         document.querySelector("#dayProgressBar").style.width = `${tasks.length ? Math.round((done / tasks.length) * 100) : 0}%`;
+        const queueSummary = document.querySelector("#queueSummary");
+          if (queueSummary) queueSummary.textContent = `按时间顺序：已完成 ${done} 项，未完成 ${unfinished} 项`;
+        const queueStats = document.querySelector("#queueStats");
+        if (queueStats) {
+          queueStats.innerHTML = `
+            <span class="queue-stat done">✓ 已完成 ${done}</span>
+            <span class="queue-stat todo">未完成 ${unfinished}</span>
+            <span class="queue-stat current">当前项有绿色“当前”标记</span>
+          `;
+        }
         const container = document.querySelector("#tasks");
         const currentContainer = document.querySelector("#currentTask");
         container.innerHTML = "";
@@ -154,9 +166,24 @@
         }
         updatePrimaryActionButton();
         const primary = primaryAction();
-        const currentTask = primary.task || [...tasks].reverse().find((task) => task.status === "completed") || tasks[0];
-        currentContainer.append(createTaskCard(currentTask, "focus"));
-        tasks.forEach((task) => container.append(createTaskCard(task, "queue", currentTask.id)));
+        const currentTask = primary.task;
+        if (currentTask) {
+          currentContainer.append(createTaskCard(currentTask, "focus"));
+        } else {
+          currentContainer.innerHTML = `
+            <div class="empty-state">
+              <strong>今天任务都完成了</strong>
+              <p>可以生成今日总结，或让家长查看学习记录。</p>
+            </div>
+          `;
+        }
+        const queueTasks = [...tasks].sort((a, b) => {
+          const aTime = a.planned_start || "99:99";
+          const bTime = b.planned_start || "99:99";
+          if (aTime !== bTime) return aTime.localeCompare(bTime);
+          return Number(a.sort_order || a.id || 0) - Number(b.sort_order || b.id || 0);
+        });
+        queueTasks.forEach((task) => container.append(createTaskCard(task, "queue", currentTask?.id || null)));
         updateTimers();
       }
 
@@ -245,10 +272,20 @@
         if (stuck) return { task: stuck, type: "focus", label: "先处理卡住任务" };
         const running = tasks.find((task) => task.status === "in_progress");
         if (running) return { task: running, type: "focus", label: "继续当前任务" };
-        const paused = tasks.find((task) => task.status === "paused");
+        const completedTasks = tasks.filter((task) => task.status === "completed" && task.planned_end);
+        const latestCompletedEnd = completedTasks.reduce((latest, task) => (task.planned_end > latest ? task.planned_end : latest), "");
+        const forwardTasks = latestCompletedEnd
+          ? tasks.filter((task) => task.status !== "completed" && (!task.planned_start || task.planned_start >= latestCompletedEnd))
+          : tasks;
+        const candidates = latestCompletedEnd ? forwardTasks : tasks;
+        const paused = candidates.find((task) => task.status === "paused");
         if (paused) return { task: paused, type: "start", label: "继续当前任务" };
-        const next = tasks.find((task) => task.status === "not_started");
+        const next = candidates.find((task) => task.status === "not_started");
         if (next) return { task: next, type: "start", label: "开始当前任务" };
+        const earlierPaused = tasks.find((task) => task.status === "paused");
+        if (earlierPaused) return { task: earlierPaused, type: "start", label: "补做漏掉任务" };
+        const earlierUnfinished = tasks.find((task) => task.status === "not_started");
+        if (earlierUnfinished) return { task: earlierUnfinished, type: "start", label: "补做漏掉任务" };
         return { task: null, type: "endDay", label: "生成今日总结" };
       }
 
@@ -280,6 +317,7 @@
       function statusHint(task) {
         const timeText = task.planned_start && task.planned_end ? `建议 ${task.planned_start}-${task.planned_end} 完成。` : "";
         if (task.status === "not_started") return `${timeText}先点开始，系统会开始计时。`;
+        if (task.status === "in_progress" && subjectName(task) === "运动") return "正在运动。完成后点运动打卡，不需要做题。";
         if (task.status === "in_progress") return "正在学习。做完后点检查，卡住就点求助。";
         if (task.status === "paused") return "已暂停。准备好了点继续学习。";
         if (task.status === "stuck") return "先看下方提示。学会了点继续学，做完了点检查。";
@@ -290,6 +328,7 @@
       }
 
       function checkMethodText(task) {
+        if (subjectName(task) === "运动" || task.check_method === "checkin") return "运动打卡";
         if (task.check_method === "quiz") return "小测过关";
         if (task.check_method === "review_quiz") return "补漏复测";
         return "完成后检查";
@@ -335,10 +374,12 @@
         const renderedAt = isRunning ? Date.now() : 0;
         if (variant === "queue") {
           const isCurrent = currentTaskId === task.id;
+          const doneMark = task.status === "completed" ? '<span class="queue-done-mark" aria-label="已完成">✓</span>' : "";
           return `
             <div class="queue-task-row ${subjectClass(task)}">
+              ${doneMark}
               <div>
-                <div class="task-meta"><span class="subject-badge">${subjectName(task)}</span>${priorityTag(task)}${taskStatusTag(task)}${isCurrent ? '<span class="tag ok">当前</span>' : ""}</div>
+                <div class="task-meta"><span class="subject-badge">${subjectName(task)}</span>${priorityTag(task)}${taskStatusTag(task)}${isCurrent ? '<span class="tag ok current-queue-tag">当前</span>' : ""}</div>
                 <h3 class="task-title">${childTaskTitle(task)}</h3>
                 <p class="muted">${task.planned_start && task.planned_end ? `${task.schedule_block || "建议时段"} · ${task.planned_start}-${task.planned_end}` : "待安排时间段"}</p>
               </div>
@@ -372,7 +413,10 @@
         const startDisabled = canStartTask ? "" : "disabled";
         const pauseDisabled = task.status !== "in_progress" ? "disabled" : "";
         const doneAction = ["checking", "needs_revision"].includes(task.status) ? "showQuiz" : "complete";
-        const doneLabel = task.status === "checking"
+        const isMovement = subjectName(task) === "运动" || task.check_method === "checkin";
+        const doneLabel = isMovement && !["checking", "needs_revision", "completed"].includes(task.status)
+          ? "运动完成，打卡"
+          : task.status === "checking"
           ? "继续检查"
           : task.status === "completed"
             ? "已通过"
@@ -388,7 +432,7 @@
         const doneDisabled = canFinishTask && task.status !== "completed" ? "" : "disabled";
         const stuckDisabled = canAskStuck ? "" : "disabled";
         const pauseButton = task.status === "in_progress" ? `<button data-action="pause" data-id="${task.id}" aria-label="暂停计时">暂停</button>` : "";
-        const checkAfterPauseButton = task.status === "paused" ? `<button class="warn" data-action="${doneAction}" data-id="${task.id}" aria-label="我做完了，开始检查" ${doneDisabled}>我做完了，开始检查</button>` : "";
+        const checkAfterPauseButton = task.status === "paused" ? `<button class="warn" data-action="${doneAction}" data-id="${task.id}" aria-label="${doneLabel}" ${doneDisabled}>${doneLabel}</button>` : "";
         const checkAfterStuckButton = task.status === "stuck" ? `<button class="warn" data-action="${doneAction}" data-id="${task.id}" aria-label="${doneLabel}" ${doneDisabled}>${doneLabel}</button>` : "";
         const stuckLabel = task.status === "stuck" ? "还不会，再提示" : "我卡住了";
         const stuckButton = canAskStuck ? `<button class="danger" data-action="stuck" data-id="${task.id}" aria-label="${stuckLabel}" ${stuckDisabled}>${stuckLabel}</button>` : "";
@@ -524,6 +568,14 @@
         document.querySelector(`#tasks .task-card[data-task-id="${taskId}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
       }
 
+      function openWorkspace(target = "quiz") {
+        const workspace = document.querySelector(".workspace-card");
+        if (workspace) workspace.open = true;
+        const selector = target === "assist" ? "#assistBox" : "#quizBox";
+        const node = document.querySelector(selector);
+        window.setTimeout(() => node?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+      }
+
       function stuckOptionsForTask(task) {
         const subject = subjectName(task);
         if (subject === "数学") return ["题目看不懂", "不知道先算什么", "小数点不会放", "计算总出错"];
@@ -534,8 +586,7 @@
 
       function openStuckPanel(taskId) {
         const task = tasks.find((item) => item.id === taskId);
-        const workspace = document.querySelector(".workspace-card");
-        if (workspace) workspace.open = true;
+        openWorkspace("assist");
         const box = document.querySelector("#assistBox");
         const options = stuckOptionsForTask(task || {});
         box.className = "assist-workspace low-type-card";
@@ -544,14 +595,20 @@
             <span class="tag p0">少打字求助</span>
             <div>
               <strong>先点一个最像的卡点</strong>
-              <p>不会打字也可以用。下面输入框保留给家长代录或孩子会打字时补充。</p>
+              <p>如果是具体题不会，可以让孩子口述给家长，家长把题目关键条件、选项或原句记下来；没有题目信息时只能给通用提示。</p>
             </div>
           </div>
           <div class="quick-choice-grid">
             ${options.map((option) => `<button type="button" class="quick-choice" data-stuck-choice="${escapeHtml(option)}">${escapeHtml(option)}</button>`).join("")}
           </div>
-          <label class="optional-note">可选：再补一句
-            <textarea id="stuckNoteInput" placeholder="孩子口述，家长可帮忙记一句；不填也可以。"></textarea>
+          <label class="optional-note">家长帮忙记录题目 / 孩子口述也可以（强烈建议填写）
+            <textarea id="stuckQuestionInput" placeholder="孩子可以直接说给家长听，家长把题目关键条件、选项或原句记在这里，例如：第3题，已知……求……。"></textarea>
+          </label>
+          <label class="optional-note">孩子已经写到哪一步 / 哪个答案
+            <textarea id="stuckWorkInput" placeholder="例如：我列了 36÷4，但不知道对不对；或：我选了B，不知道为什么。"></textarea>
+          </label>
+          <label class="optional-note">补充说明
+            <textarea id="stuckNoteInput" placeholder="孩子口述：哪里看不懂、哪个词不会、哪一步卡住。"></textarea>
           </label>
           <div class="actions">
             <button class="primary" id="submitStuckChoice" data-id="${taskId}">提交求助</button>
@@ -562,8 +619,15 @@
 
       async function submitStuckChoice(taskId) {
         const selected = document.querySelector(".quick-choice.selected")?.dataset.stuckChoice || "";
+        const questionText = document.querySelector("#stuckQuestionInput")?.value?.trim() || "";
+        const workText = document.querySelector("#stuckWorkInput")?.value?.trim() || "";
         const extra = document.querySelector("#stuckNoteInput")?.value?.trim() || "";
-        const note = [selected, extra].filter(Boolean).join("：") || "我卡住了，需要一步一步提示";
+        const noteParts = [];
+        if (selected) noteParts.push(`卡点：${selected}`);
+        if (questionText) noteParts.push(`题目原文：${questionText}`);
+        if (workText) noteParts.push(`孩子已写：${workText}`);
+        if (extra) noteParts.push(`补充说明：${extra}`);
+        const note = noteParts.join("\n") || "我卡住了，需要一步一步提示";
         activeTaskId = taskId;
         const result = await postEvent(taskId, "stuck", note);
         updateOneTask(taskId, result);
@@ -572,8 +636,7 @@
       }
 
       async function showQuiz(taskId) {
-        const workspace = document.querySelector(".workspace-card");
-        if (workspace) workspace.open = true;
+        openWorkspace("quiz");
         const data = await api(`/api/daily-tasks/${taskId}/quiz`);
         const box = document.querySelector("#quizBox");
         box.className = "quiz-workspace";
@@ -666,6 +729,14 @@
           }
           form.append(wrapper);
         });
+        const parentConfirm = document.createElement("div");
+        parentConfirm.className = "quiz-parent-confirm";
+        parentConfirm.innerHTML = `
+          <strong>很多题不用打字？</strong>
+          <p>孩子可以整场口述给家长，家长确认都答过、该订正的已订正后，直接点下面按钮通过。</p>
+          <button type="button" class="secondary" data-parent-confirm-quiz>本次全部口述给家长，确认通过</button>
+        `;
+        form.prepend(parentConfirm);
         const submit = document.createElement("button");
         submit.className = "primary";
         submit.textContent = "提交小测";
@@ -677,6 +748,28 @@
         validation.hidden = true;
         form.append(validation);
         form.append(submit);
+        form.querySelector("[data-parent-confirm-quiz]")?.addEventListener("click", async () => {
+          if (submit.disabled) return;
+          const ok = window.confirm("确认孩子已经把本次小测全部口述/纸笔完成，并由家长检查通过？");
+          if (!ok) return;
+          submit.disabled = true;
+          submit.textContent = "正在记录...";
+          try {
+            const result = await api(`/api/daily-tasks/${taskId}/quiz`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ parent_confirmed: true, confirmation_method: "oral_to_parent", answers: {} }),
+            });
+            toast("已记录：家长确认小测通过");
+            await loadTasks();
+            box.className = "result-card success";
+            box.innerHTML = `<h3>家长确认通过：${result.correct}/${result.total}</h3><p>${escapeHtml(result.mastery?.next_action || "继续新课")}</p>`;
+          } catch (error) {
+            toast(error.message || "记录失败，请再试一次");
+            submit.disabled = false;
+            submit.textContent = "提交小测";
+          }
+        });
         form.addEventListener("submit", async (event) => {
           event.preventDefault();
           if (submit.disabled) return;
@@ -730,6 +823,10 @@
           }
         });
         box.append(form);
+        window.setTimeout(() => {
+          box.scrollIntoView({ behavior: "smooth", block: "start" });
+          form.querySelector("input, textarea, button")?.focus();
+        }, 80);
       }
 
       function escapeHtml(value) {
@@ -742,8 +839,7 @@
       }
 
       function showStuckAssistance(result) {
-        const workspace = document.querySelector(".workspace-card");
-        if (workspace) workspace.open = true;
+        openWorkspace("assist");
         const box = document.querySelector("#assistBox");
         const assistance = result.assistance || {};
         const microPractice = result.tutor_session?.micro_practice || {};
@@ -780,6 +876,10 @@
           <div class="quiz-item">
             <strong>学会以后</strong>
             <p>还没学完：点当前任务卡里的“我学会了，继续学”。已经学完：点“学完了，开始检查”。</p>
+          </div>
+          <div class="actions">
+            <button type="button" class="primary" data-action="resume" data-id="${result.task_id}">我学会了，继续学</button>
+            <button type="button" class="warn" data-action="complete" data-id="${result.task_id}">已经做完，开始检查</button>
           </div>
           <details>
             <summary>为什么这样做</summary>
@@ -818,9 +918,16 @@
           } else if (action === "complete") {
             const result = await postEvent(taskId, "complete");
             updateOneTask(taskId, result);
-            await showQuiz(taskId);
+            if (result.movement_completed || result.status === "completed") {
+              await loadTasks();
+              toast(result.movement_completed ? "运动已打卡完成" : "任务已完成");
+            } else {
+              await showQuiz(taskId);
+              toast("已打开检查题，先完成小测再进入下一项");
+            }
           } else if (action === "showQuiz") {
             await showQuiz(taskId);
+            toast("已打开当前小测");
             button.disabled = false;
             button.textContent = originalText;
           } else {

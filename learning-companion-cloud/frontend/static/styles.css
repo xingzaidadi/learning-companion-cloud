@@ -4,9 +4,9 @@
   --text: #172033;
   --muted: #667085;
   --line: #e6e8ef;
-  --primary: #3867ff;
-  --primary-dark: #244dcc;
-  --secondary: #7c3aed;
+  --primary: #1d4ed8;
+  --primary-dark: #1e3a8a;
+  --secondary: #581c87;
   --ok: #13a668;
   --warn: #f59f00;
   --danger: #df3b3b;
@@ -64,7 +64,7 @@ a {
   margin: 0;
   font-size: clamp(28px, 4vw, 44px);
   letter-spacing: -0.03em;
-  background: linear-gradient(120deg, #172033 0%, #3867ff 48%, #7c3aed 100%);
+  background: linear-gradient(90deg, #1e3a8a 0%, #1d4ed8 45%, #581c87 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -298,7 +298,7 @@ button:disabled {
   width: 0;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--primary), #22c55e);
+  background: linear-gradient(90deg, var(--primary-dark), var(--primary), var(--secondary));
   transition: width 0.25s ease;
 }
 
@@ -538,11 +538,42 @@ details.card[open] > summary::after {
 
 .compact-task-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
+}
+
+.queue-stats {
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
-  max-height: 260px;
-  overflow: auto;
-  padding-right: 4px;
+  padding: 0 20px 12px;
+}
+
+.queue-stat {
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 1000;
+  color: #5f6b82;
+  background: #f2f5fb;
+}
+
+.queue-stat.done {
+  color: #047857;
+  background: #dcfce7;
+}
+
+.queue-stat.todo {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.queue-stat.current {
+  color: #2563eb;
+  background: #dbeafe;
 }
 
 .section-head,
@@ -649,6 +680,36 @@ details.card[open] > summary::after {
   min-height: 36px;
   padding: 7px 11px;
   font-size: 13px;
+}
+
+.quiz-parent-confirm {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid #fde68a;
+  background: linear-gradient(135deg, #fff7d6, #ffffff);
+}
+
+.quiz-parent-confirm strong {
+  color: #111827;
+  font-size: 18px;
+}
+
+.quiz-parent-confirm p {
+  margin: 0;
+  color: #5f6b85;
+  font-weight: 800;
+}
+
+.quiz-parent-confirm button {
+  justify-self: start;
+  min-height: 44px;
+  border-radius: 16px;
+  border: 1px solid #f59e0b;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 1000;
 }
 
 .empty-state {
@@ -856,9 +917,27 @@ details.card[open] > summary::after {
 }
 
 .queue-task-card {
+  position: relative;
   padding: 10px 12px;
   background: rgba(255, 255, 255, 0.78);
   box-shadow: none;
+}
+
+.queue-task-card:has(.current-queue-tag) {
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.queue-task-card:has(.queue-done-mark) {
+  opacity: 0.72;
+  background: linear-gradient(135deg, rgba(240, 253, 244, 0.9), rgba(255, 255, 255, 0.68));
+  border-color: rgba(34, 197, 94, 0.24);
+}
+
+.queue-task-card:has(.queue-done-mark) .task-title,
+.queue-task-card:has(.queue-done-mark) .muted {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  text-decoration-color: rgba(34, 197, 94, 0.45);
 }
 
 .queue-task-card.active {
@@ -867,8 +946,25 @@ details.card[open] > summary::after {
 }
 
 .queue-task-row {
+  position: relative;
   display: grid;
   gap: 8px;
+}
+
+.queue-done-mark {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  color: white;
+  background: #16a34a;
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.22);
+  font-size: 20px;
+  font-weight: 1000;
 }
 
 .queue-task-row .task-title {
@@ -1762,7 +1858,7 @@ details.card > summary {
   padding: clamp(24px, 3vw, 34px);
   background:
     radial-gradient(circle at 90% 0%, rgba(255, 255, 255, 0.28), transparent 32%),
-    linear-gradient(135deg, #315bea 0%, #14b8a6 100%);
+    linear-gradient(90deg, #1e3a8a 0%, #1d4ed8 45%, #581c87 100%);
 }
 
 .parent-status-card h2 {
@@ -1921,7 +2017,580 @@ textarea:focus {
     width: 100%;
   }
 
-  .parent-detail-grid details summary {
+.parent-detail-grid details summary {
     font-size: 17px;
   }
+}
+
+.compact-task-list {
+  max-height: none;
+  overflow: visible;
+}
+
+.queue-task-card:has(.queue-done-mark) {
+  opacity: 0.72;
+  background: linear-gradient(135deg, rgba(240, 253, 244, 0.9), rgba(255, 255, 255, 0.68));
+}
+
+.queue-full-card {
+  overflow: visible !important;
+  padding: 18px 20px 20px;
+}
+
+.queue-full-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.queue-full-head h2 {
+  margin: 0;
+  color: #172033;
+  font-size: 22px;
+}
+
+.queue-full-head small {
+  color: #5f6b82;
+  font-size: 15px;
+  font-weight: 1000;
+}
+
+.queue-full-card .queue-stats {
+  padding: 0 0 12px;
+}
+
+.queue-full-card .compact-task-list {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  max-height: none !important;
+  overflow: visible !important;
+  padding: 0 !important;
+}
+
+.queue-full-card .queue-task-card {
+  min-height: 118px;
+  padding: 10px 12px;
+  border-width: 2px;
+  box-shadow: 0 8px 18px rgba(36, 48, 85, 0.055);
+}
+
+.queue-full-card .queue-task-row {
+  height: 100%;
+  align-content: space-between;
+  gap: 6px;
+}
+
+.queue-full-card .queue-task-row .task-meta {
+  gap: 5px;
+}
+
+.queue-full-card .queue-task-row .task-title {
+  display: -webkit-box;
+  min-height: 40px;
+  margin-top: 5px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.queue-full-card .queue-task-row .muted {
+  color: #526178;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.queue-full-card .queue-meta {
+  gap: 6px;
+}
+
+.queue-full-card .queue-meta .tag {
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.queue-full-card .queue-task-card:has(.queue-done-mark) {
+  opacity: 1;
+  border-color: #16a34a;
+  background: linear-gradient(135deg, #dcfce7, #f0fdf4);
+}
+
+.queue-full-card .queue-task-card:has(.queue-done-mark) .task-title,
+.queue-full-card .queue-task-card:has(.queue-done-mark) .muted {
+  color: #166534;
+  text-decoration: none;
+}
+
+.queue-full-card .queue-task-card:has(.queue-done-mark) .timer-tag {
+  color: white;
+  background: #16a34a;
+}
+
+.queue-full-card .queue-task-card:not(:has(.queue-done-mark)) {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #fff7ed, #fffbeb);
+}
+
+.queue-full-card .queue-task-card:not(:has(.queue-done-mark)) .task-title {
+  color: #7c2d12;
+}
+
+.queue-full-card .queue-task-card:not(:has(.queue-done-mark)) .timer-tag {
+  color: #92400e;
+  background: #fde68a;
+}
+
+.queue-full-card .queue-task-card:has(.current-queue-tag) {
+  border-color: #2563eb;
+  background: linear-gradient(135deg, #dbeafe, #eef2ff);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16), 0 14px 28px rgba(37, 99, 235, 0.13);
+}
+
+.queue-full-card .queue-task-card:has(.current-queue-tag) .task-title {
+  color: #1e3a8a;
+}
+
+.queue-full-card .queue-task-card:has(.current-queue-tag) .timer-tag {
+  color: white;
+  background: #2563eb;
+}
+
+.queue-full-card .queue-done-mark {
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+}
+
+.queue-full-card .queue-task-card:not(:has(.queue-done-mark))::after {
+  content: "未完成";
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: white;
+  background: #f97316;
+  font-size: 12px;
+  font-weight: 1000;
+}
+
+.queue-full-card .queue-task-card:has(.current-queue-tag)::after {
+  content: "当前";
+  background: #2563eb;
+}
+
+body:has(#startNext) .coach-hero {
+  color: white;
+  background:
+    radial-gradient(circle at 82% 20%, rgba(255, 255, 255, 0.22), transparent 28%),
+    linear-gradient(90deg, #1e3a8a 0%, #1d4ed8 42%, #581c87 100%) !important;
+}
+
+body:has(#startNext) .coach-hero .muted,
+body:has(#startNext) .coach-hero p {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+body:has(#startNext) .summary-pill {
+  color: #172033;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+body:has(#startNext) .summary-pill.active {
+  color: white;
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+body:has(#startNext) .thin-progress {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+body:has(#startNext) .thin-progress span,
+body:has(#startNext) button.primary,
+body:has(#startNext) .big-action {
+  background: linear-gradient(90deg, #1e3a8a 0%, #1d4ed8 42%, #581c87 100%) !important;
+}
+
+body:has(#startNext) .coach-hero {
+  background:
+    radial-gradient(circle at 84% 18%, rgba(255, 255, 255, 0.30), transparent 34%),
+    linear-gradient(90deg, #3b82f6 0%, #60a5fa 36%, #8b5cf6 100%) !important;
+}
+
+body:has(#startNext) .thin-progress span,
+body:has(#startNext) button.primary,
+body:has(#startNext) .big-action {
+  background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 36%, #8b5cf6 100%) !important;
+}
+
+body:has(#startNext) .summary-pill.active {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+body:has(#startNext) .coach-hero {
+  color: #172033;
+  background:
+    radial-gradient(circle at 84% 18%, rgba(255, 255, 255, 0.46), transparent 36%),
+    linear-gradient(90deg, #bfdbfe 0%, #dbeafe 42%, #ddd6fe 100%) !important;
+}
+
+body:has(#startNext) .coach-hero .muted,
+body:has(#startNext) .coach-hero p {
+  color: #475569;
+}
+
+body:has(#startNext) .summary-pill.active {
+  color: #1e3a8a;
+  background: rgba(255, 255, 255, 0.70);
+}
+
+body:has(#startNext) .thin-progress {
+  background: rgba(30, 58, 138, 0.12);
+}
+
+body:has(#startNext) .thin-progress span,
+body:has(#startNext) button.primary,
+body:has(#startNext) .big-action {
+  background: linear-gradient(90deg, #60a5fa 0%, #93c5fd 45%, #a78bfa 100%) !important;
+}
+
+body:has(#startNext) .coach-hero {
+  color: #3f2a04;
+  background:
+    radial-gradient(circle at 84% 18%, rgba(255, 255, 255, 0.55), transparent 36%),
+    linear-gradient(90deg, #fff7cc 0%, #facc15 42%, #f59e0b 72%, #fef3c7 100%) !important;
+}
+
+body:has(#startNext) .coach-hero .muted,
+body:has(#startNext) .coach-hero p {
+  color: #6b4e05;
+}
+
+body:has(#startNext) .summary-pill.active {
+  color: #78350f;
+  border-color: rgba(245, 158, 11, 0.30);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+body:has(#startNext) .thin-progress {
+  background: rgba(120, 53, 15, 0.16);
+}
+
+body:has(#startNext) .thin-progress span,
+body:has(#startNext) button.primary,
+body:has(#startNext) .big-action {
+  color: #3f2a04;
+  background: linear-gradient(90deg, #fde68a 0%, #facc15 42%, #f59e0b 100%) !important;
+}
+
+body:has(#startNext) .coach-hero {
+  color: #172033;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.82), transparent 28%),
+    radial-gradient(circle at 86% 18%, rgba(255, 255, 255, 0.62), transparent 34%),
+    linear-gradient(90deg, #e0f2fe 0%, #93c5fd 36%, #c4b5fd 72%, #f5d0fe 100%) !important;
+  box-shadow: 0 18px 42px rgba(96, 165, 250, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+body:has(#startNext) .coach-hero .muted,
+body:has(#startNext) .coach-hero p {
+  color: #475569;
+}
+
+body:has(#startNext) .summary-pill.active {
+  color: #1e3a8a;
+  border-color: rgba(147, 197, 253, 0.42);
+  background: rgba(255, 255, 255, 0.68);
+  backdrop-filter: blur(10px);
+}
+
+body:has(#startNext) .thin-progress {
+  background: rgba(255, 255, 255, 0.48);
+}
+
+body:has(#startNext) .thin-progress span,
+body:has(#startNext) button.primary,
+body:has(#startNext) .big-action {
+  color: white;
+  background: linear-gradient(90deg, #38bdf8 0%, #60a5fa 38%, #8b5cf6 76%, #c084fc 100%) !important;
+  box-shadow: 0 14px 30px rgba(96, 165, 250, 0.28);
+}
+
+body:has(#startNext) .coach-hero {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(255, 255, 255, 0.86), transparent 24%),
+    radial-gradient(circle at 86% 18%, rgba(255, 255, 255, 0.62), transparent 34%),
+    radial-gradient(circle at 18% 72%, rgba(250, 204, 21, 0.24) 0 2px, transparent 3px),
+    radial-gradient(circle at 42% 24%, rgba(253, 224, 71, 0.22) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 66% 68%, rgba(251, 191, 36, 0.20) 0 2px, transparent 3px),
+    radial-gradient(circle at 82% 42%, rgba(254, 240, 138, 0.24) 0 1.5px, transparent 2.5px),
+    linear-gradient(90deg, #e0f2fe 0%, #93c5fd 36%, #c4b5fd 72%, #f5d0fe 100%) !important;
+  background-size: auto, auto, 120px 90px, 150px 110px, 140px 100px, 170px 120px, auto;
+}
+
+body:has(#startNext) .coach-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.32) 38%, transparent 58%),
+    radial-gradient(circle at 75% 28%, rgba(253, 224, 71, 0.35) 0 2px, transparent 3px),
+    radial-gradient(circle at 30% 62%, rgba(250, 204, 21, 0.24) 0 1.5px, transparent 2.5px);
+  mix-blend-mode: screen;
+}
+
+body:has(#startNext) .coach-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+body:has(#startNext) .coach-hero {
+  background:
+    radial-gradient(circle at 14% 18%, rgba(255, 255, 255, 0.88), transparent 24%),
+    radial-gradient(circle at 86% 18%, rgba(255, 255, 255, 0.66), transparent 34%),
+    radial-gradient(circle at 18% 72%, rgba(250, 204, 21, 0.25) 0 2px, transparent 3px),
+    radial-gradient(circle at 36% 28%, rgba(226, 232, 240, 0.42) 0 2px, transparent 3px),
+    radial-gradient(circle at 58% 62%, rgba(253, 224, 71, 0.22) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 76% 38%, rgba(248, 250, 252, 0.48) 0 1.8px, transparent 3px),
+    linear-gradient(90deg, #e0f2fe 0%, #93c5fd 34%, #c4b5fd 70%, #f5d0fe 100%) !important;
+  background-size: auto, auto, 120px 90px, 132px 96px, 150px 110px, 170px 120px, auto;
+}
+
+body:has(#startNext) .coach-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.36) 38%, transparent 58%),
+    radial-gradient(circle at 75% 28%, rgba(253, 224, 71, 0.36) 0 2px, transparent 3px),
+    radial-gradient(circle at 28% 62%, rgba(248, 250, 252, 0.42) 0 2px, transparent 3px),
+    radial-gradient(circle at 46% 46%, rgba(250, 204, 21, 0.22) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 88% 64%, rgba(203, 213, 225, 0.34) 0 1.5px, transparent 2.5px);
+  mix-blend-mode: screen;
+}
+
+body:has(#startNext) .thin-progress span,
+body:has(#startNext) button.primary,
+body:has(#startNext) .big-action {
+  background: linear-gradient(90deg, #60a5fa 0%, #dbeafe 28%, #facc15 48%, #e5e7eb 66%, #8b5cf6 100%) !important;
+}
+
+body:has(#startNext) .coach-hero {
+  color: #3f2500;
+  background:
+    radial-gradient(circle at 16% 16%, rgba(255, 255, 255, 0.70), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.50), transparent 34%),
+    radial-gradient(circle at 18% 72%, rgba(255, 236, 153, 0.48) 0 2.5px, transparent 4px),
+    radial-gradient(circle at 38% 28%, rgba(250, 204, 21, 0.42) 0 2px, transparent 3.5px),
+    radial-gradient(circle at 62% 66%, rgba(245, 158, 11, 0.34) 0 2.5px, transparent 4px),
+    radial-gradient(circle at 82% 42%, rgba(254, 240, 138, 0.46) 0 2px, transparent 3.5px),
+    linear-gradient(90deg, #fff7cc 0%, #fde68a 24%, #facc15 52%, #f59e0b 78%, #fff1a8 100%) !important;
+  background-size: auto, auto, 110px 84px, 128px 96px, 136px 104px, 150px 112px, auto;
+  box-shadow: 0 18px 42px rgba(245, 158, 11, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.70);
+}
+
+body:has(#startNext) .coach-hero .muted,
+body:has(#startNext) .coach-hero p {
+  color: #6b4e05;
+}
+
+body:has(#startNext) .summary-pill.active {
+  color: #78350f;
+  border-color: rgba(245, 158, 11, 0.36);
+  background: rgba(255, 255, 255, 0.70);
+}
+
+body:has(#startNext) .thin-progress {
+  background: rgba(120, 53, 15, 0.15);
+}
+
+body:has(#startNext) .thin-progress span,
+body:has(#startNext) button.primary,
+body:has(#startNext) .big-action {
+  color: #3f2500;
+  background: linear-gradient(90deg, #fff1a8 0%, #fde047 30%, #facc15 55%, #f59e0b 100%) !important;
+  box-shadow: 0 14px 30px rgba(245, 158, 11, 0.32);
+}
+
+body:has(#startNext) .coach-hero {
+  color: #172033;
+  background:
+    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.82), transparent 28%),
+    radial-gradient(circle at 86% 18%, rgba(255, 255, 255, 0.62), transparent 34%),
+    linear-gradient(90deg, #e0f2fe 0%, #bae6fd 28%, #93c5fd 52%, #c4b5fd 78%, #e9d5ff 100%) !important;
+  box-shadow: 0 18px 42px rgba(96, 165, 250, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+body:has(#startNext) .coach-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.30) 38%, transparent 58%);
+  mix-blend-mode: screen;
+}
+
+body:has(#startNext) .coach-hero .muted,
+body:has(#startNext) .coach-hero p {
+  color: #475569;
+}
+
+body:has(#startNext) .summary-pill.active {
+  color: #1e3a8a;
+  border-color: rgba(147, 197, 253, 0.42);
+  background: rgba(255, 255, 255, 0.68);
+}
+
+body:has(#startNext) .thin-progress {
+  background: rgba(255, 255, 255, 0.48);
+}
+
+body:has(#startNext) .thin-progress span,
+body:has(#startNext) button.primary,
+body:has(#startNext) .big-action {
+  color: white;
+  background: linear-gradient(90deg, #38bdf8 0%, #60a5fa 42%, #8b5cf6 100%) !important;
+  box-shadow: 0 14px 30px rgba(96, 165, 250, 0.28);
+}
+
+@keyframes crystalSparkleSweep {
+  0% { transform: translateX(-120%) rotate(8deg); opacity: 0; }
+  18% { opacity: 0.42; }
+  52% { opacity: 0.20; }
+  100% { transform: translateX(120%) rotate(8deg); opacity: 0; }
+}
+
+@keyframes crystalGradientFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+body:has(#startNext) .coach-hero {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.82), transparent 28%),
+    radial-gradient(circle at 86% 18%, rgba(255, 255, 255, 0.62), transparent 34%),
+    linear-gradient(100deg, #e0f2fe 0%, #bae6fd 24%, #93c5fd 46%, #c4b5fd 72%, #e9d5ff 100%) !important;
+  background-size: auto, auto, 220% 220% !important;
+  animation: crystalGradientFlow 8s ease-in-out infinite;
+}
+
+body:has(#startNext) .coach-hero::after {
+  content: "";
+  position: absolute;
+  top: -35%;
+  bottom: -35%;
+  left: 0;
+  width: 42%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.72) 48%, transparent 100%);
+  filter: blur(10px);
+  mix-blend-mode: screen;
+  animation: crystalSparkleSweep 4.8s ease-in-out infinite;
+}
+
+body:has(#startNext) .thin-progress span,
+body:has(#startNext) button.primary,
+body:has(#startNext) .big-action {
+  background: linear-gradient(100deg, #38bdf8 0%, #60a5fa 32%, #8b5cf6 68%, #c084fc 100%) !important;
+  background-size: 220% 220% !important;
+  animation: crystalGradientFlow 5.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:has(#startNext) .coach-hero,
+  body:has(#startNext) .thin-progress span,
+  body:has(#startNext) button.primary,
+  body:has(#startNext) .big-action {
+    animation: none;
+  }
+
+  body:has(#startNext) .coach-hero::after {
+    display: none;
+  }
+}
+
+body:has(#startNext) .card,
+body:has(#startNext) .current-task-card,
+body:has(#startNext) .workspace-card,
+body:has(#startNext) .quiz-panel,
+body:has(#startNext) .assist-panel,
+body:has(#startNext) .queue-full-card,
+body:has(#startNext) .day-timeline-card,
+body:has(#startNext) .empty-state,
+body:has(#startNext) .result-card,
+body:has(#startNext) .quiz-item,
+body:has(#startNext) .focus-banner {
+  background:
+    radial-gradient(circle at 12% 10%, rgba(255, 255, 255, 0.72), transparent 28%),
+    linear-gradient(120deg, rgba(224, 242, 254, 0.92) 0%, rgba(186, 230, 253, 0.88) 28%, rgba(196, 181, 253, 0.82) 72%, rgba(233, 213, 255, 0.88) 100%) !important;
+  border-color: rgba(147, 197, 253, 0.55) !important;
+  box-shadow: 0 14px 32px rgba(96, 165, 250, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.68) !important;
+}
+
+body:has(#startNext) .task-card:not(.queue-task-card) {
+  background:
+    radial-gradient(circle at 12% 10%, rgba(255, 255, 255, 0.78), transparent 30%),
+    linear-gradient(120deg, rgba(239, 246, 255, 0.96), rgba(219, 234, 254, 0.90), rgba(237, 233, 254, 0.92)) !important;
+  border-color: rgba(147, 197, 253, 0.52) !important;
+}
+
+body:has(#startNext) .task-card.active,
+body:has(#startNext) .focus-task-card,
+body:has(#startNext) .summary-pill.active {
+  background:
+    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.82), transparent 28%),
+    linear-gradient(100deg, #dbeafe 0%, #93c5fd 40%, #c4b5fd 76%, #e9d5ff 100%) !important;
+  border-color: rgba(96, 165, 250, 0.72) !important;
+}
+
+body:has(#startNext) .queue-full-card .queue-task-card:has(.queue-done-mark) {
+  background: linear-gradient(120deg, #dcfce7 0%, #bbf7d0 46%, #d1fae5 100%) !important;
+  border-color: #16a34a !important;
+}
+
+body:has(#startNext) .queue-full-card .queue-task-card:not(:has(.queue-done-mark)) {
+  background: linear-gradient(120deg, #fff7ed 0%, #fed7aa 45%, #ffedd5 100%) !important;
+  border-color: #f97316 !important;
+}
+
+body:has(#startNext) .queue-full-card .queue-task-card:has(.current-queue-tag) {
+  background: linear-gradient(120deg, #dbeafe 0%, #93c5fd 46%, #c4b5fd 100%) !important;
+  border-color: #2563eb !important;
+}
+
+body:has(#startNext) .tag,
+body:has(#startNext) .queue-stat,
+body:has(#startNext) .timer-tag,
+body:has(#startNext) .summary-pill,
+body:has(#startNext) .quick-choice,
+body:has(#startNext) .answer-shortcuts button {
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.82), rgba(219, 234, 254, 0.80), rgba(237, 233, 254, 0.82)) !important;
+  border-color: rgba(147, 197, 253, 0.46) !important;
+}
+
+body:has(#startNext) .subject-badge,
+body:has(#startNext) button.primary,
+body:has(#startNext) .big-action,
+body:has(#startNext) .quick-choice.selected,
+body:has(#startNext) .answer-shortcuts button.selected {
+  color: white !important;
+  background: linear-gradient(100deg, #38bdf8 0%, #60a5fa 38%, #8b5cf6 78%, #c084fc 100%) !important;
+}
+
+body:has(#startNext) .thin-progress span {
+  background: linear-gradient(100deg, #38bdf8 0%, #60a5fa 38%, #8b5cf6 78%, #c084fc 100%) !important;
 }

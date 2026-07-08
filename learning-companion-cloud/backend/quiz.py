@@ -853,3 +853,85 @@ def grade_quiz(conn: Connection, task_id: int, answers: dict[str, str]) -> dict[
         "error_types": error_counts,
         "mastery": mastery,
     }
+
+
+def parent_confirm_quiz(conn: Connection, task_id: int, method: str = "oral") -> dict[str, Any]:
+    task = conn.execute("SELECT * FROM daily_tasks WHERE id = ?", (task_id,)).fetchone()
+    if not task:
+        raise ValueError("任务不存在")
+    if task["status"] == "completed":
+        latest = _latest_quiz_result(conn, task_id)
+        if latest:
+            return latest
+    items = conn.execute(
+        "SELECT * FROM quiz_items WHERE daily_task_id = ? ORDER BY id",
+        (task_id,),
+    ).fetchall()
+    total = len(items)
+    correct = total
+    pass_ratio = _quiz_pass_ratio(conn)
+    mastery = {
+        "mastery_level": "B",
+        "next_action": "家长已确认口述/纸笔检查通过，继续新课。",
+        "parent_note": "本次小测由家长现场确认完成。",
+    }
+    score_json = {
+        "score": 100.0,
+        "pass_score": round(pass_ratio * 100, 1),
+        "correct_rate": 1.0,
+        "confirmed_by_parent": True,
+        "confirmation_method": method,
+    }
+    now = utc_now()
+    conn.execute(
+        """
+        INSERT INTO quiz_results (
+            daily_task_id, total, correct, wrong_items_json,
+            score_json, error_types_json, mastery_json, status, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'completed', ?)
+        """,
+        (task_id, total, correct, dumps([]), dumps(score_json), dumps({}), dumps(mastery), now),
+    )
+    conn.execute(
+        "UPDATE daily_tasks SET status = 'completed', updated_at = ? WHERE id = ?",
+        (now, task_id),
+    )
+    is_new_completion = task["status"] != "completed"
+    if is_new_completion and task["source_id"]:
+        conn.execute(
+            """
+            UPDATE task_sources
+            SET completed_units = MIN(total_units, completed_units + 1), updated_at = ?
+            WHERE id = ?
+            """,
+            (now, task["source_id"]),
+        )
+    if is_new_completion and task["check_method"] == "review_quiz":
+        link = conn.execute(
+            """
+            SELECT note FROM task_progress
+            WHERE daily_task_id = ? AND event_type = 'review_item'
+            ORDER BY id DESC LIMIT 1
+            """,
+            (task_id,),
+        ).fetchone()
+        if link and link["note"].isdigit():
+            close_related_review_items(conn, int(link["note"]), "passed")
+    if is_new_completion:
+        add_reward(conn, int(task["student_id"]), 10, "家长确认小测通过", f"{task['title']} 小测家长确认通过")
+    conn.execute(
+        "INSERT INTO task_progress (daily_task_id, event_type, note, created_at) VALUES (?, 'check', ?, ?)",
+        (task_id, "小测由家长确认通过", now),
+    )
+    return {
+        "task_id": task_id,
+        "total": total,
+        "correct": correct,
+        "status": "completed",
+        "wrong_items": [],
+        "score_json": score_json,
+        "error_types": {},
+        "mastery": mastery,
+        "parent_confirmed": True,
+    }

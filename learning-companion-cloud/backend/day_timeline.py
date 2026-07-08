@@ -72,7 +72,11 @@ def _idle_block(start: int, end: int) -> TimeBlock | None:
         return TimeBlock(start, end, "break", "换脑休息", "上厕所、喝水、整理下一项材料。")
     if minutes <= 75:
         return TimeBlock(start, end, "buffer", "自由活动", "放松一下，保留体力，不额外加题。")
-    return TimeBlock(start, end, "buffer", "大段休息", "吃点水果、午休或自由活动，避免连续学习过久。")
+    if start >= _to_minutes("19:00"):
+        return TimeBlock(start, end, "buffer", "晚间自由阅读/亲子复盘", "当前没有硬学习任务；可阅读、整理错题、收拾书包或准备明天材料。")
+    if start >= _to_minutes("14:00"):
+        return TimeBlock(start, end, "buffer", "下午弹性活动", "当前任务已排完；建议安排户外运动、兴趣活动，或由家长在管理端补充学习任务。")
+    return TimeBlock(start, end, "buffer", "弹性空档", "当前没有学习任务；如不合理，请补充任务源或重新生成今日计划。")
 
 
 def _fixed_blocks_between(start: int, end: int) -> list[TimeBlock]:

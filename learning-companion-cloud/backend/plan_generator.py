@@ -240,6 +240,8 @@ def generate_plan_from_text(conn: Connection, raw_text: str, student_id: int = 1
         key = (source["category"], source["subject"], source["title"])
         if key in created_keys:
             continue
+        if _source_already_exists(conn, student_id, source):
+            continue
         created_keys.add(key)
         cursor = conn.execute(
             """
@@ -277,6 +279,8 @@ def _insert_sources(conn: Connection, sources: list[dict[str, Any]], student_id:
         key = (source["category"], source.get("subject", ""), source["title"])
         if key in created_keys:
             continue
+        if _source_already_exists(conn, student_id, source):
+            continue
         created_keys.add(key)
         cursor = conn.execute(
             """
@@ -302,6 +306,19 @@ def _insert_sources(conn: Connection, sources: list[dict[str, Any]], student_id:
         source["id"] = cursor.lastrowid
         created.append(source)
     return {"created": len(created), "items": created}
+
+
+def _source_already_exists(conn: Connection, student_id: int, source: dict[str, Any]) -> bool:
+    row = conn.execute(
+        """
+        SELECT 1 FROM task_sources
+        WHERE student_id = ? AND status = 'active'
+          AND category = ? AND subject = ? AND title = ?
+        LIMIT 1
+        """,
+        (student_id, source["category"], source.get("subject", ""), source["title"]),
+    ).fetchone()
+    return row is not None
 
 
 def _source_from_chunk(chunk: str, settings: dict[str, Any]) -> dict[str, Any] | None:
@@ -330,7 +347,7 @@ def _comprehensive_summer_sources(text: str, settings: dict[str, Any]) -> list[d
             _fixed_homework("英语暑假作业本", "英语", 14, 3, 1, 20, "Day", deadline, "每天 1 Day，完成后读 5 分钟重点句。"),
             _fixed_homework("诵读一夏", "语文", 12, 3, 1, 12, "个", deadline, "每天 1 个，先读准，再背关键句。"),
             _fixed_homework("妙笔一下", "语文", 37, 3, 4, 25, "个", deadline, "每天 4 个小练笔，重在完整表达，不追求长。"),
-            _fixed_homework("一本", "语文", 7, 0, 1, 15, "个", deadline, "每天 1 个，做完后自己检查漏题。"),
+            _fixed_homework("一本", "语文", 7, 0, 1, 40, "组", deadline, "每天 1 组=2 篇阅读理解，先限时完成，再核对答案并圈出依据句。"),
         ]
     )
     sources.append(_reading_source(deadline))

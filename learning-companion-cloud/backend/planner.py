@@ -39,6 +39,15 @@ def _source_priority(source: Row) -> str:
     return "P2"
 
 
+def _is_invalid_source(source: Row) -> bool:
+    title = str(source["title"] or "")
+    subject = str(source["subject"] or "")
+    config = loads(source["config_json"], {})
+    warning = str(config.get("warning", ""))
+    text = f"{title} {subject} {warning}"
+    return any(marker in text for marker in ("待重新生成", "编码损坏", "????"))
+
+
 def _source_text(source: Row) -> str:
     config = loads(source["config_json"], {})
     parts = [
@@ -76,6 +85,12 @@ def _source_bucket(source: Row) -> str:
     if category == "ket" or "KET" in text:
         return "ket"
     if category == "preview":
+        if subject == "数学":
+            return "math_preview"
+        if subject == "语文":
+            return "chinese_preview"
+        if subject == "英语":
+            return "english_preview"
         return "preview"
     if subject == "体育" or any(word in text for word in ("每日运动", "跳绳", "拉伸", "慢跑")):
         return "movement"
@@ -217,7 +232,7 @@ def _ket_recent_low_score(conn: Connection, student_id: int, source_id: int, pas
     return (int(row["correct"]) / max(int(row["total"]), 1)) < pass_score
 
 
-def _select_balanced_sources(sources: list[Row], slots: int, today: str) -> list[Row]:
+def _select_balanced_sources(sources: list[Row], slots: int, today: str, settings: dict[str, Any] | None = None) -> list[Row]:
     if slots <= 0:
         return []
     day_index = _day_index(today)
@@ -228,16 +243,30 @@ def _select_balanced_sources(sources: list[Row], slots: int, today: str) -> list
     for bucket_sources in buckets.values():
         bucket_sources.sort(key=lambda source: (source["deadline"] is None, source["deadline"] or "", int(source["id"])))
 
-    if slots >= 8:
-        desired = ["math_core", "math_light", "chinese_homework", "english_homework", "preview", "ket", "reading", "movement"]
+    if slots >= 10:
+        desired = [
+            "math_core",
+            "math_light",
+            "chinese_homework",
+            "english_homework",
+            "chinese_preview",
+            "math_preview",
+            "english_preview",
+            "ket",
+            "reading",
+            "movement",
+        ]
+    elif slots >= 8:
+        desired = ["math_core", "math_light", "chinese_homework", "english_homework", "math_preview", "english_preview", "ket", "movement"]
     elif slots == 7:
-        desired = ["math_core", "math_light", "chinese_homework", "english_homework", "preview", "ket", "movement"]
+        desired = ["math_core", "math_light", "chinese_homework", "english_homework", "math_preview", "ket", "movement"]
     elif slots == 6:
-        desired = ["math_core", "math_light", "chinese_homework", "english_homework", "preview", "movement"]
+        desired = ["math_core", "math_light", "chinese_homework", "english_homework", "math_preview", "movement"]
     else:
-        desired = ["math_core", "chinese_homework", "english_homework", "preview", "movement"][:slots]
+        desired = ["math_core", "chinese_homework", "english_homework", "math_preview", "movement"][:slots]
 
-    if _is_weekend(today) and buckets.get("leisure") and "reading" in desired:
+    weekend_light_mode = bool((settings or {}).get("path_rules", {}).get("weekend_light_mode", False))
+    if weekend_light_mode and _is_weekend(today) and buckets.get("leisure") and "reading" in desired:
         desired[desired.index("reading")] = "leisure"
 
     selected: list[Row] = []
@@ -264,7 +293,7 @@ def _select_balanced_sources(sources: list[Row], slots: int, today: str) -> list
     remaining.sort(
         key=lambda source: (
             subject_counts.get(_source_subject(source), 0),
-            0 if _source_bucket(source) in {"movement", "reading", "ket", "preview"} else 1,
+            0 if _source_bucket(source) in {"movement", "reading", "ket", "chinese_preview", "math_preview", "english_preview", "preview"} else 1,
             source["deadline"] is None,
             source["deadline"] or "",
             int(source["id"]),
@@ -291,7 +320,12 @@ def _build_daily_task(source: Row, today: str, settings: dict[str, Any] | None =
         current_lesson = sequence[index]
         title = f"{label}：{current_lesson}"
 
-    if category == "summer_homework":
+    if _source_bucket(source) == "movement":
+        description = f"完成 {source['title']}：按计划热身、运动、拉伸，注意安全和补水。"
+        minutes = int(config.get("estimated_minutes", 60))
+        standard = "完成运动并做拉伸，由孩子或家长打卡确认。"
+        check_method = "checkin"
+    elif category == "summer_homework":
         unit_label = config.get("unit_label", "单位")
         pacing = config.get("pacing", f"每日 {daily_units} 个{unit_label}")
         description = f"{pacing}：完成 {source['subject'] or source['title']} 第 {int(source['completed_units']) + 1} {unit_label}，先做会的，难题做标记。"
@@ -385,8 +419,11 @@ def generate_daily_tasks(
         """,
         (student_id, 1 if block_new_preview else 0, student_id, today, source_limit),
     ).fetchall()
+    clean_sources = [source for source in sources if not _is_invalid_source(source)]
     if not force_all_sources:
-        sources = _select_balanced_sources(list(sources), remaining_slots, today)
+        sources = _select_balanced_sources(clean_sources, remaining_slots, today, settings)
+    else:
+        sources = clean_sources
 
     now = utc_now()
     for source in sources:
